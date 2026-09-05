@@ -108,7 +108,7 @@ namespace
             (1u << CR_DODGE) |
             (1u << CR_PARRY) |
             (1u << CR_BLOCK) |
-            (1u << CR_HIT_TAKEN_MELEE) |
+            (1u << CR_PROC_CHANCE) | // was CR_HIT_TAKEN_MELEE (renamed upstream, same bit 11 - no behavior change)
             (1u << CR_HIT_TAKEN_RANGED) |
             (1u << CR_HIT_TAKEN_SPELL) |
             (1u << CR_CRIT_TAKEN_MELEE) |

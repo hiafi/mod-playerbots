@@ -387,6 +387,14 @@ public:
         : CastDebuffSpellAction(botAI, "explosive shot", true, 0.0f) {}
 };
 
+// Ranks 2-4 are permanently dead post-single-rank-spell-system (see
+// docs/single-rank-spell-system.md): 60051/60052/60053 were superseded ranks of Explosive Shot,
+// no longer reachable via trainer/spell_ranks, so a bot never actually knows them and
+// botAI->CastSpell would just fail. Rank 1 (53301, below) is the sole surviving spell now - it
+// scales continuously by level instead of by which rank was learned, so it's the only real action
+// needed. isUseful() is forced false rather than remapping these to 53301 too, to avoid
+// registering 3 duplicate actions that would behave identically to Rank 1.
+
 // Rank 4
 class CastExplosiveShotRank4Action : public CastExplosiveShotBaseAction
 {
@@ -399,11 +407,7 @@ public:
     }
     bool isUseful() override
     {
-        Unit* target = GetTarget();
-        if (!target)
-            return false;
-
-        return !target->HasAura(60053);
+        return false;
     }
 };
 
@@ -419,11 +423,7 @@ public:
     }
     bool isUseful() override
     {
-        Unit* target = GetTarget();
-        if (!target)
-            return false;
-
-        return !target->HasAura(60052);
+        return false;
     }
 };
 
@@ -439,11 +439,7 @@ public:
     }
     bool isUseful() override
     {
-        Unit* target = GetTarget();
-        if (!target)
-            return false;
-
-        return !target->HasAura(60051);
+        return false;
     }
 };
 
