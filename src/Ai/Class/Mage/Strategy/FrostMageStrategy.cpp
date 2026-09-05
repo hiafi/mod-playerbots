@@ -84,7 +84,7 @@ void FrostMageStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         new TriggerNode(
             "fingers of frost",
             {
-                NextAction("deep freeze", 19.0f),
+                NextAction("ice lance", 19.0f),
                 NextAction("frostbolt", 18.0f)
             }
         )
@@ -93,7 +93,7 @@ void FrostMageStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         new TriggerNode(
             "frostbite on target",
             {
-                NextAction("deep freeze", 19.0f),
+                NextAction("ice lance", 19.0f),
                 NextAction("frostbolt", 18.0f)
             }
         )

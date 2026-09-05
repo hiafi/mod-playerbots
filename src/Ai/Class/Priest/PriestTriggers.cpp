@@ -48,8 +48,7 @@ bool BindingHealTrigger::IsActive()
 }
 
 const std::set<uint32> MindSearChannelCheckTrigger::MIND_SEAR_SPELL_IDS = {
-    48045,  // Mind Sear Rank 1
-    53023   // Mind Sear Rank 2
+    48045  // Mind Sear -- single-rank conversion collapsed rank 2 (53023) into this ID
 };
 
 bool MindSearChannelCheckTrigger::IsActive()

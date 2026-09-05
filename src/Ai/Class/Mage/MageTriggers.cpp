@@ -100,8 +100,10 @@ bool DeepFreezeCooldownTrigger::IsActive()
            SpellCooldownTrigger::IsActive();
 }
 
+// Flamestrike's rank chain was collapsed to a single spell (see docs/single-rank-spell-system.md);
+// 2120 is the only ID a bot can ever have this aura from now.
 const std::unordered_set<uint32> FlamestrikeNearbyTrigger::FLAMESTRIKE_SPELL_IDS = {
-    2120, 2121, 8422, 8423, 10215, 10216, 27086, 42925, 42926
+    2120
 };
 
 bool FlamestrikeNearbyTrigger::IsActive()
@@ -145,16 +147,10 @@ bool ImprovedScorchTrigger::IsActive()
     return DebuffTrigger::IsActive();
 }
 
+// Blizzard's rank chain was collapsed to a single spell (see docs/single-rank-spell-system.md);
+// 10 is the only ID a bot can ever be channeling from now.
 const std::unordered_set<uint32> BlizzardChannelCheckTrigger::BLIZZARD_SPELL_IDS = {
-    10,     // Blizzard Rank 1
-    6141,   // Blizzard Rank 2
-    8427,   // Blizzard Rank 3
-    10185,  // Blizzard Rank 4
-    10186,  // Blizzard Rank 5
-    10187,  // Blizzard Rank 6
-    27085,  // Blizzard Rank 7
-    42938,  // Blizzard Rank 8
-    42939   // Blizzard Rank 9
+    10
 };
 
 bool BlizzardChannelCheckTrigger::IsActive()
