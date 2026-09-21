@@ -108,7 +108,7 @@ namespace
             (1u << CR_DODGE) |
             (1u << CR_PARRY) |
             (1u << CR_BLOCK) |
-            (1u << CR_PROC_CHANCE) | // was CR_HIT_TAKEN_MELEE (renamed upstream, same bit 11 - no behavior change)
+            (1u << 11) | // CR_HIT_TAKEN_MELEE upstream / CR_PROC_CHANCE on this fork's custom stat rework - same bit, use literal for portability
             (1u << CR_HIT_TAKEN_RANGED) |
             (1u << CR_HIT_TAKEN_SPELL) |
             (1u << CR_CRIT_TAKEN_MELEE) |
