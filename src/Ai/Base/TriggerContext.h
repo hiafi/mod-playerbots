@@ -40,6 +40,7 @@ public:
         creators["collision"] = &TriggerContext::collision;
         creators["target is boss"] = &TriggerContext::target_is_boss;
         creators["target is elite"] = &TriggerContext::target_is_elite;
+        creators["target controlled"] = &TriggerContext::target_controlled;
         creators["moving"] = &TriggerContext::moving;
         creators["not moving"] = &TriggerContext::not_moving;
 
@@ -259,6 +260,7 @@ public:
 private:
     static Trigger* target_is_boss(PlayerbotAI* botAI) { return new TargetIsBossTrigger(botAI); }
     static Trigger* target_is_elite(PlayerbotAI* botAI) { return new TargetIsEliteTrigger(botAI); }
+    static Trigger* target_controlled(PlayerbotAI* botAI) { return new TargetControlledTrigger(botAI); }
     static Trigger* moving(PlayerbotAI* botAI) { return new MovingTrigger(botAI); }
     static Trigger* not_moving(PlayerbotAI* botAI) { return new NoMovementTrigger(botAI, "not moving"); }
     static Trigger* give_food(PlayerbotAI* botAI) { return new GiveFoodTrigger(botAI); }

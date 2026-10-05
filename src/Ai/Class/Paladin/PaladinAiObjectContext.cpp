@@ -5,6 +5,7 @@
  */
 
 #include "PaladinAiObjectContext.h"
+#include "AuraIdTriggers.h"
 #include "DpsPaladinStrategy.h"
 #include "GenericPaladinNonCombatStrategy.h"
 #include "HealPaladinStrategy.h"
@@ -14,9 +15,16 @@
 #include "PaladinBuffStrategies.h"
 #include "PaladinGreaterBlessingAction.h"
 #include "PaladinPullStrategy.h"
+#include "PaladinReworkActions.h"
+#include "PaladinReworkAuraStrategy.h"
+#include "PaladinReworkIds.h"
+#include "PaladinReworkTriggers.h"
+#include "PaladinSealValues.h"
 #include "PaladinTriggers.h"
 #include "Playerbots.h"
 #include "TankPaladinStrategy.h"
+
+using namespace ai::paladin_rework;
 
 class PaladinStrategyFactoryInternal : public NamedObjectContext<Strategy>
 {
@@ -60,10 +68,11 @@ private:
     static Strategy* rshadow(PlayerbotAI* botAI) { return new PaladinShadowResistanceStrategy(botAI); }
     static Strategy* rfrost(PlayerbotAI* botAI) { return new PaladinFrostResistanceStrategy(botAI); }
     static Strategy* rfire(PlayerbotAI* botAI) { return new PaladinFireResistanceStrategy(botAI); }
-    static Strategy* baoe(PlayerbotAI* botAI) { return new PaladinBuffAoeStrategy(botAI); }
-    static Strategy* barmor(PlayerbotAI* botAI) { return new PaladinBuffArmorStrategy(botAI); }
-    static Strategy* bcast(PlayerbotAI* botAI) { return new PaladinBuffCastStrategy(botAI); }
-    static Strategy* bspeed(PlayerbotAI* botAI) { return new PaladinBuffSpeedStrategy(botAI); }
+    // Aura presses carry 60 s / 15 s cooldowns, so the stock name-based aura buffing is unsafe
+    static Strategy* baoe(PlayerbotAI* botAI) { return new PaladinReworkAuraStrategy(botAI, "baoe"); }
+    static Strategy* barmor(PlayerbotAI* botAI) { return new PaladinReworkAuraStrategy(botAI, "barmor"); }
+    static Strategy* bcast(PlayerbotAI* botAI) { return new PaladinReworkAuraStrategy(botAI, "bcast"); }
+    static Strategy* bspeed(PlayerbotAI* botAI) { return new PaladinReworkAuraStrategy(botAI, "bspeed"); }
 };
 
 class PaladinBuffStrategyFactoryInternal : public NamedObjectContext<Strategy>
@@ -156,6 +165,15 @@ public:
 
         creators["avenging wrath"] = &PaladinTriggerFactoryInternal::avenging_wrath;
         creators["greater blessing needed"] = &PaladinTriggerFactoryInternal::greater_blessing_needed;
+
+        creators["paladin no seal"] = &PaladinTriggerFactoryInternal::paladin_no_seal;
+        creators["paladin primed"] = &PaladinTriggerFactoryInternal::paladin_primed;
+        creators["paladin no primed"] = &PaladinTriggerFactoryInternal::paladin_no_primed;
+        creators["paladin primed expiring"] = &PaladinTriggerFactoryInternal::paladin_primed_expiring;
+        creators["paladin primed justice"] = &PaladinTriggerFactoryInternal::paladin_primed_justice;
+        creators["paladin judgement window"] = &PaladinTriggerFactoryInternal::paladin_judgement_window;
+        creators["paladin deliverance window"] = &PaladinTriggerFactoryInternal::paladin_deliverance_window;
+        creators["paladin aura missing"] = &PaladinTriggerFactoryInternal::paladin_aura_missing;
     }
 
 private:
@@ -233,6 +251,30 @@ private:
     {
         return new GreaterBlessingNeededTrigger(botAI);
     }
+
+    static Trigger* paladin_no_seal(PlayerbotAI* botAI) { return new PaladinNoSealTrigger(botAI); }
+    static Trigger* paladin_primed(PlayerbotAI* botAI)
+    {
+        return new HasAuraIdTrigger(botAI, "paladin primed", PALADIN_PRIMED, true);
+    }
+    static Trigger* paladin_no_primed(PlayerbotAI* botAI)
+    {
+        return new NoAuraIdTrigger(botAI, "paladin no primed", PALADIN_PRIMED, true);
+    }
+    static Trigger* paladin_primed_expiring(PlayerbotAI* botAI)
+    {
+        return new AuraIdExpiringTrigger(botAI, "paladin primed expiring", PALADIN_PRIMED, 3000, true);
+    }
+    static Trigger* paladin_primed_justice(PlayerbotAI* botAI)
+    {
+        return new HasAuraIdTrigger(botAI, "paladin primed justice", {SPELL_PRIMED_JUSTICE}, true);
+    }
+    static Trigger* paladin_judgement_window(PlayerbotAI* botAI) { return new PaladinJudgementWindowTrigger(botAI); }
+    static Trigger* paladin_deliverance_window(PlayerbotAI* botAI)
+    {
+        return new PaladinDeliveranceWindowTrigger(botAI);
+    }
+    static Trigger* paladin_aura_missing(PlayerbotAI* botAI) { return new PaladinAuraMissingTrigger(botAI); }
 };
 
 class PaladinAiObjectContextInternal : public NamedObjectContext<Action>
@@ -324,6 +366,9 @@ public:
         creators["hand of freedom on party"] = &PaladinAiObjectContextInternal::hand_of_freedom_on_party;
         creators["cast greater blessing assignment"] =
             &PaladinAiObjectContextInternal::cast_greater_blessing_assignment;
+        creators["paladin cast seal"] = &PaladinAiObjectContextInternal::paladin_cast_seal;
+        creators["paladin aura"] = &PaladinAiObjectContextInternal::paladin_aura;
+        creators["deliverance"] = &PaladinAiObjectContextInternal::deliverance;
     }
 
 private:
@@ -435,6 +480,9 @@ private:
     {
         return new CastGreaterBlessingAssignmentAction(botAI);
     }
+    static Action* paladin_cast_seal(PlayerbotAI* botAI) { return new PaladinCastSealAction(botAI); }
+    static Action* paladin_aura(PlayerbotAI* botAI) { return new PaladinAuraAction(botAI); }
+    static Action* deliverance(PlayerbotAI* botAI) { return new CastDeliveranceAction(botAI); }
 };
 
 class PaladinValueContextInternal : public NamedObjectContext<UntypedValue>
@@ -445,6 +493,8 @@ public:
         creators["greater blessing assignments"] = &PaladinValueContextInternal::greater_blessing_assignments;
         creators["greater blessing pending assignment"] =
             &PaladinValueContextInternal::greater_blessing_pending_assignment;
+        creators["paladin seal choice"] = &PaladinValueContextInternal::paladin_seal_choice;
+        creators["paladin aura choice"] = &PaladinValueContextInternal::paladin_aura_choice;
     }
 
 private:
@@ -457,6 +507,9 @@ private:
     {
         return ai::gbless::greater_blessing_pending_assignment_value(botAI);
     }
+
+    static UntypedValue* paladin_seal_choice(PlayerbotAI* botAI) { return new PaladinSealChoiceValue(botAI); }
+    static UntypedValue* paladin_aura_choice(PlayerbotAI* botAI) { return new PaladinAuraChoiceValue(botAI); }
 };
 
 SharedNamedObjectContextList<Strategy> PaladinAiObjectContext::sharedStrategyContexts;

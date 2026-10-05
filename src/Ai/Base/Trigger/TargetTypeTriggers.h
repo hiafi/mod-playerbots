@@ -27,6 +27,15 @@ public:
     bool IsActive() override;
 };
 
+// Current target is stunned, confused, silenced or disarmed (ai::target::IsControlled).
+class TargetControlledTrigger : public Trigger
+{
+public:
+    TargetControlledTrigger(PlayerbotAI* botAI, std::string const name = "target controlled") : Trigger(botAI, name) {}
+
+    bool IsActive() override;
+};
+
 class MovingTrigger : public Trigger
 {
 public:

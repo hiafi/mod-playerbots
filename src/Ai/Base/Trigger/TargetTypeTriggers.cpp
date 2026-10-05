@@ -6,23 +6,12 @@
 
 #include "TargetTypeTriggers.h"
 #include "Playerbots.h"
+#include "TargetTypeUtils.h"
 
-namespace
-{
-bool IsBoss(Creature* creature) { return creature && (creature->IsDungeonBoss() || creature->isWorldBoss()); }
-}  // namespace
+bool TargetIsBossTrigger::IsActive() { return ai::target::IsBoss(AI_VALUE(Unit*, "current target")); }
 
-bool TargetIsBossTrigger::IsActive()
-{
-    Unit* target = AI_VALUE(Unit*, "current target");
-    return target && IsBoss(target->ToCreature());
-}
+bool TargetIsEliteTrigger::IsActive() { return ai::target::IsElite(AI_VALUE(Unit*, "current target")); }
 
-bool TargetIsEliteTrigger::IsActive()
-{
-    Unit* target = AI_VALUE(Unit*, "current target");
-    Creature* creature = target ? target->ToCreature() : nullptr;
-    return creature && (creature->isElite() || IsBoss(creature));
-}
+bool TargetControlledTrigger::IsActive() { return ai::target::IsControlled(AI_VALUE(Unit*, "current target")); }
 
 bool MovingTrigger::IsActive() { return AI_VALUE2(bool, "moving", "self target"); }
