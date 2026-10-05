@@ -6,7 +6,17 @@
 
 #include "PaladinReworkUtils.h"
 #include "AiFactory.h"
-#include "PlayerbotAI.h"
+#include "AuraIdUtils.h"
+#include "PaladinReworkIds.h"
+#include "Playerbots.h"
+
+using namespace ai::paladin_rework;
+
+namespace
+{
+constexpr uint8 PACK_ENEMIES_DEFAULT = 3;
+constexpr uint8 PACK_ENEMIES_PRIMED_COMMAND = 2;
+}  // namespace
 
 PaladinSpec GetPaladinSpec(Player* bot)
 {
@@ -19,4 +29,14 @@ PaladinSpec GetPaladinSpec(Player* bot)
         default:
             return PaladinSpec::Retribution;
     }
+}
+
+bool IsPrimedPack(PlayerbotAI* botAI)
+{
+    static std::vector<uint32> const primedCommand = {SPELL_PRIMED_COMMAND};
+    Player* bot = botAI->GetBot();
+    AiObjectContext* context = botAI->GetAiObjectContext();
+    uint8 const needed = ai::aura::HasAnyAura(bot, primedCommand, bot->GetGUID()) ? PACK_ENEMIES_PRIMED_COMMAND
+                                                                                  : PACK_ENEMIES_DEFAULT;
+    return AI_VALUE2(uint8, "enemies near target", "8") >= needed;
 }

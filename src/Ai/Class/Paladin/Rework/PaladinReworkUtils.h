@@ -8,6 +8,7 @@
 #define PLAYERBOTS_PALADINREWORKUTILS_H
 
 class Player;
+class PlayerbotAI;
 
 enum class PaladinSpec
 {
@@ -17,5 +18,8 @@ enum class PaladinSpec
 };
 
 PaladinSpec GetPaladinSpec(Player* bot);
+
+// The pack rule for spending Primed: 3+ enemies near the target, 2+ while Primed Command is up.
+bool IsPrimedPack(PlayerbotAI* botAI);
 
 #endif

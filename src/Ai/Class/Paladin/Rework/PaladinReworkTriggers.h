@@ -40,10 +40,6 @@ public:
 
     bool IsActive() override;
 
-protected:
-    // Shared rule: 3+ enemies near the target, 2+ while Primed Command is up.
-    bool IsPack();
-
 private:
     bool _wantPack;
 };

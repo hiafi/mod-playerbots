@@ -18,7 +18,10 @@
 #include "PaladinReworkActions.h"
 #include "PaladinReworkAuraStrategy.h"
 #include "PaladinReworkIds.h"
+#include "PaladinReworkRetStrategy.h"
 #include "PaladinReworkTriggers.h"
+#include "PaladinRetActions.h"
+#include "PaladinRetTriggers.h"
 #include "PaladinSealValues.h"
 #include "PaladinTriggers.h"
 #include "Playerbots.h"
@@ -106,7 +109,8 @@ public:
 
 private:
     static Strategy* tank(PlayerbotAI* botAI) { return new TankPaladinStrategy(botAI); }
-    static Strategy* dps(PlayerbotAI* botAI) { return new DpsPaladinStrategy(botAI); }
+    // The rework's Retribution rotation replaces the stock DpsPaladinStrategy under the same name
+    static Strategy* dps(PlayerbotAI* botAI) { return new PaladinReworkRetStrategy(botAI); }
     static Strategy* heal(PlayerbotAI* botAI) { return new HealPaladinStrategy(botAI); }
     static Strategy* offheal(PlayerbotAI* botAI) { return new OffhealRetPaladinStrategy(botAI); }
 };
@@ -174,6 +178,38 @@ public:
         creators["paladin judgement window"] = &PaladinTriggerFactoryInternal::paladin_judgement_window;
         creators["paladin deliverance window"] = &PaladinTriggerFactoryInternal::paladin_deliverance_window;
         creators["paladin aura missing"] = &PaladinTriggerFactoryInternal::paladin_aura_missing;
+        creators["ret divine plea"] = &PaladinTriggerFactoryInternal::ret_divine_plea;
+        creators["ret divine shield"] = &PaladinTriggerFactoryInternal::ret_divine_shield;
+        creators["ret lay on hands"] = &PaladinTriggerFactoryInternal::ret_lay_on_hands;
+        creators["ret divine protection"] = &PaladinTriggerFactoryInternal::ret_divine_protection;
+        creators["ret justice combo"] = &PaladinTriggerFactoryInternal::ret_justice_combo;
+        creators["ret justice setup"] = &PaladinTriggerFactoryInternal::ret_justice_setup;
+        creators["ret judgement"] = &PaladinTriggerFactoryInternal::ret_judgement;
+        creators["ret deliverance"] = &PaladinTriggerFactoryInternal::ret_deliverance;
+        creators["ret avenging wrath"] = &PaladinTriggerFactoryInternal::ret_avenging_wrath;
+        creators["ret execution sentence"] = &PaladinTriggerFactoryInternal::ret_execution_sentence;
+        creators["ret wake of ashes"] = &PaladinTriggerFactoryInternal::ret_wake_of_ashes;
+        creators["ret hammer of wrath"] = &PaladinTriggerFactoryInternal::ret_hammer_of_wrath;
+        creators["ret art of war heal"] = &PaladinTriggerFactoryInternal::ret_art_of_war_heal;
+        creators["ret exorcism"] = &PaladinTriggerFactoryInternal::ret_exorcism;
+        creators["ret blade of justice"] = &PaladinTriggerFactoryInternal::ret_blade_of_justice;
+        creators["ret swift retribution"] = &PaladinTriggerFactoryInternal::ret_swift_retribution;
+        creators["ret divine storm"] = &PaladinTriggerFactoryInternal::ret_divine_storm;
+        creators["ret holy wrath"] = &PaladinTriggerFactoryInternal::ret_holy_wrath;
+        creators["ret single target"] = &PaladinTriggerFactoryInternal::ret_single_target;
+        creators["ret consecration"] = &PaladinTriggerFactoryInternal::ret_consecration;
+        creators["ret pack deliverance"] = &PaladinTriggerFactoryInternal::ret_pack_deliverance;
+        creators["ret pack judgement"] = &PaladinTriggerFactoryInternal::ret_pack_judgement;
+        creators["ret pack avenging wrath"] = &PaladinTriggerFactoryInternal::ret_pack_avenging_wrath;
+        creators["ret pack wake of ashes"] = &PaladinTriggerFactoryInternal::ret_pack_wake_of_ashes;
+        creators["ret pack holy wrath"] = &PaladinTriggerFactoryInternal::ret_pack_holy_wrath;
+        creators["ret pack divine storm"] = &PaladinTriggerFactoryInternal::ret_pack_divine_storm;
+        creators["ret pack consecration"] = &PaladinTriggerFactoryInternal::ret_pack_consecration;
+        creators["ret pack execution sentence"] = &PaladinTriggerFactoryInternal::ret_pack_execution_sentence;
+        creators["ret pack blade of justice"] = &PaladinTriggerFactoryInternal::ret_pack_blade_of_justice;
+        creators["ret pack exorcism"] = &PaladinTriggerFactoryInternal::ret_pack_exorcism;
+        creators["ret pack hammer of wrath"] = &PaladinTriggerFactoryInternal::ret_pack_hammer_of_wrath;
+        creators["ret pack crusader strike"] = &PaladinTriggerFactoryInternal::ret_pack_crusader_strike;
     }
 
 private:
@@ -275,6 +311,53 @@ private:
         return new PaladinDeliveranceWindowTrigger(botAI);
     }
     static Trigger* paladin_aura_missing(PlayerbotAI* botAI) { return new PaladinAuraMissingTrigger(botAI); }
+    static Trigger* ret_divine_plea(PlayerbotAI* botAI) { return new PaladinRetDivinePleaTrigger(botAI); }
+    static Trigger* ret_divine_shield(PlayerbotAI* botAI) { return new PaladinRetDivineShieldTrigger(botAI); }
+    static Trigger* ret_lay_on_hands(PlayerbotAI* botAI) { return new PaladinRetLayOnHandsTrigger(botAI); }
+    static Trigger* ret_divine_protection(PlayerbotAI* botAI) { return new PaladinRetDivineProtectionTrigger(botAI); }
+    static Trigger* ret_justice_combo(PlayerbotAI* botAI) { return new PaladinRetJusticeComboTrigger(botAI); }
+    static Trigger* ret_justice_setup(PlayerbotAI* botAI) { return new PaladinRetJusticeSetupTrigger(botAI); }
+    static Trigger* ret_judgement(PlayerbotAI* botAI) { return new PaladinRetJudgementTrigger(botAI); }
+    static Trigger* ret_deliverance(PlayerbotAI* botAI) { return new PaladinRetDeliveranceTrigger(botAI); }
+    static Trigger* ret_avenging_wrath(PlayerbotAI* botAI) { return new PaladinRetAvengingWrathTrigger(botAI); }
+    static Trigger* ret_execution_sentence(PlayerbotAI* botAI) { return new PaladinRetExecutionSentenceTrigger(botAI); }
+    static Trigger* ret_wake_of_ashes(PlayerbotAI* botAI) { return new PaladinRetWakeOfAshesTrigger(botAI); }
+    static Trigger* ret_hammer_of_wrath(PlayerbotAI* botAI) { return new PaladinRetHammerOfWrathTrigger(botAI); }
+    static Trigger* ret_art_of_war_heal(PlayerbotAI* botAI) { return new PaladinRetArtOfWarHealTrigger(botAI); }
+    static Trigger* ret_exorcism(PlayerbotAI* botAI) { return new PaladinRetExorcismTrigger(botAI); }
+    static Trigger* ret_blade_of_justice(PlayerbotAI* botAI) { return new PaladinRetBladeOfJusticeTrigger(botAI); }
+    static Trigger* ret_swift_retribution(PlayerbotAI* botAI) { return new PaladinRetSwiftRetributionTrigger(botAI); }
+    static Trigger* ret_divine_storm(PlayerbotAI* botAI) { return new PaladinRetDivineStormTrigger(botAI); }
+    static Trigger* ret_holy_wrath(PlayerbotAI* botAI) { return new PaladinRetHolyWrathTrigger(botAI); }
+    static Trigger* ret_single_target(PlayerbotAI* botAI) { return new PaladinRetSingleTargetTrigger(botAI); }
+    static Trigger* ret_consecration(PlayerbotAI* botAI) { return new PaladinRetConsecrationTrigger(botAI); }
+    static Trigger* ret_pack_deliverance(PlayerbotAI* botAI) { return new PaladinRetPackDeliveranceTrigger(botAI); }
+    static Trigger* ret_pack_judgement(PlayerbotAI* botAI) { return new PaladinRetPackJudgementTrigger(botAI); }
+    static Trigger* ret_pack_avenging_wrath(PlayerbotAI* botAI)
+    {
+        return new PaladinRetPackAvengingWrathTrigger(botAI);
+    }
+    static Trigger* ret_pack_wake_of_ashes(PlayerbotAI* botAI) { return new PaladinRetPackWakeOfAshesTrigger(botAI); }
+    static Trigger* ret_pack_holy_wrath(PlayerbotAI* botAI) { return new PaladinRetPackHolyWrathTrigger(botAI); }
+    static Trigger* ret_pack_divine_storm(PlayerbotAI* botAI) { return new PaladinRetPackDivineStormTrigger(botAI); }
+    static Trigger* ret_pack_consecration(PlayerbotAI* botAI) { return new PaladinRetPackConsecrationTrigger(botAI); }
+    static Trigger* ret_pack_execution_sentence(PlayerbotAI* botAI)
+    {
+        return new PaladinRetPackExecutionSentenceTrigger(botAI);
+    }
+    static Trigger* ret_pack_blade_of_justice(PlayerbotAI* botAI)
+    {
+        return new PaladinRetPackBladeOfJusticeTrigger(botAI);
+    }
+    static Trigger* ret_pack_exorcism(PlayerbotAI* botAI) { return new PaladinRetPackExorcismTrigger(botAI); }
+    static Trigger* ret_pack_hammer_of_wrath(PlayerbotAI* botAI)
+    {
+        return new PaladinRetPackHammerOfWrathTrigger(botAI);
+    }
+    static Trigger* ret_pack_crusader_strike(PlayerbotAI* botAI)
+    {
+        return new PaladinRetPackCrusaderStrikeTrigger(botAI);
+    }
 };
 
 class PaladinAiObjectContextInternal : public NamedObjectContext<Action>
@@ -369,6 +452,10 @@ public:
         creators["paladin cast seal"] = &PaladinAiObjectContextInternal::paladin_cast_seal;
         creators["paladin aura"] = &PaladinAiObjectContextInternal::paladin_aura;
         creators["deliverance"] = &PaladinAiObjectContextInternal::deliverance;
+        creators["blade of justice"] = &PaladinAiObjectContextInternal::blade_of_justice;
+        creators["wake of ashes"] = &PaladinAiObjectContextInternal::wake_of_ashes;
+        creators["execution sentence"] = &PaladinAiObjectContextInternal::execution_sentence;
+        creators["execution sentence on cluster"] = &PaladinAiObjectContextInternal::execution_sentence_on_cluster;
     }
 
 private:
@@ -483,6 +570,13 @@ private:
     static Action* paladin_cast_seal(PlayerbotAI* botAI) { return new PaladinCastSealAction(botAI); }
     static Action* paladin_aura(PlayerbotAI* botAI) { return new PaladinAuraAction(botAI); }
     static Action* deliverance(PlayerbotAI* botAI) { return new CastDeliveranceAction(botAI); }
+    static Action* blade_of_justice(PlayerbotAI* botAI) { return new CastBladeOfJusticeAction(botAI); }
+    static Action* wake_of_ashes(PlayerbotAI* botAI) { return new CastWakeOfAshesAction(botAI); }
+    static Action* execution_sentence(PlayerbotAI* botAI) { return new CastExecutionSentenceAction(botAI); }
+    static Action* execution_sentence_on_cluster(PlayerbotAI* botAI)
+    {
+        return new CastExecutionSentenceOnClusterAction(botAI);
+    }
 };
 
 class PaladinValueContextInternal : public NamedObjectContext<UntypedValue>

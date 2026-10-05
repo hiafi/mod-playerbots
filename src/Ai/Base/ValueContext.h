@@ -188,6 +188,8 @@ public:
         creators["distance"] = &ValueContext::distance;
         creators["moving"] = &ValueContext::moving;
         creators["enemies within"] = &ValueContext::enemies_within;
+        creators["elite enemies within"] = &ValueContext::elite_enemies_within;
+        creators["most clustered enemy"] = &ValueContext::most_clustered_enemy;
         creators["enemies near target"] = &ValueContext::enemies_near_target;
         creators["enemies in cone"] = &ValueContext::enemies_in_cone;
         creators["party has healer"] = &ValueContext::party_has_healer;
@@ -400,6 +402,8 @@ private:
     static UntypedValue* facing(PlayerbotAI* botAI) { return new IsFacingValue(botAI); }
     static UntypedValue* moving(PlayerbotAI* botAI) { return new IsMovingValue(botAI); }
     static UntypedValue* enemies_within(PlayerbotAI* botAI) { return new EnemiesWithinValue(botAI); }
+    static UntypedValue* elite_enemies_within(PlayerbotAI* botAI) { return new EliteEnemiesWithinValue(botAI); }
+    static UntypedValue* most_clustered_enemy(PlayerbotAI* botAI) { return new MostClusteredEnemyValue(botAI); }
     static UntypedValue* enemies_near_target(PlayerbotAI* botAI) { return new EnemiesNearTargetValue(botAI); }
     static UntypedValue* enemies_in_cone(PlayerbotAI* botAI) { return new EnemiesInConeValue(botAI); }
     static UntypedValue* party_has_healer(PlayerbotAI* botAI) { return new PartyHasHealerValue(botAI); }
