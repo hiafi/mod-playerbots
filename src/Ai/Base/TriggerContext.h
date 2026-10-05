@@ -23,6 +23,7 @@
 #include "RpgTriggers.h"
 #include "RtiTriggers.h"
 #include "StuckTriggers.h"
+#include "TargetTypeTriggers.h"
 #include "TravelTriggers.h"
 #include "WaitForAttackTriggers.h"
 
@@ -37,6 +38,10 @@ public:
         creators["sit"] = &TriggerContext::sit;
         creators["return to stay position"] = &TriggerContext::return_to_stay_position;
         creators["collision"] = &TriggerContext::collision;
+        creators["target is boss"] = &TriggerContext::target_is_boss;
+        creators["target is elite"] = &TriggerContext::target_is_elite;
+        creators["moving"] = &TriggerContext::moving;
+        creators["not moving"] = &TriggerContext::not_moving;
 
         creators["timer"] = &TriggerContext::Timer;
         creators["timer bg"] = &TriggerContext::TimerBG;
@@ -252,6 +257,10 @@ public:
     }
 
 private:
+    static Trigger* target_is_boss(PlayerbotAI* botAI) { return new TargetIsBossTrigger(botAI); }
+    static Trigger* target_is_elite(PlayerbotAI* botAI) { return new TargetIsEliteTrigger(botAI); }
+    static Trigger* moving(PlayerbotAI* botAI) { return new MovingTrigger(botAI); }
+    static Trigger* not_moving(PlayerbotAI* botAI) { return new NoMovementTrigger(botAI, "not moving"); }
     static Trigger* give_food(PlayerbotAI* botAI) { return new GiveFoodTrigger(botAI); }
     static Trigger* give_water(PlayerbotAI* botAI) { return new GiveWaterTrigger(botAI); }
     static Trigger* no_rti(PlayerbotAI* botAI) { return new NoRtiTrigger(botAI); }
