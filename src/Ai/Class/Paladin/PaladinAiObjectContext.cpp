@@ -14,10 +14,13 @@
 #include "PaladinActions.h"
 #include "PaladinBuffStrategies.h"
 #include "PaladinGreaterBlessingAction.h"
+#include "PaladinHolyContext.h"
+#include "PaladinProtContext.h"
 #include "PaladinPullStrategy.h"
 #include "PaladinReworkActions.h"
 #include "PaladinReworkAuraStrategy.h"
 #include "PaladinReworkIds.h"
+#include "PaladinReworkProtStrategy.h"
 #include "PaladinReworkRetStrategy.h"
 #include "PaladinReworkTriggers.h"
 #include "PaladinRetActions.h"
@@ -44,13 +47,15 @@ public:
     }
 
 private:
-    static Strategy* nc(PlayerbotAI* botAI) { return new GenericPaladinNonCombatStrategy(botAI); }
+    // The stock paladin "nc" plus the Holy out-of-combat tank upkeep, gated on the Holy spec
+    static Strategy* nc(PlayerbotAI* botAI) { return new PaladinReworkNonCombatStrategy(botAI); }
     static Strategy* pull(PlayerbotAI* botAI) { return new PaladinPullStrategy(botAI); }
     static Strategy* cure(PlayerbotAI* botAI) { return new PaladinCureStrategy(botAI); }
     static Strategy* boost(PlayerbotAI* botAI) { return new PaladinBoostStrategy(botAI); }
     static Strategy* cc(PlayerbotAI* botAI) { return new PaladinCcStrategy(botAI); }
     static Strategy* bthreat(PlayerbotAI* botAI) { return new PaladinBuffThreatStrategy(botAI); }
-    static Strategy* healer_dps(PlayerbotAI* botAI) { return new PaladinHealerDpsStrategy(botAI); }
+    // Empty: the stock version Holy Shocks enemies, which the rework's Holy guide forbids
+    static Strategy* healer_dps(PlayerbotAI* botAI) { return new PaladinReworkHealerDpsStrategy(botAI); }
 };
 
 class PaladinResistanceStrategyFactoryInternal : public NamedObjectContext<Strategy>
@@ -108,10 +113,12 @@ public:
     }
 
 private:
-    static Strategy* tank(PlayerbotAI* botAI) { return new TankPaladinStrategy(botAI); }
+    // The rework's Protection rotation replaces the stock TankPaladinStrategy under the same name
+    static Strategy* tank(PlayerbotAI* botAI) { return new PaladinReworkProtStrategy(botAI); }
     // The rework's Retribution rotation replaces the stock DpsPaladinStrategy under the same name
     static Strategy* dps(PlayerbotAI* botAI) { return new PaladinReworkRetStrategy(botAI); }
-    static Strategy* heal(PlayerbotAI* botAI) { return new HealPaladinStrategy(botAI); }
+    // The rework's Holy rotation replaces the stock HealPaladinStrategy under the same name
+    static Strategy* heal(PlayerbotAI* botAI) { return new PaladinReworkHolyStrategy(botAI); }
     static Strategy* offheal(PlayerbotAI* botAI) { return new OffhealRetPaladinStrategy(botAI); }
 };
 
@@ -637,16 +644,22 @@ void PaladinAiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextL
 {
     AiObjectContext::BuildSharedActionContexts(actionContexts);
     actionContexts.Add(new PaladinAiObjectContextInternal());
+    actionContexts.Add(new PaladinProtActionFactory());
+    actionContexts.Add(new PaladinHolyActionFactory());
 }
 
 void PaladinAiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextList<Trigger>& triggerContexts)
 {
     AiObjectContext::BuildSharedTriggerContexts(triggerContexts);
     triggerContexts.Add(new PaladinTriggerFactoryInternal());
+    triggerContexts.Add(new PaladinProtTriggerFactory());
+    triggerContexts.Add(new PaladinHolyTriggerFactory());
 }
 
 void PaladinAiObjectContext::BuildSharedValueContexts(SharedNamedObjectContextList<UntypedValue>& valueContexts)
 {
     AiObjectContext::BuildSharedValueContexts(valueContexts);
     valueContexts.Add(new PaladinValueContextInternal());
+    valueContexts.Add(new PaladinProtValueFactory());
+    valueContexts.Add(new PaladinHolyValueFactory());
 }
