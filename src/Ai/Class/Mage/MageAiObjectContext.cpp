@@ -40,7 +40,7 @@ public:
     }
 
 private:
-    static Strategy* nc(PlayerbotAI* botAI) { return new MageReworkNonCombatStrategy(botAI); }
+    static Strategy* nc(PlayerbotAI* botAI) { return new GenericMageNonCombatStrategy(botAI); }
     static Strategy* pull(PlayerbotAI* botAI) { return new PullStrategy(botAI, "shoot"); }
     static Strategy* aoe(PlayerbotAI* botAI) { return new MageReworkAoeStrategy(botAI); }
     static Strategy* cure(PlayerbotAI* botAI) { return new MageCureStrategy(botAI); }

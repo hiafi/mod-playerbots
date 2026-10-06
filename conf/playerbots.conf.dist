@@ -2044,6 +2044,8 @@ AiPlayerbot.PremadeSpecLink.7.5.80 = -023222301004-05032331331013501120331251
 # Mage rework (custom talent trees): slots 0-2 use the level-60 builds from docs/reworks/bot-strategy/ (MG8).
 # .80 repeats .60 so a level-80 bot still gets the build (leftover points go to the other trees). Frostfire (3)
 # and the PvP slots 4-6 reuse the PvE builds and keep probability 0 (stock positions point at the old trees).
+# Frost takes Glyph of Water Elemental (42754), not Eternal Water (50045): the glyphed elemental is a different
+# creature (37994) without Freeze and with the stock Waterbolt.
 AiPlayerbot.PremadeSpecName.8.0 = arcane pve
 AiPlayerbot.PremadeSpecGlyph.8.0 = 42735,43339,44955,43364,43361,42751
 AiPlayerbot.PremadeSpecLink.8.0.60 = 3330303303000303103312310230131
@@ -2053,7 +2055,7 @@ AiPlayerbot.PremadeSpecGlyph.8.1 = 42739,43339,45737,43364,44920,42751
 AiPlayerbot.PremadeSpecLink.8.1.60 = -303330300133303001331103301331
 AiPlayerbot.PremadeSpecLink.8.1.80 = -303330300133303001331103301331
 AiPlayerbot.PremadeSpecName.8.2 = frost pve
-AiPlayerbot.PremadeSpecGlyph.8.2 = 42742,43339,50045,43364,43361,42751
+AiPlayerbot.PremadeSpecGlyph.8.2 = 42742,43339,42754,43364,43361,42751
 AiPlayerbot.PremadeSpecLink.8.2.60 = --3203013301202330310030131231331
 AiPlayerbot.PremadeSpecLink.8.2.80 = --3203013301202330310030131231331
 AiPlayerbot.PremadeSpecName.8.3 = frostfire pve
