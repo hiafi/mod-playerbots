@@ -596,6 +596,7 @@ public:
 };
 
 void AddPlayerbotsSecureLoginScripts();
+void AddPlayerbotsStrategyDataScripts();
 void AddPlayerbotsSelfBotAfkScripts();
 
 void AddSC_MagtheridonBotScripts();
@@ -618,6 +619,7 @@ void AddPlayerbotsScripts()
     new PlayerbotsWorldScript();
     new PlayerBotsBGScript();
     AddPlayerbotsSecureLoginScripts();
+    AddPlayerbotsStrategyDataScripts();
     AddPlayerbotsSelfBotAfkScripts();
     AddPlayerbotsCommandscripts();
     PlayerBotsGuildValidationScript();

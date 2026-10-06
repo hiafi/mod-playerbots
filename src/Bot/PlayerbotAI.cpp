@@ -49,6 +49,7 @@
 #include "SocialMgr.h"
 #include "SpellAuraEffects.h"
 #include "SpellInfo.h"
+#include "StrategyData.h"
 #include "Transport.h"
 #include "Unit.h"
 #include "UpdateTime.h"
@@ -153,6 +154,7 @@ PlayerbotAI::PlayerbotAI(Player* bot)
     }
 
     accountId = bot->GetSession()->GetAccountId();
+    strategyDataGeneration = ai::data::Generation();  // read before the engines build their trigger lists
     aiObjectContext = AiFactory::createAiObjectContext(bot, this);
 
     engines[BOT_STATE_COMBAT] = AiFactory::createCombatEngine(bot, this, aiObjectContext);
@@ -256,6 +258,17 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
     if (!bot || !bot->GetSession() || !bot->IsInWorld() || bot->IsBeingTeleported() ||
         bot->GetSession()->IsLoggingOut() || bot->IsDuringRemoveFromWorld())
         return;
+
+    // Strategy data was reloaded: rebuild every engine's trigger list from the new snapshot
+    if (uint32 const dataGeneration = ai::data::Generation(); dataGeneration != strategyDataGeneration)
+    {
+        strategyDataGeneration = dataGeneration;
+        for (Engine* engine : engines)
+        {
+            if (engine)
+                engine->Init();
+        }
+    }
 
     // Bots send no movement opcodes, so m_lastFallZ stays frozen and Player::IsFalling() (a Z test
     // against it) blocks LFG teleports. Unit::IsFalling() is the flag test, so real falls keep theirs.

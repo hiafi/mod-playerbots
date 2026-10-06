@@ -15,6 +15,7 @@
 #include "RandomItemMgr.h"
 #include "RandomPlayerbotFactory.h"
 #include "RandomPlayerbotMgr.h"
+#include "StrategyData.h"
 #include "Talentspec.h"
 #include "TravelMgr.h"
 #include <cctype>
@@ -406,6 +407,7 @@ bool PlayerbotAIConfig::Initialize()
         sConfigMgr->GetOption<int32>("AiPlayerbot.RandomBotAutoJoinBGRatedArena5v5Count", 0);
     logInGroupOnly = sConfigMgr->GetOption<bool>("AiPlayerbot.LogInGroupOnly", true);
     logValuesPerTick = sConfigMgr->GetOption<bool>("AiPlayerbot.LogValuesPerTick", false);
+    strategyDataPath = sConfigMgr->GetOption<std::string>("AiPlayerbot.StrategyDataPath", "");
     fleeingEnabled = sConfigMgr->GetOption<bool>("AiPlayerbot.FleeingEnabled", true);
     summonAtInnkeepersEnabled = sConfigMgr->GetOption<bool>("AiPlayerbot.SummonAtInnkeepersEnabled", true);
     randomBotMinLevel = sConfigMgr->GetOption<int32>("AiPlayerbot.RandomBotMinLevel", 1);
@@ -777,6 +779,7 @@ bool PlayerbotAIConfig::Initialize()
     PlayerbotFactory::Init();
 
     AiObjectContext::BuildAllSharedContexts();
+    ai::data::LoadAtStartup();
 
     if (sPlayerbotAIConfig.randomBotSuggestDungeons)
     {

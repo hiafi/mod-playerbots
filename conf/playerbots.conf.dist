@@ -2538,12 +2538,30 @@ AiPlayerbot.CommandServerPort = 8888
 ####################################################################################################
 
 ####################################################################################################
+# STRATEGY DATA
+#
+#    AiPlayerbot.StrategyDataPath
+#        Description: Directory holding the YAML strategy rows (*.yaml, searched recursively). Each
+#                     file holds one or more YAML documents separated by "---", one strategy key
+#                     per document. Read at startup and by ".botstrat reload" (".botstrat check"
+#                     validates without applying). Empty uses the module's own data/strategies
+#                     directory, resolved at build time.
+#        Default:     "" - (module data/strategies)
+
+AiPlayerbot.StrategyDataPath = ""
+
+#
+#
+####################################################################################################
+
+####################################################################################################
 # DEBUG SWITCHES
 #
 
 AiPlayerbot.SpellDump = 0
 AiPlayerbot.LogInGroupOnly = 1
 AiPlayerbot.LogValuesPerTick = 0
+
 AiPlayerbot.RandomChangeMultiplier = 1
 
 # Tell which spell is avoiding (experimental)

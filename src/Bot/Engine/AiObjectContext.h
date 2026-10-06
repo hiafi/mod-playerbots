@@ -73,6 +73,13 @@ public:
 
     static void BuildAllSharedContexts();
 
+    // Read-only view of the action and trigger creator tables a class's bots use (base + class names), for
+    // validating strategy data without a bot. className is lowercase ("paladin", "dk"); "base" is the shared set.
+    // Returns false for an unknown class. Valid after BuildAllSharedContexts.
+    static bool GetCreatorTables(std::string const& className,
+                                 SharedNamedObjectContextList<Action> const*& actionTable,
+                                 SharedNamedObjectContextList<Trigger> const*& triggerTable);
+
     static void BuildSharedContexts();
     static void BuildSharedStrategyContexts(SharedNamedObjectContextList<Strategy>& strategyContexts);
     static void BuildSharedActionContexts(SharedNamedObjectContextList<Action>& actionContexts);

@@ -638,6 +638,7 @@ protected:
     Engine* currentEngine;
     Engine* engines[BOT_STATE_MAX];
     BotState currentState;
+    uint32 strategyDataGeneration = 0;
     ChatHelper chatHelper;
     std::list<ChatCommandHolder> chatCommands;
     std::list<ChatQueuedReply> chatReplies;

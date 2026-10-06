@@ -57,6 +57,45 @@ void AiObjectContext::BuildAllSharedContexts()
         });
 }
 
+bool AiObjectContext::GetCreatorTables(std::string const& className,
+                                       SharedNamedObjectContextList<Action> const*& actionTable,
+                                       SharedNamedObjectContextList<Trigger> const*& triggerTable)
+{
+    struct ClassTables
+    {
+        char const* name;
+        SharedNamedObjectContextList<Action> const* actions;
+        SharedNamedObjectContextList<Trigger> const* triggers;
+    };
+
+    ClassTables const tables[] = {
+        {"base", &sharedActionContexts, &sharedTriggerContexts},
+        {"warrior", &WarriorAiObjectContext::sharedActionContexts, &WarriorAiObjectContext::sharedTriggerContexts},
+        {"paladin", &PaladinAiObjectContext::sharedActionContexts, &PaladinAiObjectContext::sharedTriggerContexts},
+        {"hunter", &HunterAiObjectContext::sharedActionContexts, &HunterAiObjectContext::sharedTriggerContexts},
+        {"rogue", &RogueAiObjectContext::sharedActionContexts, &RogueAiObjectContext::sharedTriggerContexts},
+        {"priest", &PriestAiObjectContext::sharedActionContexts, &PriestAiObjectContext::sharedTriggerContexts},
+        {"dk", &DKAiObjectContext::sharedActionContexts, &DKAiObjectContext::sharedTriggerContexts},
+        {"deathknight", &DKAiObjectContext::sharedActionContexts, &DKAiObjectContext::sharedTriggerContexts},
+        {"shaman", &ShamanAiObjectContext::sharedActionContexts, &ShamanAiObjectContext::sharedTriggerContexts},
+        {"mage", &MageAiObjectContext::sharedActionContexts, &MageAiObjectContext::sharedTriggerContexts},
+        {"warlock", &WarlockAiObjectContext::sharedActionContexts, &WarlockAiObjectContext::sharedTriggerContexts},
+        {"druid", &DruidAiObjectContext::sharedActionContexts, &DruidAiObjectContext::sharedTriggerContexts},
+    };
+
+    for (ClassTables const& entry : tables)
+    {
+        if (className != entry.name)
+            continue;
+
+        actionTable = entry.actions;
+        triggerTable = entry.triggers;
+        return true;
+    }
+
+    return false;
+}
+
 void AiObjectContext::BuildSharedContexts()
 {
     BuildSharedStrategyContexts(sharedStrategyContexts);
