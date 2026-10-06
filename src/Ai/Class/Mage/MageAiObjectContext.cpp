@@ -11,6 +11,7 @@
 #include "FrostMageStrategy.h"
 #include "GenericMageNonCombatStrategy.h"
 #include "MageActions.h"
+#include "MageFireContext.h"
 #include "MageReworkActions.h"
 #include "MageReworkGenericStrategy.h"
 #include "MageReworkStrategies.h"
@@ -60,8 +61,8 @@ public:
 
 private:
     static Strategy* frost(PlayerbotAI* botAI) { return new FrostMageStrategy(botAI); }
-    static Strategy* fire(PlayerbotAI* botAI) { return new FireMageStrategy(botAI); }
-    static Strategy* frostfire(PlayerbotAI* botAI) { return new FrostFireMageStrategy(botAI); }
+    static Strategy* fire(PlayerbotAI* botAI) { return new MageReworkFireStrategy(botAI); }
+    static Strategy* frostfire(PlayerbotAI* botAI) { return new MageReworkFireStrategy(botAI, "frostfire"); }
     static Strategy* arcane(PlayerbotAI* botAI) { return new ArcaneMageStrategy(botAI); }
 };
 
@@ -440,6 +441,7 @@ void MageAiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextList
     AiObjectContext::BuildSharedActionContexts(actionContexts);
     actionContexts.Add(new MageAiObjectContextInternal());
     actionContexts.Add(new MageReworkActionFactoryInternal());
+    actionContexts.Add(new MageFireActionFactory());
 }
 
 void MageAiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextList<Trigger>& triggerContexts)
@@ -447,6 +449,7 @@ void MageAiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextLis
     AiObjectContext::BuildSharedTriggerContexts(triggerContexts);
     triggerContexts.Add(new MageTriggerFactoryInternal());
     triggerContexts.Add(new MageReworkTriggerFactoryInternal());
+    triggerContexts.Add(new MageFireTriggerFactory());
 }
 
 void MageAiObjectContext::BuildSharedValueContexts(SharedNamedObjectContextList<UntypedValue>& valueContexts)
