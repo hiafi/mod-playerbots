@@ -18,15 +18,12 @@ namespace
 {
 constexpr uint32 ITEM_MANA_AGATE = 5514;
 constexpr uint8 LOW_MANA_PCT = 30;  // the gem, then Evocation (guide section 8)
-constexpr int32 SCORCH_DEBUFF_REFRESH_MS = 3000;
-constexpr float COMBUSTION_MIN_TARGET_LIFETIME_SEC = 10.0f;
 constexpr uint32 FLASHPOINT_MIN_TARGET_AGE_MS = 4000;  // the Ignite bank fills over ~4 s
 constexpr uint32 FLASHPOINT_MIN_COMBAT_SEC = 4;
 constexpr int32 COMBUSTION_DURATION_MS = 10000;
 constexpr int32 FLASHPOINT_AFTER_COMBUSTION_MS = 4000;
 constexpr int32 COMBUSTION_REMAINING_FOR_FLASHPOINT_MS = COMBUSTION_DURATION_MS - FLASHPOINT_AFTER_COMBUSTION_MS;
 constexpr char const* FLASHPOINT_RADIUS = "8";
-constexpr uint32 IMPROVED_SCORCH_TALENT_RANKS[] = {11095, 12872, 12873};
 
 bool InPackMode(PlayerbotAI* botAI)
 {
@@ -152,42 +149,6 @@ bool MageFireManaGemTrigger::Evaluate(Unit* /*target*/)
 
 bool MageFireEvocationTrigger::Evaluate(Unit* /*target*/) { return ai::mage_fire::EvocationAllowed(botAI); }
 
-bool MageFireHotStreakTrigger::Evaluate(Unit* /*target*/) { return ai::aura::HasAnyAura(bot, HOT_STREAK_PROC); }
-
-bool MageFireFannedFlamesTrigger::Evaluate(Unit* /*target*/)
-{
-    return ai::aura::HasAnyAura(bot, FANNED_FLAMES_READY);
-}
-
-bool MageFireLivingBombTrigger::Evaluate(Unit* target)
-{
-    return ai::mage_fire::LivingBombOnTargetAllowed(botAI, target);
-}
-
-bool MageFirePackLivingBombTrigger::Evaluate(Unit* /*target*/)
-{
-    return AI_VALUE2(uint8, "attackers with aura id", LIVING_BOMB_SPREAD_COUNT) < LIVING_BOMB_MAX_TARGETS &&
-           AI_VALUE2(Unit*, "attacker without aura id", LIVING_BOMB_SPREAD_TARGET) != nullptr;
-}
-
-bool MageFireScorchDebuffTrigger::Evaluate(Unit* target)
-{
-    // Without Improved Scorch the debuff never appears, and a leveling bot would Scorch every GCD instead of Fireball
-    bool talented = false;
-    for (uint32 const rank : IMPROVED_SCORCH_TALENT_RANKS)
-        talented = talented || bot->HasSpell(rank);
-    if (!talented)
-        return false;
-
-    int32 const remaining = ai::aura::AuraRemainingMs(target, IMPROVED_SCORCH);
-    return remaining >= 0 && remaining < SCORCH_DEBUFF_REFRESH_MS;
-}
-
-bool MageFireCombustionTrigger::Evaluate(Unit* /*target*/)
-{
-    return IsReady(SPELL_COMBUSTION) && AI_VALUE(float, "target lifetime") >= COMBUSTION_MIN_TARGET_LIFETIME_SEC;
-}
-
 MageFireFlashpointTrigger::MageFireFlashpointTrigger(PlayerbotAI* botAI, std::string const name, Mode mode)
     : MageFireTrigger(botAI, name, mode), _combatTime(botAI, name + " combat time"), _pack(mode == Mode::Pack)
 {
@@ -210,26 +171,3 @@ bool MageFireFlashpointTrigger::Evaluate(Unit* target)
 
     return !_pack || ai::mage_fire::FlashpointPackSplash(botAI);
 }
-
-bool MageFireCritStreakTrigger::Evaluate(Unit* /*target*/)
-{
-    return IsReady(SPELL_FIRE_BLAST) && ai::mage_fire::CritStreakReady(botAI);
-}
-
-bool MageFireMeteorTrigger::Evaluate(Unit* /*target*/) { return IsReady(SPELL_METEOR); }
-
-bool MageFireDragonsBreathTrigger::Evaluate(Unit* /*target*/) { return IsReady(SPELL_DRAGONS_BREATH); }
-
-bool MageFireFlamestrikeTrigger::Evaluate(Unit* /*target*/)
-{
-    return bot->HasSpell(SPELL_FLAMESTRIKE) && !bot->GetDynObject(SPELL_FLAMESTRIKE) &&
-           AI_VALUE2(uint8, "most clustered enemy count", FLAMESTRIKE_RADIUS) >= AOE_CLUSTER_MIN_ENEMIES;
-}
-
-bool MageFireBlizzardTrigger::Evaluate(Unit* /*target*/)
-{
-    return bot->HasSpell(SPELL_BLIZZARD) && bot->GetDynObject(SPELL_FLAMESTRIKE) &&
-           AI_VALUE2(uint8, "most clustered enemy count", BLIZZARD_RADIUS) >= AOE_CLUSTER_MIN_ENEMIES;
-}
-
-bool MageFireFillerTrigger::Evaluate(Unit* /*target*/) { return true; }
