@@ -20,6 +20,7 @@
 #include "PaladinReworkActions.h"
 #include "PaladinReworkAuraStrategy.h"
 #include "PaladinReworkIds.h"
+#include "PaladinReworkOffhealStrategy.h"
 #include "PaladinReworkProtStrategy.h"
 #include "PaladinReworkRetStrategy.h"
 #include "PaladinReworkTriggers.h"
@@ -119,7 +120,8 @@ private:
     static Strategy* dps(PlayerbotAI* botAI) { return new PaladinReworkRetStrategy(botAI); }
     // The rework's Holy rotation replaces the stock HealPaladinStrategy under the same name
     static Strategy* heal(PlayerbotAI* botAI) { return new PaladinReworkHolyStrategy(botAI); }
-    static Strategy* offheal(PlayerbotAI* botAI) { return new OffhealRetPaladinStrategy(botAI); }
+    // Stock offheal minus its name-based aura press, which the rework's aura cooldowns make unsafe
+    static Strategy* offheal(PlayerbotAI* botAI) { return new PaladinReworkOffhealStrategy(botAI); }
 };
 
 class PaladinTriggerFactoryInternal : public NamedObjectContext<Trigger>

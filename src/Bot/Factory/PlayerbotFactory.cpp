@@ -4664,6 +4664,12 @@ void PlayerbotFactory::InitGlyphs(bool increment)
             tab = 6;
     }
 
+    // This server has no PvP, so never hand out a PvP glyph set. The talent ids the checks above key on also
+    // name different talents in this server's reworked trees (e.g. a Ret build with Divine Purpose would read
+    // as Ret PvP). The PvE variants above (DK double aura, Frostfire, Cat) are kept.
+    if (tab < MAX_SPECNO && sPlayerbotAIConfig.premadeSpecName[cls][tab].find("pvp") != std::string::npos)
+        tab = AiFactory::GetPlayerSpecTab(bot);
+
     std::list<uint32> glyphs;
     ItemTemplateContainer const* itemTemplates = sObjectMgr->GetItemTemplateStore();
     for (ItemTemplateContainer::const_iterator i = itemTemplates->begin(); i != itemTemplates->end(); ++i)
