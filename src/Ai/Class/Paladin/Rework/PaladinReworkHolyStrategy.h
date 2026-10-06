@@ -36,17 +36,6 @@ public:
     float GetValue(Action* action) override;
 };
 
-// CombatStrategy's "enemy out of spell" -> "reach spell" sits at ACTION_HIGH, above every Holy heal, and "dps assist"
-// always gives the healer an enemy target. Dropping it keeps the bot healing instead of walking toward the enemy;
-// "reach party member to heal" is a different action class and still moves it into healing range.
-class PaladinHolyNoReachSpellMultiplier : public Multiplier
-{
-public:
-    PaladinHolyNoReachSpellMultiplier(PlayerbotAI* botAI) : Multiplier(botAI, "holy no reach spell") {}
-
-    float GetValue(Action* action) override;
-};
-
 // The stock paladin "nc" strategy plus the Holy out-of-combat upkeep on the tank.
 class PaladinReworkNonCombatStrategy : public GenericPaladinNonCombatStrategy
 {

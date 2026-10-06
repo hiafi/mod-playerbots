@@ -11,6 +11,7 @@
 #include "Playerbots.h"
 #include "QualifierUtils.h"
 #include "Timer.h"
+#include <algorithm>
 #include <cmath>
 #include <limits>
 #include <unordered_map>
@@ -60,7 +61,58 @@ HealCluster FindHealCluster(Player* bot, std::string const& qualifier)
 
     return best;
 }
+
+// Mana users only: a member without a mana pool is never below
+bool IsBelowManaPct(Player* member, float pct)
+{
+    uint32 const maxMana = member->GetMaxPower(POWER_MANA);
+    return maxMana > 0 && static_cast<float>(member->GetPower(POWER_MANA)) * 100.0f / static_cast<float>(maxMana) < pct;
+}
+
+constexpr size_t WITHOUT_OWN_AURA_FIELDS = 2;
+constexpr size_t WITH_AURA_FIELDS = 4;
 }  // namespace
+
+namespace ai::party
+{
+
+Player* FindAttackedMemberBelow(PlayerbotAI* botAI, float pct, std::function<bool(Player*)> const& exclude)
+{
+    Player* bot = botAI->GetBot();
+    AiObjectContext* context = botAI->GetAiObjectContext();
+    std::vector<Player*> candidates;
+    for (Player* member : GetGroupPlayers(bot))
+        if (member->GetHealthPct() < pct && IsInHealRangeAndSight(bot, member) && !(exclude && exclude(member)))
+            candidates.push_back(member);
+
+    if (candidates.empty())
+        return nullptr;
+
+    std::unordered_map<ObjectGuid, uint32> victimCounts;
+    for (ObjectGuid const guid : AI_VALUE(GuidVector, "attackers"))
+    {
+        Unit* attacker = botAI->GetUnit(guid);
+        if (!attacker || !attacker->IsAlive())
+            continue;
+
+        if (Unit* victim = attacker->GetVictim())
+            ++victimCounts[victim->GetGUID()];
+    }
+
+    Player* best = nullptr;
+    for (Player* member : candidates)
+    {
+        if (!victimCounts.contains(member->GetGUID()))
+            continue;
+
+        if (!best || member->GetHealthPct() < best->GetHealthPct())
+            best = member;
+    }
+
+    return best;
+}
+
+}  // namespace ai::party
 
 bool PartyHasHealerValue::Calculate()
 {
@@ -80,6 +132,20 @@ uint8 PartyMembersBelowValue::Calculate()
     uint32 count = 0;
     for (Player* member : GetGroupPlayers(bot))
         if (member->GetHealthPct() < args[0] && IsInHealRangeAndSight(bot, member))
+            ++count;
+
+    return ai::qualifier::ClampCount(count);
+}
+
+uint8 PartyMembersBelowManaValue::Calculate()
+{
+    std::vector<float> const args = ai::qualifier::ParseNumbers(qualifier, 1);
+    if (args.empty())
+        return 0;
+
+    uint32 count = 0;
+    for (Player* member : GetGroupPlayers(bot))
+        if (IsBelowManaPct(member, args[0]) && IsInHealRangeAndSight(bot, member))
             ++count;
 
     return ai::qualifier::ClampCount(count);
@@ -183,6 +249,7 @@ WorldLocation HealClusterPositionValue::Calculate()
 {
     HealCluster const cluster = FindHealCluster(bot, qualifier);
     _clusterCount = cluster.count;
+    _centre = cluster.centre ? cluster.centre->GetGUID() : ObjectGuid::Empty;
     if (!cluster.centre)
         return WorldLocation();
 
@@ -199,6 +266,89 @@ uint8 HealClusterCountValue::Calculate()
 
     position->Get();
     return position->GetCount();
+}
+
+ObjectGuid AttackedPartyMemberBelowValue::CalculateGuid()
+{
+    std::vector<float> const args = ai::qualifier::ParseNumbers(qualifier, 1);
+    if (args.empty())
+        return ObjectGuid::Empty;
+
+    Player* member = ai::party::FindAttackedMemberBelow(botAI, args[0]);
+    return member ? member->GetGUID() : ObjectGuid::Empty;
+}
+
+ObjectGuid PartyMemberWithoutOwnAuraValue::CalculateGuid()
+{
+    std::vector<std::string> const fields = ai::qualifier::Split(qualifier, ';');
+    float pct = 0.0f;
+    if (fields.size() != WITHOUT_OWN_AURA_FIELDS || !ai::qualifier::ParseNumber(fields[0], pct))
+        return ObjectGuid::Empty;
+
+    std::vector<uint32> const ids = ai::qualifier::ParseIds(fields[1]);
+    if (ids.empty())
+        return ObjectGuid::Empty;
+
+    Player* lowest = nullptr;
+    for (Player* member : GetGroupPlayers(bot))
+    {
+        if (member->GetHealthPct() >= pct || !IsInHealRangeAndSight(bot, member) ||
+            ai::aura::HasAnyAura(member, ids, bot->GetGUID()))
+            continue;
+
+        if (!lowest || member->GetHealthPct() < lowest->GetHealthPct())
+            lowest = member;
+    }
+
+    return lowest ? lowest->GetGUID() : ObjectGuid::Empty;
+}
+
+uint8 PartyMembersWithAuraValue::Calculate()
+{
+    std::vector<std::string> const fields = ai::qualifier::Split(qualifier, ';');
+    float pct = 0.0f;
+    float minAuras = 0.0f;
+    float owned = 0.0f;
+    if (fields.size() != WITH_AURA_FIELDS || !ai::qualifier::ParseNumber(fields[0], pct) ||
+        !ai::qualifier::ParseNumber(fields[1], minAuras) || !ai::qualifier::ParseNumber(fields[2], owned) ||
+        minAuras < 1.0f)
+        return 0;
+
+    // Distinct ids only, so a listed id repeated in the qualifier is not counted twice.
+    std::vector<uint32> ids = ai::qualifier::ParseIds(fields[3]);
+    std::sort(ids.begin(), ids.end());
+    ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
+    if (ids.empty())
+        return 0;
+
+    ObjectGuid const caster = owned != 0.0f ? bot->GetGUID() : ObjectGuid::Empty;
+    uint32 count = 0;
+    for (Player* member : GetGroupPlayers(bot))
+    {
+        if (member->GetHealthPct() >= pct || !IsInHealRangeAndSight(bot, member))
+            continue;
+
+        uint32 distinct = 0;
+        for (uint32 const id : ids)
+            if (ai::aura::HasAnyAura(member, {id}, caster))
+                ++distinct;
+
+        if (static_cast<float>(distinct) >= minAuras)
+            ++count;
+    }
+
+    return ai::qualifier::ClampCount(count);
+}
+
+ObjectGuid HealClusterUnitValue::CalculateGuid()
+{
+    auto* position =
+        dynamic_cast<HealClusterPositionValue*>(context->GetValue<WorldLocation>("heal cluster position", qualifier));
+    if (!position)
+        return ObjectGuid::Empty;
+
+    position->Get();
+    return position->GetCentre();
 }
 
 bool AuraFromOtherCasterValue::Calculate()

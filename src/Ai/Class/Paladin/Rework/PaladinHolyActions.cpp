@@ -21,17 +21,9 @@ constexpr float LOW_MANA_FLASH_HEALTH_PCT = 70.0f;
 constexpr uint8 LOW_MANA_PCT = 15;
 }  // namespace
 
-Value<Unit*>* PaladinHolyCastOnValueAction::GetTargetValue()
-{
-    if (_qualifier.empty())
-        return context->GetValue<Unit*>(_targetValue);
-
-    return context->GetValue<Unit*>(_targetValue, _qualifier);
-}
-
 bool PaladinHolyShockAction::Execute(Event event)
 {
-    if (!PaladinHolyCastOnValueAction::Execute(event))
+    if (!CastOnValueAction::Execute(event))
         return false;
 
     context->GetValue<bool>("holy healing shock cast")->Set(true);
@@ -41,66 +33,34 @@ bool PaladinHolyShockAction::Execute(Event event)
 bool PaladinHolyShockAction::isUseful()
 {
     Unit* target = GetTarget();
-    return target && bot->IsFriendlyTo(target) && PaladinHolyCastOnValueAction::isUseful();
+    return target && bot->IsFriendlyTo(target) && CastOnValueAction::isUseful();
 }
 
 PaladinHolyLayOnHandsAction::PaladinHolyLayOnHandsAction(PlayerbotAI* botAI)
-    : PaladinHolyCastOnValueAction(botAI, "lay on hands", "tank first heal target",
-                                   ai::paladin_holy::LAY_ON_HANDS_TARGET)
+    : CastOnValueAction(botAI, "lay on hands", "tank first heal target", ai::paladin_holy::LAY_ON_HANDS_TARGET)
 {
 }
 
 bool PaladinHolyHandOfSacrificeAction::isUseful()
 {
     Unit* tank = GetTarget();
-    return tank && tank != bot && PaladinHolyCastOnValueAction::isUseful();
+    return tank && tank != bot && CastOnValueAction::isUseful();
 }
 
-bool PaladinHolyLightsHammerAction::FindDropPosition(WorldLocation& position)
+PaladinHolyLightsHammerAction::PaladinHolyLightsHammerAction(PlayerbotAI* botAI)
+    : CastAtPositionAction(botAI, "light's hammer", SPELL_LIGHTS_HAMMER, "heal cluster position",
+                           ai::paladin_holy::HAMMER_CLUSTER, HAMMER_RANGE, "effective tank")
 {
-    // The cluster is searched out to 40 yd but the hammer only reaches 30; past that, fall back to the tank
-    if (AI_VALUE2(uint8, "heal cluster count", ai::paladin_holy::HAMMER_CLUSTER) >= HAMMER_CLUSTER_ALLIES)
-    {
-        position = AI_VALUE2(WorldLocation, "heal cluster position", ai::paladin_holy::HAMMER_CLUSTER);
-        if (position.GetMapId() == bot->GetMapId() && bot->GetExactDist(position) <= HAMMER_RANGE)
-            return true;
-    }
-
-    // The positional CanCastSpell doesn't check spell range, so check it here or the cast fails every tick
-    Unit* tank = AI_VALUE(Unit*, "effective tank");
-    if (!tank || bot->GetExactDist(tank) > HAMMER_RANGE)
-        return false;
-
-    position = WorldLocation(tank->GetMapId(), tank->GetPositionX(), tank->GetPositionY(), tank->GetPositionZ(), 0);
-    return true;
 }
 
-bool PaladinHolyLightsHammerAction::isUseful()
+// The cluster is searched out to 40 yd but the hammer only reaches 30; past that the base falls back to the tank
+bool PaladinHolyLightsHammerAction::IsPositionWanted()
 {
-    if (botAI->IsInVehicle() && !botAI->IsInVehicle(false, false, true))
-        return false;
-
-    WorldLocation position;
-    return FindDropPosition(position);
-}
-
-bool PaladinHolyLightsHammerAction::isPossible()
-{
-    WorldLocation position;
-    return FindDropPosition(position) &&
-           botAI->CanCastSpell(SPELL_LIGHTS_HAMMER, position.GetPositionX(), position.GetPositionY(),
-                               position.GetPositionZ());
-}
-
-bool PaladinHolyLightsHammerAction::Execute(Event /*event*/)
-{
-    WorldLocation position;
-    return FindDropPosition(position) && botAI->CastSpell(SPELL_LIGHTS_HAMMER, position.GetPositionX(),
-                                                          position.GetPositionY(), position.GetPositionZ());
+    return AI_VALUE2(uint8, "heal cluster count", ai::paladin_holy::HAMMER_CLUSTER) >= HAMMER_CLUSTER_ALLIES;
 }
 
 PaladinHolyLightOnHealTargetAction::PaladinHolyLightOnHealTargetAction(PlayerbotAI* botAI)
-    : PaladinHolyCastOnValueAction(botAI, "holy light", "tank first heal target", ai::paladin_holy::HEAL_TARGET)
+    : CastOnValueAction(botAI, "holy light", "tank first heal target", ai::paladin_holy::HEAL_TARGET)
 {
 }
 
@@ -110,11 +70,11 @@ bool PaladinHolyLightOnHealTargetAction::isUseful()
 {
     Unit* target = GetTarget();
     return target && target->GetHealthPct() < HOLY_LIGHT_MAX_HEALTH_PCT &&
-           AI_VALUE2(uint8, "mana", "self target") > LOW_MANA_PCT && PaladinHolyCastOnValueAction::isUseful();
+           AI_VALUE2(uint8, "mana", "self target") > LOW_MANA_PCT && CastOnValueAction::isUseful();
 }
 
 PaladinHolyFlashOfLightOnHealTargetAction::PaladinHolyFlashOfLightOnHealTargetAction(PlayerbotAI* botAI)
-    : PaladinHolyCastOnValueAction(botAI, "flash of light", "tank first heal target", ai::paladin_holy::HEAL_TARGET)
+    : CastOnValueAction(botAI, "flash of light", "tank first heal target", ai::paladin_holy::HEAL_TARGET)
 {
 }
 
@@ -128,5 +88,5 @@ bool PaladinHolyFlashOfLightOnHealTargetAction::isUseful()
     if (AI_VALUE2(uint8, "mana", "self target") < LOW_MANA_PCT && target->GetHealthPct() >= LOW_MANA_FLASH_HEALTH_PCT)
         return false;
 
-    return PaladinHolyCastOnValueAction::isUseful();
+    return CastOnValueAction::isUseful();
 }

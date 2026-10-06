@@ -10,9 +10,22 @@
 #include "NamedObjectContext.h"
 #include "Object.h"
 #include "Value.h"
+#include <functional>
 
+class Player;
 class PlayerbotAI;
 class Unit;
+
+namespace ai::party
+{
+
+// The most injured group member below pct that at least one attacker is targeting: members within heal range and
+// line of sight, lowest health percent first, the first of equals in group order. `exclude` drops candidates before
+// the attacker scan, so a caller can add its own filter. Null if nobody qualifies.
+Player* FindAttackedMemberBelow(PlayerbotAI* botAI, float pct,
+                                std::function<bool(Player*)> const& exclude = nullptr);
+
+}  // namespace ai::party
 
 // Any other living group member within 40 yd is a healer.
 class PartyHasHealerValue : public BoolCalculatedValue
@@ -32,6 +45,19 @@ class PartyMembersBelowValue : public CalculatedValue<uint8>, public Qualified
 {
 public:
     PartyMembersBelowValue(PlayerbotAI* botAI, std::string const name = "party members below")
+        : CalculatedValue<uint8>(botAI, name, IN_MILLISECONDS)
+    {
+    }
+
+    uint8 Calculate() override;
+};
+
+// Group members (bot included) with a mana pool, within 40 yd and in line of sight, below a mana percent.
+// Qualifier: mana pct, e.g. "30". Members without mana (warriors, rogues, death knights) never count.
+class PartyMembersBelowManaValue : public CalculatedValue<uint8>, public Qualified
+{
+public:
+    PartyMembersBelowManaValue(PlayerbotAI* botAI, std::string const name = "party members below mana")
         : CalculatedValue<uint8>(botAI, name, IN_MILLISECONDS)
     {
     }
@@ -96,6 +122,49 @@ protected:
     ObjectGuid CalculateGuid() override;
 };
 
+// The most injured member below a health percent that at least one attacker is targeting, the bot included.
+// Qualifier: health pct, e.g. "25".
+class AttackedPartyMemberBelowValue : public GuidCachedUnitValue, public Qualified
+{
+public:
+    AttackedPartyMemberBelowValue(PlayerbotAI* botAI, std::string const name = "attacked party member below")
+        : GuidCachedUnitValue(botAI, name, IN_MILLISECONDS)
+    {
+    }
+
+protected:
+    ObjectGuid CalculateGuid() override;
+};
+
+// The lowest-health member below a health percent that carries none of the listed auras applied by the bot, the
+// bot included. Qualifier: "pct;ids", ids comma-separated spell ids, e.g. "100;139,6074". A pct of 101 means
+// anyone, since health percent never exceeds 100.
+class PartyMemberWithoutOwnAuraValue : public GuidCachedUnitValue, public Qualified
+{
+public:
+    PartyMemberWithoutOwnAuraValue(PlayerbotAI* botAI, std::string const name = "party member without own aura")
+        : GuidCachedUnitValue(botAI, name, IN_MILLISECONDS)
+    {
+    }
+
+protected:
+    ObjectGuid CalculateGuid() override;
+};
+
+// Members below a health percent that carry at least minAuras distinct auras from the list, the bot included.
+// Qualifier: "pct;minAuras;owned;ids": owned 1 counts only auras applied by the bot, 0 any caster. E.g.
+// "90;2;1;774,8936". A pct of 101 means every member.
+class PartyMembersWithAuraValue : public CalculatedValue<uint8>, public Qualified
+{
+public:
+    PartyMembersWithAuraValue(PlayerbotAI* botAI, std::string const name = "party members with aura")
+        : CalculatedValue<uint8>(botAI, name, IN_MILLISECONDS)
+    {
+    }
+
+    uint8 Calculate() override;
+};
+
 // Centre of the densest cluster of injured group members. Qualifier: "radius,pct", e.g. "10,90".
 class HealClusterPositionValue : public CalculatedValue<WorldLocation>, public Qualified
 {
@@ -109,9 +178,27 @@ public:
 
     // Size of the cluster behind the last calculated position.
     uint8 GetCount() const { return _clusterCount; }
+    // The member at the centre of the last calculated position.
+    ObjectGuid GetCentre() const { return _centre; }
 
 private:
     uint8 _clusterCount = 0;
+    ObjectGuid _centre;
+};
+
+// The member standing at the centre of the cluster that HealClusterPositionValue picks. Qualifier: "radius,pct".
+// No cache of its own: like HealClusterCountValue it re-reads the position value on every call, so the unit is
+// always the member behind the current position and count.
+class HealClusterUnitValue : public GuidCachedUnitValue, public Qualified
+{
+public:
+    HealClusterUnitValue(PlayerbotAI* botAI, std::string const name = "heal cluster unit")
+        : GuidCachedUnitValue(botAI, name, 0)
+    {
+    }
+
+protected:
+    ObjectGuid CalculateGuid() override;
 };
 
 // Number of injured members in the cluster that HealClusterPositionValue picks. Qualifier: "radius,pct".

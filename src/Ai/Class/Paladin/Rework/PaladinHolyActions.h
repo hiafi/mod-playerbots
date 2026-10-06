@@ -7,34 +7,18 @@
 #ifndef PLAYERBOTS_PALADINHOLYACTIONS_H
 #define PLAYERBOTS_PALADINHOLYACTIONS_H
 
+#include "CastAtPositionAction.h"
+#include "CastOnValueAction.h"
 #include "GenericSpellActions.h"
 
 class PlayerbotAI;
-class WorldLocation;
-
-// A spell cast on the unit a value picks instead of the current target.
-class PaladinHolyCastOnValueAction : public CastSpellAction
-{
-public:
-    PaladinHolyCastOnValueAction(PlayerbotAI* botAI, std::string const spell, std::string const targetValue,
-                                 std::string const qualifier = "")
-        : CastSpellAction(botAI, spell), _targetValue(targetValue), _qualifier(qualifier)
-    {
-    }
-
-    Value<Unit*>* GetTargetValue() override;
-
-private:
-    std::string _targetValue;
-    std::string _qualifier;
-};
 
 // Holy Shock on an ally only: it damages enemies, and an enemy Shock would flip Divine Toll to damage mode.
-class PaladinHolyShockAction : public PaladinHolyCastOnValueAction
+class PaladinHolyShockAction : public CastOnValueAction
 {
 public:
     PaladinHolyShockAction(PlayerbotAI* botAI, std::string const targetValue)
-        : PaladinHolyCastOnValueAction(botAI, "holy shock", targetValue)
+        : CastOnValueAction(botAI, "holy shock", targetValue)
     {
     }
 
@@ -54,37 +38,37 @@ public:
     PaladinHolyShockOnTankAction(PlayerbotAI* botAI) : PaladinHolyShockAction(botAI, "effective tank") {}
 };
 
-class PaladinHolyLayOnHandsAction : public PaladinHolyCastOnValueAction
+class PaladinHolyLayOnHandsAction : public CastOnValueAction
 {
 public:
     PaladinHolyLayOnHandsAction(PlayerbotAI* botAI);
 };
 
-class PaladinHolyHandOfProtectionAction : public PaladinHolyCastOnValueAction
+class PaladinHolyHandOfProtectionAction : public CastOnValueAction
 {
 public:
     PaladinHolyHandOfProtectionAction(PlayerbotAI* botAI)
-        : PaladinHolyCastOnValueAction(botAI, "hand of protection", "holy protect target")
+        : CastOnValueAction(botAI, "hand of protection", "holy protect target")
     {
     }
 };
 
-class PaladinHolyHandOfSacrificeAction : public PaladinHolyCastOnValueAction
+class PaladinHolyHandOfSacrificeAction : public CastOnValueAction
 {
 public:
     PaladinHolyHandOfSacrificeAction(PlayerbotAI* botAI)
-        : PaladinHolyCastOnValueAction(botAI, "hand of sacrifice", "effective tank")
+        : CastOnValueAction(botAI, "hand of sacrifice", "effective tank")
     {
     }
 
     bool isUseful() override;
 };
 
-class PaladinHolyHandOfSalvationAction : public PaladinHolyCastOnValueAction
+class PaladinHolyHandOfSalvationAction : public CastOnValueAction
 {
 public:
     PaladinHolyHandOfSalvationAction(PlayerbotAI* botAI)
-        : PaladinHolyCastOnValueAction(botAI, "hand of salvation", "holy salvation target")
+        : CastOnValueAction(botAI, "hand of salvation", "holy salvation target")
     {
     }
 };
@@ -99,38 +83,34 @@ public:
 };
 
 // Ground-targeted: on the densest cluster of 3+ injured allies, otherwise at the tank's feet.
-class PaladinHolyLightsHammerAction : public CastSpellAction
+class PaladinHolyLightsHammerAction : public CastAtPositionAction
 {
 public:
-    PaladinHolyLightsHammerAction(PlayerbotAI* botAI) : CastSpellAction(botAI, "light's hammer") {}
+    PaladinHolyLightsHammerAction(PlayerbotAI* botAI);
 
-    bool Execute(Event event) override;
-    bool isUseful() override;
-    bool isPossible() override;
-
-private:
-    bool FindDropPosition(WorldLocation& position);
+protected:
+    bool IsPositionWanted() override;
 };
 
-class PaladinHolySacredShieldAction : public PaladinHolyCastOnValueAction
+class PaladinHolySacredShieldAction : public CastOnValueAction
 {
 public:
     PaladinHolySacredShieldAction(PlayerbotAI* botAI)
-        : PaladinHolyCastOnValueAction(botAI, "sacred shield", "effective tank")
+        : CastOnValueAction(botAI, "sacred shield", "effective tank")
     {
     }
 };
 
-class PaladinHolyBeaconAction : public PaladinHolyCastOnValueAction
+class PaladinHolyBeaconAction : public CastOnValueAction
 {
 public:
     PaladinHolyBeaconAction(PlayerbotAI* botAI)
-        : PaladinHolyCastOnValueAction(botAI, "beacon of light", "effective tank")
+        : CastOnValueAction(botAI, "beacon of light", "effective tank")
     {
     }
 };
 
-class PaladinHolyLightOnHealTargetAction : public PaladinHolyCastOnValueAction
+class PaladinHolyLightOnHealTargetAction : public CastOnValueAction
 {
 public:
     PaladinHolyLightOnHealTargetAction(PlayerbotAI* botAI);
@@ -138,7 +118,7 @@ public:
     bool isUseful() override;
 };
 
-class PaladinHolyFlashOfLightOnHealTargetAction : public PaladinHolyCastOnValueAction
+class PaladinHolyFlashOfLightOnHealTargetAction : public CastOnValueAction
 {
 public:
     PaladinHolyFlashOfLightOnHealTargetAction(PlayerbotAI* botAI);

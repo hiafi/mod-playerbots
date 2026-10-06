@@ -6,9 +6,10 @@
 
 #include "PaladinHolyValues.h"
 #include "AuraIdUtils.h"
-#include "Group.h"
+#include "GroupUtils.h"
 #include "PaladinReworkIds.h"
 #include "PaladinReworkUtils.h"
+#include "PartyRoleValues.h"
 #include "Playerbots.h"
 #include "QualifierUtils.h"
 #include <algorithm>
@@ -18,7 +19,6 @@ using namespace ai::paladin_rework;
 
 namespace
 {
-constexpr float HEAL_RANGE = 40.0f;
 constexpr float SHOCK_URGENT_HEALTH_PCT = 50.0f;
 constexpr float SHOCK_TOP_UP_HEALTH_PCT = 90.0f;
 constexpr int32 GLIMMER_REFRESH_MS = 8000;
@@ -27,30 +27,13 @@ constexpr float PROTECT_HEALTH_PCT = 25.0f;
 std::vector<uint32> const GLIMMER = {SPELL_GLIMMER_MARKER};
 std::vector<uint32> const HAND_OF_SALVATION = {SPELL_HAND_OF_SALVATION};
 
-// The member rules of the file-local group scan in PartyRoleValues.cpp; hoist both into one shared helper later.
+// Group players in the bot's map instance, alive, the bot always and the others within 40 yd and in line of sight
 std::vector<Player*> GetHealableMembers(Player* bot)
 {
     std::vector<Player*> members;
-    Group* group = bot->GetGroup();
-    if (!group)
-    {
-        if (bot->IsAlive())
-            members.push_back(bot);
-
-        return members;
-    }
-
-    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
-    {
-        Player* member = ref->GetSource();
-        if (!member || !member->IsInWorld() || !member->IsInMap(bot) || !member->IsAlive())
-            continue;
-
-        if (member != bot && (!bot->IsWithinDist(member, HEAL_RANGE) || !bot->IsWithinLOSInMap(member)))
-            continue;
-
-        members.push_back(member);
-    }
+    for (Player* member : ai::group::GetGroupPlayers(bot))
+        if (ai::group::IsInHealRangeAndSight(bot, member))
+            members.push_back(member);
 
     return members;
 }
@@ -136,26 +119,9 @@ ObjectGuid PaladinHolyShockTargetValue::CalculateGuid()
 ObjectGuid PaladinHolyProtectTargetValue::CalculateGuid()
 {
     Unit* tank = AI_VALUE(Unit*, "effective tank");
-    std::vector<Player*> candidates;
-    for (Player* member : GetHealableMembers(bot))
-        if (member != tank && member->GetHealthPct() < PROTECT_HEALTH_PCT &&
-            !ai::aura::HasAnyAura(member, PALADIN_FORBEARANCE))
-            candidates.push_back(member);
-
-    if (candidates.empty())
-        return ObjectGuid::Empty;
-
-    std::unordered_map<ObjectGuid, uint32> const victimCounts = CountAttackersPerVictim(botAI);
-    Player* best = nullptr;
-    for (Player* member : candidates)
-    {
-        if (!victimCounts.contains(member->GetGUID()))
-            continue;
-
-        if (!best || member->GetHealthPct() < best->GetHealthPct())
-            best = member;
-    }
-
+    Player* best = ai::party::FindAttackedMemberBelow(
+        botAI, PROTECT_HEALTH_PCT, [tank](Player* member)
+        { return member == tank || ai::aura::HasAnyAura(member, PALADIN_FORBEARANCE); });
     return best ? best->GetGUID() : ObjectGuid::Empty;
 }
 

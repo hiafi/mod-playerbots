@@ -4,15 +4,13 @@
  * or (at your option) any later version.
  */
 
-#include "PaladinProtValues.h"
-#include "GroupUtils.h"
+#include "CastOnValueAction.h"
 #include "Playerbots.h"
 
-bool PaladinProtOtherTankPresentValue::Calculate()
+Value<Unit*>* CastOnValueAction::GetTargetValue()
 {
-    for (Player* member : ai::group::GetGroupPlayers(bot))
-        if (member != bot && PlayerbotAI::IsTank(member))
-            return true;
+    if (_qualifier.empty())
+        return context->GetValue<Unit*>(_targetValue);
 
-    return false;
+    return context->GetValue<Unit*>(_targetValue, _qualifier);
 }

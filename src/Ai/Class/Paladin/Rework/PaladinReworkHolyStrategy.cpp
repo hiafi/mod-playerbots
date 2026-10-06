@@ -5,9 +5,9 @@
  */
 
 #include "PaladinReworkHolyStrategy.h"
+#include "NoReachSpellMultiplier.h"
 #include "PaladinHolyActions.h"
 #include "Playerbots.h"
-#include "ReachTargetActions.h"
 #include "Strategy.h"
 
 namespace
@@ -78,12 +78,7 @@ void PaladinReworkHolyStrategy::InitTriggers(std::vector<TriggerNode*>& triggers
 void PaladinReworkHolyStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers)
 {
     multipliers.push_back(new PaladinHolyCleanseMultiplier(botAI));
-    multipliers.push_back(new PaladinHolyNoReachSpellMultiplier(botAI));
-}
-
-float PaladinHolyNoReachSpellMultiplier::GetValue(Action* action)
-{
-    return dynamic_cast<ReachSpellAction*>(action) ? 0.0f : 1.0f;
+    multipliers.push_back(new NoReachSpellMultiplier(botAI));
 }
 
 std::vector<NextAction> PaladinReworkHolyStrategy::getDefaultActions()

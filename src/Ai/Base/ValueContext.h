@@ -21,6 +21,7 @@
 #include "CcTargetValue.h"
 #include "ChatValue.h"
 #include "CollisionValue.h"
+#include "ControlledUnitsValues.h"
 #include "CraftValue.h"
 #include "CurrentCcTargetValue.h"
 #include "CurrentTargetValue.h"
@@ -203,10 +204,16 @@ public:
         creators["enemies in cone"] = &ValueContext::enemies_in_cone;
         creators["party has healer"] = &ValueContext::party_has_healer;
         creators["party members below"] = &ValueContext::party_members_below;
+        creators["party members below mana"] = &ValueContext::party_members_below_mana;
+        creators["party member without own aura"] = &ValueContext::party_member_without_own_aura;
+        creators["party members with aura"] = &ValueContext::party_members_with_aura;
+        creators["attacked party member below"] = &ValueContext::attacked_party_member_below;
         creators["effective tank"] = &ValueContext::effective_tank;
         creators["tank first heal target"] = &ValueContext::tank_first_heal_target;
         creators["heal cluster position"] = &ValueContext::heal_cluster_position;
         creators["heal cluster count"] = &ValueContext::heal_cluster_count;
+        creators["heal cluster unit"] = &ValueContext::heal_cluster_unit;
+        creators["controlled units by entry"] = &ValueContext::controlled_units_by_entry;
         creators["aura from other caster"] = &ValueContext::aura_from_other_caster;
         creators["swimming"] = &ValueContext::swimming;
         creators["behind"] = &ValueContext::behind;
@@ -430,10 +437,25 @@ private:
     static UntypedValue* enemies_in_cone(PlayerbotAI* botAI) { return new EnemiesInConeValue(botAI); }
     static UntypedValue* party_has_healer(PlayerbotAI* botAI) { return new PartyHasHealerValue(botAI); }
     static UntypedValue* party_members_below(PlayerbotAI* botAI) { return new PartyMembersBelowValue(botAI); }
+    static UntypedValue* party_members_below_mana(PlayerbotAI* botAI) { return new PartyMembersBelowManaValue(botAI); }
+    static UntypedValue* party_member_without_own_aura(PlayerbotAI* botAI)
+    {
+        return new PartyMemberWithoutOwnAuraValue(botAI);
+    }
+    static UntypedValue* party_members_with_aura(PlayerbotAI* botAI) { return new PartyMembersWithAuraValue(botAI); }
+    static UntypedValue* attacked_party_member_below(PlayerbotAI* botAI)
+    {
+        return new AttackedPartyMemberBelowValue(botAI);
+    }
     static UntypedValue* effective_tank(PlayerbotAI* botAI) { return new EffectiveTankValue(botAI); }
     static UntypedValue* tank_first_heal_target(PlayerbotAI* botAI) { return new TankFirstHealTargetValue(botAI); }
     static UntypedValue* heal_cluster_position(PlayerbotAI* botAI) { return new HealClusterPositionValue(botAI); }
     static UntypedValue* heal_cluster_count(PlayerbotAI* botAI) { return new HealClusterCountValue(botAI); }
+    static UntypedValue* heal_cluster_unit(PlayerbotAI* botAI) { return new HealClusterUnitValue(botAI); }
+    static UntypedValue* controlled_units_by_entry(PlayerbotAI* botAI)
+    {
+        return new ControlledUnitsByEntryValue(botAI);
+    }
     static UntypedValue* aura_from_other_caster(PlayerbotAI* botAI) { return new AuraFromOtherCasterValue(botAI); }
     static UntypedValue* swimming(PlayerbotAI* botAI) { return new IsSwimmingValue(botAI); }
     static UntypedValue* distance(PlayerbotAI* botAI) { return new DistanceValue(botAI); }

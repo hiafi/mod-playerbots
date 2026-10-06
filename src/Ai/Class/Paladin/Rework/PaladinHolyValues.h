@@ -39,6 +39,7 @@ protected:
 };
 
 // The most injured non-tank member below 25% that a mob is attacking, with no Forbearance or Immune Shield marker.
+// The shared "attacked party member below" search with the tank and the Forbearance marker filtered out.
 class PaladinHolyProtectTargetValue : public GuidCachedUnitValue
 {
 public:
