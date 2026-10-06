@@ -27,4 +27,11 @@ bool AuraIdExpiringTrigger::IsActive()
     return remaining > 0 && remaining < _belowMs;
 }
 
+bool AuraIdRemainingAboveTrigger::IsActive()
+{
+    int32 const remaining = ai::aura::AuraRemainingMs(GetTarget(), Ids, GetCaster());
+    // 0 means absent, -1 means permanent
+    return remaining == -1 || (remaining > 0 && remaining >= _atLeastMs);
+}
+
 bool CountAtLeastTrigger::IsActive() { return AI_VALUE2(uint8, _valueName, _qualifier) >= _minCount; }

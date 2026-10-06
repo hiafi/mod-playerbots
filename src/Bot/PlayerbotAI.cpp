@@ -1381,6 +1381,9 @@ void PlayerbotAI::HandleBotOutgoingPacket(WorldPacket const& packet)
             // */
             return;
         }
+        case SMSG_SPELLNONMELEEDAMAGELOG:  // read in place: no packet copy on this hot path
+            ownSpellResults.RecordDamageLog(packet, bot->GetGUID());
+            return;
         case SMSG_DISMOUNT:
         {
             WorldPacket p(packet);

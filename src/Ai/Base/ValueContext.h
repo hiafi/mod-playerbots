@@ -67,6 +67,7 @@
 #include "NearestNpcsValue.h"
 #include "NewPlayerNearbyValue.h"
 #include "OutfitListValue.h"
+#include "OwnSpellResultValues.h"
 #include "PartyMemberSnaredTargetValue.h"
 #include "PartyMemberToDispel.h"
 #include "PartyMemberToHeal.h"
@@ -96,6 +97,7 @@
 #include "Stances.h"
 #include "StatsValues.h"
 #include "TankTargetValue.h"
+#include "TargetChangeValue.h"
 #include "TargetValue.h"
 #include "ThreatValues.h"
 #include "TradeValues.h"
@@ -200,6 +202,8 @@ public:
         creators["attackers with aura id"] = &ValueContext::attackers_with_aura_id;
         creators["lowest health attacker below"] = &ValueContext::lowest_health_attacker_below;
         creators["spell cooldown remaining"] = &ValueContext::spell_cooldown_remaining;
+        creators["time since target change"] = &ValueContext::time_since_target_change;
+        creators["last own spell crit"] = &ValueContext::last_own_spell_crit;
         creators["target lifetime"] = &ValueContext::target_lifetime;
         creators["enemies in cone"] = &ValueContext::enemies_in_cone;
         creators["party has healer"] = &ValueContext::party_has_healer;
@@ -433,6 +437,11 @@ private:
         return new LowestHealthAttackerBelowValue(botAI);
     }
     static UntypedValue* spell_cooldown_remaining(PlayerbotAI* botAI) { return new SpellCooldownRemainingValue(botAI); }
+    static UntypedValue* time_since_target_change(PlayerbotAI* botAI)
+    {
+        return new TimeSinceTargetChangeValue(botAI);
+    }
+    static UntypedValue* last_own_spell_crit(PlayerbotAI* botAI) { return new LastOwnSpellCritValue(botAI); }
     static UntypedValue* target_lifetime(PlayerbotAI* botAI) { return new TargetLifetimeValue(botAI); }
     static UntypedValue* enemies_in_cone(PlayerbotAI* botAI) { return new EnemiesInConeValue(botAI); }
     static UntypedValue* party_has_healer(PlayerbotAI* botAI) { return new PartyHasHealerValue(botAI); }

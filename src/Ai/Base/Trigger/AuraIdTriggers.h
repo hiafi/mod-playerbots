@@ -87,7 +87,24 @@ private:
     int32 _belowMs;
 };
 
-// Current-target versions of the four triggers above, for debuffs and DoTs. Same base-class rules apply.
+// The inverse of AuraIdExpiringTrigger: one of the ids is present and is permanent or has at least `atLeastMs` left,
+// e.g. "the buff still has 1.5 s to spend".
+class AuraIdRemainingAboveTrigger : public AuraIdTriggerBase
+{
+public:
+    AuraIdRemainingAboveTrigger(PlayerbotAI* botAI, std::string const name, std::vector<uint32> ids, int32 atLeastMs,
+                                bool ownedByBot = true, int checkInterval = 1)
+        : AuraIdTriggerBase(botAI, name, std::move(ids), ownedByBot, checkInterval), _atLeastMs(atLeastMs)
+    {
+    }
+
+    bool IsActive() override;
+
+private:
+    int32 _atLeastMs;
+};
+
+// Current-target versions of the triggers above, for debuffs and DoTs. Same base-class rules apply.
 class TargetHasAuraIdTrigger : public HasAuraIdTrigger
 {
 public:
@@ -116,6 +133,14 @@ class TargetAuraIdExpiringTrigger : public AuraIdExpiringTrigger
 {
 public:
     using AuraIdExpiringTrigger::AuraIdExpiringTrigger;
+
+    std::string const GetTargetName() override { return "current target"; }
+};
+
+class TargetAuraIdRemainingAboveTrigger : public AuraIdRemainingAboveTrigger
+{
+public:
+    using AuraIdRemainingAboveTrigger::AuraIdRemainingAboveTrigger;
 
     std::string const GetTargetName() override { return "current target"; }
 };

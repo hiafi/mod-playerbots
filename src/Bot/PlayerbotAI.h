@@ -16,6 +16,7 @@
 #include "Item.h"
 #include "NewRpgInfo.h"
 #include "NewRpgStrategy.h"
+#include "OwnSpellResultLog.h"
 #include "PlayerbotAIBase.h"
 #include "PlayerbotAIConfig.h"
 #include "PlayerbotSecurity.h"
@@ -397,6 +398,7 @@ public:
     void HandleCommand(uint32 type, std::string const text, Player* fromPlayer);
     void QueueChatResponse(const ChatQueuedReply reply);
     void HandleBotOutgoingPacket(WorldPacket const& packet);
+    ai::spell::OwnSpellResultLog& GetOwnSpellResults() { return ownSpellResults; }
     void HandleMasterIncomingPacket(WorldPacket const& packet);
     void HandleMasterOutgoingPacket(WorldPacket const& packet);
     void HandleTeleportAck();
@@ -654,6 +656,7 @@ protected:
     Position jumpDestination = Position();
     uint32 nextTransportCheck = 0;
     bool spellInterruptRequested = false;
+    ai::spell::OwnSpellResultLog ownSpellResults;
 };
 
 #endif
