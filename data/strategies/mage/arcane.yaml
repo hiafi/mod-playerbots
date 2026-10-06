@@ -85,11 +85,9 @@ rows:
       single and missile_barrage and not moving(self)
       and (blast_4 or remaining(self, 44401) < 3000)
     relevance: normal + 6.5
-  # Barrage dumps the stacks by mana band, outside BURN (MG20): 4 stacks above 80%, 3 at 50-80%, 2 at 30-50%,
-  # 1 below 30%. The action re-checks BURN (a basket queued in the tick Arcane Power went out would dump it).
-  - do: arcane barrage stacks
-    when: single and not burn and stacks(self, 36032) >= 4 and mana(self) > 80
-    relevance: normal + 6.0
+  # Barrage dumps the stacks by mana band, outside BURN (MG20): 3 stacks at 50-80%, 2 at 30-50%, 1 below 30%. No dump
+  # above 80% (tuned 2026-10-06: dumping at 4 stacks there held mana near 95% and cost ~15% DPS in the sim).
+  # The action re-checks BURN (a basket queued in the tick Arcane Power went out would dump it).
   - do: arcane barrage stacks
     when: single and not burn and stacks(self, 36032) >= 3 and mana(self) >= 50 and mana(self) <= 80
     relevance: normal + 6.0
