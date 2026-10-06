@@ -31,6 +31,18 @@ public:
     bool isPossible() override;
 };
 
+// Presses the aura PaladinAuraSwapValue picks: Concentration (or Holy's Resistance) on low mana, the normal aura
+// back once it can be pressed again.
+class PaladinAuraSwapAction : public Action
+{
+public:
+    PaladinAuraSwapAction(PlayerbotAI* botAI) : Action(botAI, "paladin aura swap") {}
+
+    bool Execute(Event event) override;
+    bool isUseful() override;
+    bool isPossible() override;
+};
+
 SPELL_ACTION(CastDeliveranceAction, "deliverance");
 
 #endif

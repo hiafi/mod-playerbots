@@ -22,6 +22,8 @@ bool PaladinAuraMissingTrigger::IsActive()
     return !ai::aura::HasAnyAura(bot, PALADIN_AURAS, bot->GetGUID()) && AI_VALUE(uint32, "paladin aura choice") != 0;
 }
 
+bool PaladinAuraSwapTrigger::IsActive() { return AI_VALUE(uint32, "paladin aura swap") != 0; }
+
 bool PaladinPrimedWindowTrigger::IsActive()
 {
     return ai::aura::HasAnyAura(bot, PALADIN_PRIMED, bot->GetGUID()) && IsPrimedPack(botAI) == _wantPack;

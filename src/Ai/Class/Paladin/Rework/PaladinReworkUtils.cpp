@@ -31,6 +31,11 @@ PaladinSpec GetPaladinSpec(Player* bot)
     }
 }
 
+uint32 LowManaSwapAura(PaladinSpec spec)
+{
+    return spec == PaladinSpec::Holy ? SPELL_RESISTANCE_AURA : SPELL_CONCENTRATION_AURA;
+}
+
 bool IsPrimedPack(PlayerbotAI* botAI)
 {
     static std::vector<uint32> const primedCommand = {SPELL_PRIMED_COMMAND};

@@ -187,6 +187,7 @@ public:
         creators["paladin judgement window"] = &PaladinTriggerFactoryInternal::paladin_judgement_window;
         creators["paladin deliverance window"] = &PaladinTriggerFactoryInternal::paladin_deliverance_window;
         creators["paladin aura missing"] = &PaladinTriggerFactoryInternal::paladin_aura_missing;
+        creators["paladin aura swap"] = &PaladinTriggerFactoryInternal::paladin_aura_swap;
         creators["ret divine plea"] = &PaladinTriggerFactoryInternal::ret_divine_plea;
         creators["ret divine shield"] = &PaladinTriggerFactoryInternal::ret_divine_shield;
         creators["ret lay on hands"] = &PaladinTriggerFactoryInternal::ret_lay_on_hands;
@@ -320,6 +321,7 @@ private:
         return new PaladinDeliveranceWindowTrigger(botAI);
     }
     static Trigger* paladin_aura_missing(PlayerbotAI* botAI) { return new PaladinAuraMissingTrigger(botAI); }
+    static Trigger* paladin_aura_swap(PlayerbotAI* botAI) { return new PaladinAuraSwapTrigger(botAI); }
     static Trigger* ret_divine_plea(PlayerbotAI* botAI) { return new PaladinRetDivinePleaTrigger(botAI); }
     static Trigger* ret_divine_shield(PlayerbotAI* botAI) { return new PaladinRetDivineShieldTrigger(botAI); }
     static Trigger* ret_lay_on_hands(PlayerbotAI* botAI) { return new PaladinRetLayOnHandsTrigger(botAI); }
@@ -460,6 +462,7 @@ public:
             &PaladinAiObjectContextInternal::cast_greater_blessing_assignment;
         creators["paladin cast seal"] = &PaladinAiObjectContextInternal::paladin_cast_seal;
         creators["paladin aura"] = &PaladinAiObjectContextInternal::paladin_aura;
+        creators["paladin aura swap"] = &PaladinAiObjectContextInternal::paladin_aura_swap;
         creators["deliverance"] = &PaladinAiObjectContextInternal::deliverance;
         creators["blade of justice"] = &PaladinAiObjectContextInternal::blade_of_justice;
         creators["wake of ashes"] = &PaladinAiObjectContextInternal::wake_of_ashes;
@@ -578,6 +581,7 @@ private:
     }
     static Action* paladin_cast_seal(PlayerbotAI* botAI) { return new PaladinCastSealAction(botAI); }
     static Action* paladin_aura(PlayerbotAI* botAI) { return new PaladinAuraAction(botAI); }
+    static Action* paladin_aura_swap(PlayerbotAI* botAI) { return new PaladinAuraSwapAction(botAI); }
     static Action* deliverance(PlayerbotAI* botAI) { return new CastDeliveranceAction(botAI); }
     static Action* blade_of_justice(PlayerbotAI* botAI) { return new CastBladeOfJusticeAction(botAI); }
     static Action* wake_of_ashes(PlayerbotAI* botAI) { return new CastWakeOfAshesAction(botAI); }
@@ -598,6 +602,8 @@ public:
             &PaladinValueContextInternal::greater_blessing_pending_assignment;
         creators["paladin seal choice"] = &PaladinValueContextInternal::paladin_seal_choice;
         creators["paladin aura choice"] = &PaladinValueContextInternal::paladin_aura_choice;
+        creators["paladin aura swap"] = &PaladinValueContextInternal::paladin_aura_swap;
+        creators["paladin aura swapped"] = &PaladinValueContextInternal::paladin_aura_swapped;
     }
 
 private:
@@ -613,6 +619,8 @@ private:
 
     static UntypedValue* paladin_seal_choice(PlayerbotAI* botAI) { return new PaladinSealChoiceValue(botAI); }
     static UntypedValue* paladin_aura_choice(PlayerbotAI* botAI) { return new PaladinAuraChoiceValue(botAI); }
+    static UntypedValue* paladin_aura_swap(PlayerbotAI* botAI) { return new PaladinAuraSwapValue(botAI); }
+    static UntypedValue* paladin_aura_swapped(PlayerbotAI* botAI) { return new PaladinAuraSwappedValue(botAI); }
 };
 
 SharedNamedObjectContextList<Strategy> PaladinAiObjectContext::sharedStrategyContexts;

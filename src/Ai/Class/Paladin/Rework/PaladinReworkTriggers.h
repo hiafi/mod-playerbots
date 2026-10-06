@@ -29,6 +29,15 @@ public:
     bool IsActive() override;
 };
 
+// The low-mana aura swap has an aura to press (see PaladinAuraSwapValue).
+class PaladinAuraSwapTrigger : public Trigger
+{
+public:
+    PaladinAuraSwapTrigger(PlayerbotAI* botAI) : Trigger(botAI, "paladin aura swap") {}
+
+    bool IsActive() override;
+};
+
 // Primed is up; subclasses pick the Judgement (single target) or Deliverance (pack) side.
 class PaladinPrimedWindowTrigger : public Trigger
 {
