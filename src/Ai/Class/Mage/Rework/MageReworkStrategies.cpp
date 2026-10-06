@@ -6,6 +6,7 @@
 
 #include "MageReworkStrategies.h"
 #include "Playerbots.h"
+#include "StrategyData.h"
 
 void MageReworkAoeStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
@@ -16,4 +17,10 @@ void MageReworkAoeStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 void MageReworkFrostArmorStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
     triggers.push_back(new TriggerNode("mage no frost armor", {NextAction("mage ice armor", ACTION_HIGH - 1.0f)}));
+}
+
+void MageReworkNonCombatStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
+{
+    GenericMageNonCombatStrategy::InitTriggers(triggers);
+    ai::data::AppendRows("mage/nc", triggers);
 }

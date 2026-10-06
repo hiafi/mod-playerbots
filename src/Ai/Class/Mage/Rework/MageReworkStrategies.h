@@ -8,6 +8,7 @@
 #define PLAYERBOTS_MAGEREWORKSTRATEGIES_H
 
 #include "CombatStrategy.h"
+#include "GenericMageNonCombatStrategy.h"
 #include "Strategy.h"
 
 class PlayerbotAI;
@@ -21,6 +22,16 @@ public:
 
     void InitTriggers(std::vector<TriggerNode*>& triggers) override;
     std::string const getName() override { return "aoe"; }
+};
+
+// Registered as "nc": the stock non-combat rows plus data/strategies/mage/nc.yaml (the Water Elemental summoned before
+// the pull, MG39).
+class MageReworkNonCombatStrategy : public GenericMageNonCombatStrategy
+{
+public:
+    MageReworkNonCombatStrategy(PlayerbotAI* botAI) : GenericMageNonCombatStrategy(botAI) {}
+
+    void InitTriggers(std::vector<TriggerNode*>& triggers) override;
 };
 
 // Registered as "boost". Empty: the cooldowns (Arcane Power, Combustion, Icy Veins) live in the spec lists.

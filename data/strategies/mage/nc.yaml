@@ -1,0 +1,14 @@
+# Mage non-combat rows, appended to the stock "nc" strategy by MageReworkNonCombatStrategy::InitTriggers. See
+# .agents/docs/strategy-data.md for the format.
+strategy: mage/nc
+class: mage
+rows:
+  # Summon the Water Elemental before the pull (MG39), so the first combat GCD isn't spent on it. Only with Glyph of
+  # Eternal Water (aura 70937, in the Frost glyph set), which makes the pet permanent: without it the pet lasts 45 s
+  # and the summon's 3 min cooldown would be gone by the pull. The combat rows in frost.yaml still summon in combat.
+  - do: summon water elemental
+    when: known(31687) and aura(self, 70937) and trigger("no pet")
+    relevance: normal + 12
+  - do: set pet stance
+    trigger: new pet
+    relevance: normal + 12
