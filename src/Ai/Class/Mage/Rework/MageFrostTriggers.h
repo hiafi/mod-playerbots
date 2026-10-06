@@ -18,8 +18,8 @@ class Unit;
 // so the action re-checks the same condition before it runs.
 namespace ai::mage_frost
 {
-// MG42: the bot's last cast was Flurry, 2 s ago at most. Shattering Cold lands on bolt impact, so the tick after
-// Flurry may not see the aura yet. "last spell cast" keeps whole seconds, so this accepts up to a second more.
+// MG42: the bot started a Flurry cast 2 s ago at most (the SpellCastStamps clock, the same as the YAML row's
+// ms_since_cast). Shattering Cold lands on bolt impact, so the tick after Flurry may not see the aura yet.
 bool FlurryJustCast(PlayerbotAI* botAI);
 // MG42: own Shattering Cold on the target, or Flurry just cast.
 bool ShatteringColdReady(PlayerbotAI* botAI, Unit* target);
@@ -37,15 +37,6 @@ Creature* FindWaterElemental(Player* bot);
 // MG40: the Water Elemental is out, knows Freeze and has it off cooldown.
 bool FreezeReady(Player* bot);
 }  // namespace ai::mage_frost
-
-// The bot's last cast was Flurry, 2 s ago at most.
-class MageFrostFlurryRecentTrigger : public Trigger
-{
-public:
-    MageFrostFlurryRecentTrigger(PlayerbotAI* botAI) : Trigger(botAI, "frost flurry recent") {}
-
-    bool IsActive() override;
-};
 
 // Mana below 30% and a Mana Agate in the bags and off cooldown.
 class MageFrostManaGemTrigger : public Trigger

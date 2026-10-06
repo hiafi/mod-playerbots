@@ -44,6 +44,7 @@ private:
     double Eval(Node const& node) const;
     double EvalCall(Node const& node) const;
 
+    PlayerbotAI* _botAI;
     Player* _bot;
     std::shared_ptr<StrategyData const> _snapshot;
     std::unique_ptr<Node> _root;

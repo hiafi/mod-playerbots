@@ -6,16 +6,16 @@
 
 #include "MageFrostTriggers.h"
 #include "AuraIdUtils.h"
-#include "LastSpellCastValue.h"
 #include "MageReworkIds.h"
 #include "MageReworkUtils.h"
 #include "Playerbots.h"
+#include "Timer.h"
 
 using namespace ai::mage_rework;
 
 namespace
 {
-constexpr time_t FLURRY_RECENT_SEC = 2;
+constexpr double FLURRY_RECENT_MS = 2000.0;
 constexpr uint8 ICICLES_FULL = 5;
 constexpr int32 SHATTER_ICE_LANCE_MIN_REMAINING_MS = 1500;  // MG43
 constexpr uint8 LOW_MANA_PCT = 30;  // the gem, then Evocation (MG6)
@@ -27,9 +27,7 @@ namespace ai::mage_frost
 
 bool FlurryJustCast(PlayerbotAI* botAI)
 {
-    AiObjectContext* context = botAI->GetAiObjectContext();
-    LastSpellCast& last = AI_VALUE(LastSpellCast&, "last spell cast");
-    return last.id == SPELL_FLURRY && time(nullptr) - last.timer <= FLURRY_RECENT_SEC;
+    return botAI->GetSpellCastStamps().MsSince(SPELL_FLURRY, getMSTime()) <= FLURRY_RECENT_MS;
 }
 
 bool ShatteringColdReady(PlayerbotAI* botAI, Unit* target)
@@ -84,8 +82,6 @@ bool FreezeReady(Player* bot)
 }
 
 }  // namespace ai::mage_frost
-
-bool MageFrostFlurryRecentTrigger::IsActive() { return ai::mage_frost::FlurryJustCast(botAI); }
 
 bool MageFrostManaGemTrigger::IsActive() { return ai::mage_frost::ManaGemWanted(botAI); }
 

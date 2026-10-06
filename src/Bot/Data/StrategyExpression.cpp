@@ -57,8 +57,12 @@ struct FunctionSpec
 // enemies_near_target(yd)     value "enemies near target::<yd>".
 // enemies_in_cone(yd, deg)    value "enemies in cone::<yd>,<deg>".
 // last_crit(ids)              value "last own spell crit::<ids>"; UINT32_MAX when the last result was not a crit.
-// cooldown(spell)             id: value "spell cooldown remaining::<id>"; name: ai::spell::CooldownRemainingMs of the
-//                             id the value "spell id::<name>" resolves. ms, 0 when ready, unknown or unresolved.
+// cooldown(spell)             ai::spell::CooldownRemainingMs of the id (a name: the id the value "spell id::<name>"
+//                             resolves). ms, 0 when ready, unknown or unresolved.
+// ms_since_cast(spell)        ai::spell::SpellCastStamps::MsSince: ms since the bot started a cast of the spell through
+//                             PlayerbotAI::CastSpell (getMSTime clock; instants count from the cast). Name: resolved
+//                             like cooldown(). Infinity when never cast (or the name is unresolved), so
+//                             "ms_since_cast(x) <= 2000" is false.
 // lifetime(u)                 target: value "target lifetime"; other: value "estimated lifetime::<u>". Missing: 0.
 // time_since_target_change()  value "time since target change", ms.
 // exists(u)                   the unit value yields a unit (dead or alive).
@@ -83,6 +87,7 @@ constexpr FunctionSpec FUNCTIONS[] = {
     {"enemies_in_cone", ExprFn::EnemiesInCone, ExprType::Number, 2, 2, {ArgKind::Number, ArgKind::Number}},
     {"last_crit", ExprFn::LastCrit, ExprType::Number, 1, 1, {ArgKind::Ids}},
     {"cooldown", ExprFn::Cooldown, ExprType::Number, 1, 1, {ArgKind::Spell}},
+    {"ms_since_cast", ExprFn::MsSinceCast, ExprType::Number, 1, 1, {ArgKind::Spell}},
     {"lifetime", ExprFn::Lifetime, ExprType::Number, 1, 1, {ArgKind::Unit}},
     {"time_since_target_change", ExprFn::TimeSinceTargetChange, ExprType::Number, 0, 0, {}},
     {"exists", ExprFn::Exists, ExprType::Bool, 1, 1, {ArgKind::Unit}},
@@ -861,6 +866,7 @@ private:
                 node->valueName = node->spellName.empty() ? "spell cooldown remaining::" + std::to_string(node->spellId)
                                                           : "spell id::" + node->spellName;
                 break;
+            case ExprFn::MsSinceCast:
             case ExprFn::Known:
                 if (!node->spellName.empty())
                     node->valueName = "spell id::" + node->spellName;

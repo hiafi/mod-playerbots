@@ -12,6 +12,7 @@
 #include "PlayerbotAI.h"
 #include "SpellReadyUtils.h"
 #include "TargetTypeUtils.h"
+#include "Timer.h"
 #include "Trigger.h"
 #include "UnitPredicateUtils.h"
 #include "Value.h"
@@ -199,6 +200,7 @@ private:
                     node.spellId = Cast<uint32>(call, call.valueName, "a uint32");
 
                 break;
+            case ExprFn::MsSinceCast:
             case ExprFn::Known:
                 if (!call.spellName.empty())
                     node.spellId = Cast<uint32>(call, call.valueName, "a uint32");
@@ -250,7 +252,7 @@ private:
 };
 
 BoundCondition::BoundCondition(PlayerbotAI* botAI, std::shared_ptr<StrategyData const> snapshot)
-    : _bot(botAI->GetBot()), _snapshot(std::move(snapshot))
+    : _botAI(botAI), _bot(botAI->GetBot()), _snapshot(std::move(snapshot))
 {
 }
 
@@ -400,6 +402,11 @@ double BoundCondition::EvalCall(Node const& node) const
         {
             uint32 const spellId = call.spellName.empty() ? call.spellId : node.spellId->Get();
             return spellId ? ai::spell::CooldownRemainingMs(_bot, spellId) : 0.0;
+        }
+        case ExprFn::MsSinceCast:
+        {
+            uint32 const spellId = call.spellName.empty() ? call.spellId : node.spellId->Get();
+            return _botAI->GetSpellCastStamps().MsSince(spellId, getMSTime());
         }
         case ExprFn::Lifetime:
             return Live(unitValue) ? node.floatValue->Get() : 0.0;

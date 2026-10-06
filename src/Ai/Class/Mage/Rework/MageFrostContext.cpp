@@ -30,7 +30,6 @@ Action* MakeBlizzard(PlayerbotAI* botAI) { return new MageReworkBlizzardAction(b
 
 MageFrostTriggerFactory::MageFrostTriggerFactory()
 {
-    creators["frost flurry recent"] = &Make<Trigger, MageFrostFlurryRecentTrigger>;
     creators["frost mana gem"] = &Make<Trigger, MageFrostManaGemTrigger>;
     creators["frost evocation"] = &Make<Trigger, MageFrostEvocationTrigger>;
     creators["frost freeze ready"] = &Make<Trigger, MageFrostFreezeReadyTrigger>;

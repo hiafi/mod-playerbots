@@ -1,8 +1,8 @@
 # Frost mage rows, appended to the "frost" combat strategy by MageReworkFrostStrategy::InitTriggers.
 # Each row queues its actions at the relevance when its condition holds (`when`, the expression language of
 # StrategyExpression.h) or when an existing C++ trigger fires (`trigger`). Execution order is by relevance, not by
-# position in this file. The rows that stay C++ keep a clock, scan the bags or read the pet: "frost flurry recent"
-# (the bot's last cast), Mana Gem, Evocation (the action re-checks the same guards) and Freeze (pet cooldown).
+# position in this file. The rows that stay C++ scan the bags or read the pet: Mana Gem, Evocation (the action
+# re-checks the same guards) and Freeze (pet cooldown).
 # Every Ice Lance row has its own action, which re-checks that row: a queued basket can survive a whole Glacial Spike
 # cast, and baskets with the same action name merge. Spell ids: MageReworkIds.h, plan MG38-MG50.
 strategy: mage/frost
@@ -59,15 +59,16 @@ rows:
     relevance: normal + 8.5
 
   # The Flurry + Glacial Spike unit, either mode (MG42). Flurry needs 5 Icicles and standing; the Spike is own
-  # Shattering Cold on the target or a Flurry cast within 2 s (the aura lands 400 ms after Flurry). The Spike outranks
-  # every other GCD row (Ice Barrier, Frozen Orb): nothing may land between Flurry and the Spike, or the Spike lands
-  # after Shattering Cold is gone. It is only castable in that window, since the core refuses it below 5 Icicles.
+  # Shattering Cold on the target or a Flurry cast within 2 s (ms_since_cast; the aura lands 400 ms after Flurry).
+  # The Spike outranks every other GCD row (Ice Barrier, Frozen Orb): nothing may land between Flurry and the Spike,
+  # or the Spike lands after Shattering Cold is gone. It is only castable in that window, since the core refuses it
+  # below 5 Icicles.
   - do: frost flurry
     when: >-
       target_alive and known(200004) and cooldown(200004) == 0 and icicles_full and not moving(self)
     relevance: normal + 8.0
   - do: frost shattered glacial spike
-    when: target_alive and known(200002) and (shattered or trigger("frost flurry recent"))
+    when: target_alive and known(200002) and (shattered or ms_since_cast(200004) <= 2000)
     relevance: normal + 9.95
 
   # Single target (MG43, MG44)

@@ -22,6 +22,7 @@
 #include "PlayerbotSecurity.h"
 #include "PlayerbotTextMgr.h"
 #include "SpellAuras.h"
+#include "SpellCastStamps.h"
 #include "Util.h"
 #include "WorldPacket.h"
 #include <stack>
@@ -399,6 +400,7 @@ public:
     void QueueChatResponse(const ChatQueuedReply reply);
     void HandleBotOutgoingPacket(WorldPacket const& packet);
     ai::spell::OwnSpellResultLog& GetOwnSpellResults() { return ownSpellResults; }
+    ai::spell::SpellCastStamps& GetSpellCastStamps() { return spellCastStamps; }
     void HandleMasterIncomingPacket(WorldPacket const& packet);
     void HandleMasterOutgoingPacket(WorldPacket const& packet);
     void HandleTeleportAck();
@@ -658,6 +660,7 @@ protected:
     uint32 nextTransportCheck = 0;
     bool spellInterruptRequested = false;
     ai::spell::OwnSpellResultLog ownSpellResults;
+    ai::spell::SpellCastStamps spellCastStamps;
 };
 
 #endif

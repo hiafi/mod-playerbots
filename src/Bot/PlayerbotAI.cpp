@@ -3864,6 +3864,7 @@ bool PlayerbotAI::CastSpell(uint32 spellId, Unit* target, Item* itemTarget)
     // WaitForSpellCast(spell);
 
     aiObjectContext->GetValue<LastSpellCast&>("last spell cast")->Get().Set(spellId, target->GetGUID(), time(nullptr));
+    spellCastStamps.Stamp(spellId, getMSTime());
 
     aiObjectContext->GetValue<PositionMap&>("position")->Get()["random"].Reset();
 
@@ -3999,6 +4000,7 @@ bool PlayerbotAI::CastSpell(uint32 spellId, float x, float y, float z, Item* ite
 
     // WaitForSpellCast(spell);
     aiObjectContext->GetValue<LastSpellCast&>("last spell cast")->Get().Set(spellId, bot->GetGUID(), time(nullptr));
+    spellCastStamps.Stamp(spellId, getMSTime());
     aiObjectContext->GetValue<PositionMap&>("position")->Get()["random"].Reset();
 
     if (oldSel)
