@@ -144,6 +144,7 @@ inline std::vector<uint32> const MISSILE_BARRAGE_PROC = {SPELL_MISSILE_BARRAGE_P
 inline std::vector<uint32> const CLEARCASTING = {SPELL_CLEARCASTING};
 inline std::vector<uint32> const ARCANE_POTENCY = {SPELL_ARCANE_POTENCY_1, SPELL_ARCANE_POTENCY_2};
 inline std::vector<uint32> const ARCANE_POWER = {SPELL_ARCANE_POWER};
+inline std::vector<uint32> const PRESENCE_OF_MIND = {SPELL_PRESENCE_OF_MIND};
 inline std::vector<uint32> const ARCANE_OVERLOAD_BUFF = {SPELL_ARCANE_OVERLOAD_BUFF};
 inline std::vector<uint32> const NETHERWIND_PRESENCE = {SPELL_NETHERWIND_PRESENCE_1, SPELL_NETHERWIND_PRESENCE_2,
                                                         SPELL_NETHERWIND_PRESENCE_3};

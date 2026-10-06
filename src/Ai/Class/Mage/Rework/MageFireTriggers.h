@@ -30,8 +30,6 @@ constexpr char const* const PYROBLAST_IDS = "11366";
 // so the action re-checks the same condition before it runs.
 namespace ai::mage_fire
 {
-// A Mana Agate in the bags and off cooldown.
-bool ManaGemUsable(Player* bot);
 // Guide section 8: mana below the band, Evocation ready, the gem not usable (MG6: gem first), not in Combustion, and
 // not while the Flashpoint row for the current mode could fire.
 bool EvocationAllowed(PlayerbotAI* botAI);

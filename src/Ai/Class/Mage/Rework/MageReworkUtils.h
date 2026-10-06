@@ -21,4 +21,10 @@ enum class MageSpec
 // The talent tab the bot spent the most points in. The frostfire build is a Fire bot (it lives in the Fire tab).
 MageSpec GetMageSpec(Player* bot);
 
+namespace ai::mage_rework
+{
+// A Mana Agate in the bags and off cooldown (all three specs spend it before Evocation, MG6).
+bool ManaGemUsable(Player* bot);
+}  // namespace ai::mage_rework
+
 #endif

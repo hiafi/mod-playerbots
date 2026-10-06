@@ -11,7 +11,9 @@
 #include "FrostMageStrategy.h"
 #include "GenericMageNonCombatStrategy.h"
 #include "MageActions.h"
+#include "MageArcaneContext.h"
 #include "MageFireContext.h"
+#include "MageFrostContext.h"
 #include "MageReworkActions.h"
 #include "MageReworkGenericStrategy.h"
 #include "MageReworkStrategies.h"
@@ -60,10 +62,10 @@ public:
     }
 
 private:
-    static Strategy* frost(PlayerbotAI* botAI) { return new FrostMageStrategy(botAI); }
+    static Strategy* frost(PlayerbotAI* botAI) { return new MageReworkFrostStrategy(botAI); }
     static Strategy* fire(PlayerbotAI* botAI) { return new MageReworkFireStrategy(botAI); }
     static Strategy* frostfire(PlayerbotAI* botAI) { return new MageReworkFireStrategy(botAI, "frostfire"); }
-    static Strategy* arcane(PlayerbotAI* botAI) { return new ArcaneMageStrategy(botAI); }
+    static Strategy* arcane(PlayerbotAI* botAI) { return new MageReworkArcaneStrategy(botAI); }
 };
 
 class MageBuffStrategyFactoryInternal : public NamedObjectContext<Strategy>
@@ -442,6 +444,8 @@ void MageAiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextList
     actionContexts.Add(new MageAiObjectContextInternal());
     actionContexts.Add(new MageReworkActionFactoryInternal());
     actionContexts.Add(new MageFireActionFactory());
+    actionContexts.Add(new MageArcaneActionFactory());
+    actionContexts.Add(new MageFrostActionFactory());
 }
 
 void MageAiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextList<Trigger>& triggerContexts)
@@ -450,10 +454,12 @@ void MageAiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextLis
     triggerContexts.Add(new MageTriggerFactoryInternal());
     triggerContexts.Add(new MageReworkTriggerFactoryInternal());
     triggerContexts.Add(new MageFireTriggerFactory());
+    triggerContexts.Add(new MageFrostTriggerFactory());
 }
 
 void MageAiObjectContext::BuildSharedValueContexts(SharedNamedObjectContextList<UntypedValue>& valueContexts)
 {
     AiObjectContext::BuildSharedValueContexts(valueContexts);
     valueContexts.Add(new MageReworkValueFactoryInternal());
+    valueContexts.Add(new MageArcaneValueFactory());
 }

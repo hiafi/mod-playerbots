@@ -1,0 +1,131 @@
+# Arcane mage rows, appended to the "arcane" combat strategy by MageReworkArcaneStrategy::InitTriggers.
+# Each row queues its action at the relevance when its condition holds. Execution order is by relevance, not by
+# position in this file. The guide is docs/reworks/bot-strategy/mage-arcane-strat.md; MGnn names the Mage plan row
+# that settled a call. Spell ids: 12042 Arcane Power, 12043 Presence of Mind, 12051 Evocation, 1008 Amplify Magic,
+# 44425 Arcane Barrage, 36032 Arcane Blast stacks (on the bot), 44401 Missile Barrage proc, 200067 Brilliance Aura,
+# 200078 Temporal Convergence, 200079 Arcane Overload. Overload and Temporal Convergence are level-80 spells that a
+# level-60 bot may not have, so their rows are gated on known().
+# The mana thresholds are starting points (MG54); retune them after a sim run. The ones the actions re-check
+# (gem 70, Evocation 30, Overload 30) are repeated in MageArcaneActions.h.
+strategy: mage/arcane
+class: mage
+conditions:
+  # Mode gates. Single and pack rows need a live current target; the pack is 3+ enemies within 10 yd of the target
+  # (the target counts itself). The cooldown rows apply in both modes.
+  target_alive: alive(target)
+  single: alive(target) and enemies_near_target(10) < 3
+  pack: alive(target) and enemies_near_target(10) >= 3
+
+  # BURN: Arcane Power up, or ready with mana at 80%+ (C++ value, MG9)
+  burn: value("arcane burn")
+  evocation_ready: known(12051) and cooldown(12051) == 0
+  blast_4: stacks(self, 36032) >= 4
+  missile_barrage: aura(self, 44401)
+  # Presence of Mind and Arcane Power exclude each other's buff and share a category (Spell.dbc, category 1151):
+  # casting Arcane Power locks Presence of Mind for 15 s; while the Presence of Mind buff is up Arcane Power's
+  # cooldown reads as endless, then 1.5 s once it is spent. So Presence of Mind can't be used in BURN (MG18).
+  pom_ready: known(12043) and cooldown(12043) == 0 and not aura(self, 12043) and not aura(self, 12042)
+  pom_up: aura(self, 12043)
+  # Arcane Power not yet cast but ready or within 5 s of it: Amplify Magic waits to line up with it (MG13)
+  ap_soon: known(12042) and cooldown(12042) <= 5000 and not aura(self, 12042)
+
+rows:
+  # Mana: the gem during BURN, Evocation below 30% (MG6, MG15)
+  - do: arcane use mana gem
+    when: burn and mana(self) < 70 and value("arcane mana gem usable")
+    relevance: emergency - 1
+  - do: arcane evocation
+    when: evocation_ready and mana(self) < 30
+    relevance: emergency - 2
+
+  # Cooldowns, both modes. Brilliance Aura: a party member under 40% mana, or the bot under 50% in BURN (MG12)
+  - do: arcane brilliance aura
+    when: >-
+      target_alive and known(200067) and cooldown(200067) == 0 and not aura(self, 200067)
+      and (value("party members below mana::40") >= 1 or (burn and mana(self) < 50))
+    relevance: normal + 9.5
+  # Amplify Magic (MG13): in BURN against a target that lives 10+ s, else only against a boss or elite while Arcane
+  # Power is 30+ s from ready. Never while Arcane Power is about to be cast.
+  - do: arcane amplify magic
+    when: >-
+      target_alive and known(1008) and cooldown(1008) == 0 and not aura(target, 1008) and not ap_soon and not pom_up
+      and ((burn and lifetime(target) > 10)
+      or (cooldown(12042) > 30000 and elite(target)))
+    relevance: normal + 9.0
+  # Arcane Power (MG14): with Evocation ready or mana at 80%+, never under 50%
+  - do: arcane power
+    when: >-
+      target_alive and known(12042) and cooldown(12042) == 0 and not aura(self, 12042) and mana(self) >= 50
+      and (evocation_ready or mana(self) >= 80)
+    relevance: normal + 8.5
+  # Overload in BURN at a full stack with 30%+ mana (MG16). No hold rule for "prefer inside Arcane Power".
+  - do: arcane overload
+    when: >-
+      target_alive and burn and blast_4 and mana(self) >= 30 and known(200079) and cooldown(200079) == 0
+    relevance: normal + 8.0
+  # Temporal Convergence at a full stack, only when Evocation and Arcane Power both have 20+ s left (MG17)
+  - do: arcane temporal convergence
+    when: >-
+      target_alive and blast_4 and not pom_up and known(200078) and cooldown(200078) == 0
+      and known(12051) and cooldown(12051) > 20000 and known(12042) and cooldown(12042) > 20000
+    relevance: normal + 7.5
+  # Presence of Mind (MG18) only while moving with stacks to keep, so the Blast stays instant and the stacks don't
+  # fall off. The guide's BURN use is dropped: inside Arcane Power the server refuses it, and cast before Arcane Power
+  # it holds Arcane Power off (see pom_ready) while the PoM Blast drains the mana that BURN's start needed. For the
+  # same reason not in the 5 s before Arcane Power is ready.
+  - do: presence of mind
+    when: target_alive and moving(self) and stacks(self, 36032) >= 1 and pom_ready and not ap_soon
+    relevance: normal + 7.0
+
+  # Single target
+  # Missiles only with Missile Barrage, at a full stack or with the proc about to end (MG19). A channel: not while
+  # moving.
+  - do: arcane missiles barrage
+    when: >-
+      single and missile_barrage and not moving(self)
+      and (blast_4 or remaining(self, 44401) < 3000)
+    relevance: normal + 6.5
+  # Barrage dumps the stacks by mana band, outside BURN (MG20): 4 stacks above 80%, 3 at 50-80%, 2 at 30-50%,
+  # 1 below 30%. The action re-checks BURN (a basket queued in the tick Arcane Power went out would dump it).
+  - do: arcane barrage stacks
+    when: single and not burn and stacks(self, 36032) >= 4 and mana(self) > 80
+    relevance: normal + 6.0
+  - do: arcane barrage stacks
+    when: single and not burn and stacks(self, 36032) >= 3 and mana(self) >= 50 and mana(self) <= 80
+    relevance: normal + 6.0
+  - do: arcane barrage stacks
+    when: single and not burn and stacks(self, 36032) >= 2 and mana(self) >= 30 and mana(self) < 50
+    relevance: normal + 6.0
+  - do: arcane barrage stacks
+    when: single and not burn and stacks(self, 36032) >= 1 and mana(self) < 30
+    relevance: normal + 6.0
+  # The one BURN exception: under 30% with Evocation not available
+  - do: arcane barrage stacks
+    when: single and burn and stacks(self, 36032) >= 1 and mana(self) < 30 and not evocation_ready
+    relevance: normal + 6.0
+  # Walking with the stacks about to fall off: spend them on an instant Barrage (5.3). Not with Presence of Mind up
+  # or ready, since the moving Presence of Mind row above keeps the stacks with an instant Blast instead.
+  - do: arcane barrage stacks
+    when: >-
+      target_alive and moving(self) and not aura(self, 12043) and not pom_ready
+      and stacks(self, 36032) >= 1 and remaining(self, 36032) < 1500
+    relevance: normal + 6.5
+
+  # Pack block, ranked among the cooldown rows above (the guide: everything in the cooldown list still applies)
+  # Overload on cooldown with 30%+ mana (MG21)
+  - do: arcane overload
+    when: pack and mana(self) >= 30 and known(200079) and cooldown(200079) == 0
+    relevance: normal + 7.8
+  # Barrage at a full stack whatever the state
+  - do: arcane barrage stacks
+    when: pack and blast_4
+    relevance: normal + 6.8
+  # Explosion as filler with 4+ enemies already inside 10 yd; never walks to them
+  - do: arcane explosion cast
+    when: pack and enemies_within(10) >= 4 and known("arcane explosion")
+    relevance: normal + 5.0
+
+  # The last row, both modes: Blast builds the stacks the Barrage rows spend
+  - do: mage arcane blast
+    when: target_alive
+    relevance: normal + 1.0

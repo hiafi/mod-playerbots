@@ -8,6 +8,7 @@
 #include "AuraIdUtils.h"
 #include "MageFireActions.h"
 #include "MageReworkIds.h"
+#include "MageReworkUtils.h"
 #include "MageReworkValues.h"
 #include "OwnSpellResultValues.h"
 #include "Playerbots.h"
@@ -16,7 +17,6 @@ using namespace ai::mage_rework;
 
 namespace
 {
-constexpr uint32 ITEM_MANA_AGATE = 5514;
 constexpr uint8 LOW_MANA_PCT = 30;  // the gem, then Evocation (guide section 8)
 constexpr uint32 FLASHPOINT_MIN_TARGET_AGE_MS = 4000;  // the Ignite bank fills over ~4 s
 constexpr uint32 FLASHPOINT_MIN_COMBAT_SEC = 4;
@@ -40,27 +40,12 @@ bool IsReady(Player* bot, PlayerbotAI* botAI, uint32 spellId)
 namespace ai::mage_fire
 {
 
-bool ManaGemUsable(Player* bot)
-{
-    Item* gem = bot->GetItemByEntry(ITEM_MANA_AGATE);
-    if (!gem)
-        return false;
-
-    for (_Spell const& spell : gem->GetTemplate()->Spells)
-    {
-        if (spell.SpellId && bot->HasSpellCooldown(static_cast<uint32>(spell.SpellId)))
-            return false;
-    }
-
-    return true;
-}
-
 bool EvocationAllowed(PlayerbotAI* botAI)
 {
     Player* bot = botAI->GetBot();
     AiObjectContext* context = botAI->GetAiObjectContext();
     if (AI_VALUE2(uint8, "mana", "self target") >= LOW_MANA_PCT || !IsReady(bot, botAI, SPELL_EVOCATION) ||
-        ManaGemUsable(bot))
+        ai::mage_rework::ManaGemUsable(bot))
         return false;
 
     // Guard 1: never channel through Combustion
@@ -144,7 +129,7 @@ bool MageFireTrigger::IsReady(uint32 spellId)
 
 bool MageFireManaGemTrigger::Evaluate(Unit* /*target*/)
 {
-    return AI_VALUE2(uint8, "mana", "self target") < LOW_MANA_PCT && ai::mage_fire::ManaGemUsable(bot);
+    return AI_VALUE2(uint8, "mana", "self target") < LOW_MANA_PCT && ai::mage_rework::ManaGemUsable(bot);
 }
 
 bool MageFireEvocationTrigger::Evaluate(Unit* /*target*/) { return ai::mage_fire::EvocationAllowed(botAI); }
