@@ -16,7 +16,7 @@ class WorldLocation;
 // fallback (the spell then lands at that unit's feet). The action checks distance itself, to the position and to the
 // fallback, so it can pick the fallback when the position is out of reach, and it re-checks line of sight to the
 // position before it casts, so an out-of-range or hidden cast is never reported as a success (risk 2). Subclasses
-// re-check their thresholds in isUseful.
+// re-check their thresholds in isUseful. A spell with a cast time or a channel is not possible while the bot moves.
 //
 // The action's name is the spell name, like CastSpellAction, so the queue and the multipliers see it as the spell.
 class CastAtPositionAction : public CastSpellAction

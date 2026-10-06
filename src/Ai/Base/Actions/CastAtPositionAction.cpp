@@ -52,8 +52,18 @@ bool CastAtPositionAction::isUseful()
     return FindPosition(position);
 }
 
+// A channel has no cast time, so neither CanCastSpell (it maps SPELL_FAILED_MOVING to castable) nor CastSpell's
+// moving guard (cast time only) stops it while the bot moves: Spell::prepare refuses it and CastSpell still reports
+// success (risk 2). Refuse anything with a cast time or a channel while moving here.
 bool CastAtPositionAction::isPossible()
 {
+    if (bot->isMoving())
+    {
+        SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(_spellId);
+        if (!spellInfo || spellInfo->IsChanneled() || spellInfo->CalcCastTime(bot) > 0)
+            return false;
+    }
+
     WorldLocation position;
     return FindPosition(position) &&
            botAI->CanCastSpell(_spellId, position.GetPositionX(), position.GetPositionY(), position.GetPositionZ());
