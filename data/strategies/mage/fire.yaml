@@ -1,0 +1,94 @@
+# Fire mage rows, appended to the "fire" and "frostfire" combat strategies by MageReworkFireStrategy::InitTriggers.
+# Each row queues its actions at the relevance when its condition holds (`when`, the expression language of
+# StrategyExpression.h) or when an existing C++ trigger fires (`trigger`). Execution order is by relevance, not by
+# position in this file. The three rows that stay C++ share state with their actions or keep a clock of their own:
+# Flashpoint (combat-time and target-age clocks), Mana Gem (bag scan) and Evocation (EvocationAllowed is also the
+# action's re-check).
+strategy: mage/fire
+class: mage
+conditions:
+  # Mode gates. Single and Pack rows need a live current target; the pack is 3+ enemies within 10 yd of the target
+  # (the current target counts itself). Target rows apply in both modes.
+  target_alive: alive(target)
+  single: alive(target) and enemies_near_target(10) < 3
+  pack: alive(target) and enemies_near_target(10) >= 3
+
+  hot_streak: aura(self, 48108)
+  fanned_flames: aura(self, 200118)
+  meteor_ready: known(200095) and cooldown(200095) == 0
+  # Fewer than 3 own Living Bombs out ("attackers with aura id": own 44457, 35 yd)
+  bomb_cap_open: value("attackers with aura id::44457;1;35") < 3
+
+rows:
+  # Mana, either mode: the gem first, then Evocation
+  - do: use mana agate
+    trigger: fire mana gem
+    relevance: emergency - 1
+  - do: fire evocation
+    trigger: fire evocation
+    relevance: emergency - 2
+
+  # Single target
+  - do: pyroblast
+    when: single and hot_streak
+    relevance: normal + 8.0
+  - do: scorch
+    when: single and fanned_flames
+    relevance: normal + 7.5
+  # Both modes, capped at 3 bombs in a pack. Never refreshed, or the explosion is lost.
+  - do: fire living bomb
+    when: target_alive and not aura(target, 44457, own) and (enemies_near_target(10) < 3 or bomb_cap_open)
+    relevance: normal + 7.0
+  - do: fire flashpoint
+    trigger: fire flashpoint
+    relevance: normal + 3.0
+  - do: mage meteor
+    when: single and meteor_ready
+    relevance: normal + 2.0
+
+  # Pack, ranked above the single list
+  - do: fire living bomb on attacker
+    when: pack and bomb_cap_open and exists("attacker without aura id::44457;1;0;0;35")
+    relevance: normal + 9.5
+  - do: pyroblast
+    when: pack and hot_streak
+    relevance: normal + 9.0
+  - do: mage dragon's breath
+    when: pack and known(31661) and cooldown(31661) == 0
+    relevance: normal + 8.5
+  - do: mage meteor
+    when: pack and meteor_ready
+    relevance: normal + 8.0
+  - do: fire pack flashpoint
+    trigger: fire pack flashpoint
+    relevance: normal + 7.5
+  - do: scorch
+    when: pack and fanned_flames
+    relevance: normal + 7.0
+  - do: mage flamestrike
+    when: pack and known(2120) and not dynobj(2120) and value("most clustered enemy count::5") >= 4
+    relevance: normal + 6.5
+  - do: mage blizzard
+    when: pack and known(10) and dynobj(2120) and value("most clustered enemy count::8") >= 4
+    relevance: normal + 6.0
+
+  # Either mode, below the pack rows: the single-list rows the pack block doesn't list
+  # Improved Scorch (any caster) absent or about to expire, for a bot with the talent
+  - do: scorch
+    when: >-
+      target_alive and (known(11095) or known(12872) or known(12873)) and remaining(target, 22959) < 3000
+    relevance: normal + 4.0
+  - do: combustion
+    when: target_alive and known(11129) and cooldown(11129) == 0 and lifetime(target) >= 10
+    relevance: normal + 3.5
+  # The last Hot Streak starter crit is newer than the last Pyroblast
+  - do: fire crit streak fire blast
+    when: >-
+      target_alive and known(2136) and cooldown(2136) == 0
+      and last_crit("133,25306,2136,59637,2948,44614") < last_crit(11366)
+    relevance: normal + 2.5
+
+  # The last row
+  - do: fireball
+    when: target_alive
+    relevance: normal + 1.0

@@ -7,6 +7,7 @@
 #ifndef PLAYERBOTS_TRIGGERCONTEXT_H
 #define PLAYERBOTS_TRIGGERCONTEXT_H
 
+#include "ConditionTrigger.h"
 #include "CureTriggers.h"
 #include "FightDurationTriggers.h"
 #include "FishingTriggers.h"
@@ -35,6 +36,7 @@ class TriggerContext : public NamedObjectContext<Trigger>
 public:
     TriggerContext()
     {
+        creators["data"] = &TriggerContext::data;
         creators["return"] = &TriggerContext::_return;
         creators["sit"] = &TriggerContext::sit;
         creators["return to stay position"] = &TriggerContext::return_to_stay_position;
@@ -265,6 +267,7 @@ private:
     static Trigger* target_is_elite(PlayerbotAI* botAI) { return new TargetIsEliteTrigger(botAI); }
     static Trigger* target_controlled(PlayerbotAI* botAI) { return new TargetControlledTrigger(botAI); }
     static Trigger* combat_time(PlayerbotAI* botAI) { return new CombatTimeTrigger(botAI); }
+    static Trigger* data(PlayerbotAI* botAI) { return new ConditionTrigger(botAI); }
     static Trigger* target_lifetime_at_least(PlayerbotAI* botAI) { return new TargetLifetimeAtLeastTrigger(botAI); }
     static Trigger* moving(PlayerbotAI* botAI) { return new MovingTrigger(botAI); }
     static Trigger* not_moving(PlayerbotAI* botAI) { return new NoMovementTrigger(botAI, "not moving"); }

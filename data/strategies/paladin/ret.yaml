@@ -1,8 +1,30 @@
 # Retribution paladin rows, appended to the "dps" combat strategy by PaladinReworkRetStrategy::InitTriggers.
-# Each row: a C++ trigger (do not rename without changing PaladinAiObjectContext.cpp) queues the actions at the
-# relevance. Execution order is by relevance, not by position in this file.
+# Each row queues its actions at the relevance when its condition holds (`when`, the expression language of
+# StrategyExpression.h) or when an existing C++ trigger fires (`trigger`). Execution order is by relevance, not by
+# position in this file.
 strategy: paladin/ret
 class: paladin
+conditions:
+  # Mode gates: Single and Pack rows need a live current target, and 3+ enemies within 8 yd of the bot is a pack
+  single: alive(target) and enemies_within(8) < 3
+  pack: alive(target) and enemies_within(8) >= 3
+
+  # Primed seal (any of the six, cast by the bot)
+  primed: aura(self, "201063,201064,201065,201066,201067,201068", own)
+  primed_justice: aura(self, 201066, own)
+  deliverance_known: known(201061)
+  # Primed Command needs 2 enemies within 8 yd of the target to count as a pack, any other primed seal 3
+  primed_pack: >-
+    (aura(self, 201064, own) and enemies_near_target(8) >= 2)
+    or (not aura(self, 201064, own) and enemies_near_target(8) >= 3)
+
+  # Seal stacks (the owned seal; 0 with none): Avenging Wrath and Execution Sentence hold at 3+, Wake of Ashes at 8+
+  seal_burst_ok: stacks(self, "21084,20165,20166,20164,20375,31801", own) <= 2
+  seal_wake_ok: stacks(self, "21084,20165,20166,20164,20375,31801", own) <= 7
+
+  art_of_war: aura(self, 59578, own)
+  forbearance: aura(self, "25771,61988")
+
 rows:
   # Kept from the stock DpsPaladinStrategy / GenericPaladinStrategy. CombatStrategy only closes to spell
   # range, so without "reach melee" the bot would stand at range and never melee.
@@ -27,102 +49,110 @@ rows:
     trigger: paladin no seal
     relevance: normal + 7.0
   - do: divine plea
-    trigger: ret divine plea
+    when: value("has mana::self target") and mana(self) < 70
     relevance: normal + 7.5
   - do: divine shield
-    trigger: ret divine shield
+    when: health(self) < 15 and not forbearance
     relevance: emergency + 6
   - do: lay on hands
-    trigger: ret lay on hands
+    when: health(self) < 10 and (forbearance or not known(642) or cooldown(642) > 0)
     relevance: emergency + 5
   - do: divine protection
-    trigger: ret divine protection
+    when: health(self) < 35 and value("my attacker count") >= 1
     relevance: emergency + 4
 
   # Single target
   - do: judgement
-    trigger: ret justice combo
+    when: single and primed_justice and not boss(target) and controlled(target)
     relevance: normal + 6.8
   - do: hammer of justice
-    trigger: ret justice setup
+    when: >-
+      single and primed_justice and not boss(target) and not controlled(target) and known(853) and
+      cooldown(853) == 0
     relevance: normal + 6.7
   - do: judgement
-    trigger: ret judgement
+    when: single and primed and (not primed_pack or not deliverance_known)
     relevance: normal + 6.5
   - do: deliverance
-    trigger: ret deliverance
+    when: single and primed and primed_pack and deliverance_known
     relevance: normal + 6.5
   - do: avenging wrath
-    trigger: ret avenging wrath
+    when: >-
+      single and elite(target) and health_pct(target) > 30 and seal_burst_ok and (aura(self, 201103, own)
+      or not known(20165) or cooldown(20165) > 20000)
     relevance: normal + 6.0
   - do: execution sentence
-    trigger: ret execution sentence
+    when: >-
+      single and seal_burst_ok and ((boss(target) and health_pct(target) > 25) or (not boss(target) and
+      health_pct(target) > 50))
     relevance: normal + 5.5
   - do: wake of ashes
-    trigger: ret wake of ashes
+    when: single and in_range(target, 12) and in_arc(target, 104) and seal_wake_ok
     relevance: normal + 5.0
   - do: hammer of wrath
-    trigger: ret hammer of wrath
+    when: single and health_pct(target) <= 20
     relevance: normal + 4.5
   - do: flash of light
-    trigger: ret art of war heal
+    when: single and art_of_war and health(self) < 40 and not value("party has healer")
     relevance: normal + 4.25
   - do: exorcism
-    trigger: ret exorcism
+    when: single and known("exorcism") and cooldown("exorcism") == 0 and (art_of_war or not moving(self))
     relevance: normal + 4.0
   - do: blade of justice
-    trigger: ret blade of justice
+    when: single and in_range(target, 20)
     relevance: normal + 3.5
   - do: crusader strike
-    trigger: ret swift retribution
+    when: >-
+      single and (stacks(self, "201426,201427,201428", own) < 3 or remaining(self, "201426,201427,201428",
+      own) < 2000)
     relevance: normal + 3.0
   - do: divine storm
-    trigger: ret divine storm
+    when: single and in_range(target, 8)
     relevance: normal + 2.5
   - do: holy wrath
-    trigger: ret holy wrath
+    when: single and in_range(target, 10)
     relevance: normal + 2.0
   - do: crusader strike
-    trigger: ret single target
+    when: single
     relevance: normal + 1.5
   - do: consecration
-    trigger: ret consecration
+    when: single and mana(self) > 60
     relevance: normal + 1.0
 
   # Pack
   - do: deliverance
-    trigger: ret pack deliverance
+    when: pack and primed and deliverance_known
     relevance: normal + 6.5
   - do: judgement
-    trigger: ret pack judgement
+    when: pack and primed and not deliverance_known
     relevance: normal + 6.5
   - do: avenging wrath
-    trigger: ret pack avenging wrath
+    when: pack and value("elite enemies within::8") >= 4
     relevance: normal + 6.25
   - do: wake of ashes
-    trigger: ret pack wake of ashes
+    when: pack and enemies_in_cone(12, 104) >= 2 and seal_wake_ok
     relevance: normal + 6.0
   - do: holy wrath
-    trigger: ret pack holy wrath
+    when: pack and enemies_within(10) >= 2
     relevance: normal + 5.5
   - do: divine storm
-    trigger: ret pack divine storm
+    when: pack and enemies_within(8) >= 2
     relevance: normal + 5.0
   - do: consecration
-    trigger: ret pack consecration
+    when: pack and enemies_within(8) >= 3 and mana(self) > 30
     relevance: normal + 4.5
   - do: execution sentence on cluster
-    trigger: ret pack execution sentence
+    when: pack and health_pct("most clustered enemy::5") > 50
     relevance: normal + 4.0
   - do: blade of justice
-    trigger: ret pack blade of justice
+    when: pack and aura(self, 20375, own) and enemies_near_target(8) >= 3
     relevance: normal + 3.5
   - do: exorcism
-    trigger: ret pack exorcism
+    when: pack and art_of_war
     relevance: normal + 3.0
   - do: hammer of wrath
-    trigger: ret pack hammer of wrath
+    when: pack and health_pct(target) <= 20
     relevance: normal + 2.5
   - do: crusader strike
-    trigger: ret pack crusader strike
+    when: pack
     relevance: normal + 2.0

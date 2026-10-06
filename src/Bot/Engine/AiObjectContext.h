@@ -79,6 +79,11 @@ public:
     static bool GetCreatorTables(std::string const& className,
                                  SharedNamedObjectContextList<Action> const*& actionTable,
                                  SharedNamedObjectContextList<Trigger> const*& triggerTable);
+    // The same, with the value table (base + class names) for checking the values a condition reads.
+    static bool GetCreatorTables(std::string const& className,
+                                 SharedNamedObjectContextList<Action> const*& actionTable,
+                                 SharedNamedObjectContextList<Trigger> const*& triggerTable,
+                                 SharedNamedObjectContextList<UntypedValue> const*& valueTable);
 
     static void BuildSharedContexts();
     static void BuildSharedStrategyContexts(SharedNamedObjectContextList<Strategy>& strategyContexts);

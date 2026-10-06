@@ -61,26 +61,47 @@ bool AiObjectContext::GetCreatorTables(std::string const& className,
                                        SharedNamedObjectContextList<Action> const*& actionTable,
                                        SharedNamedObjectContextList<Trigger> const*& triggerTable)
 {
+    SharedNamedObjectContextList<UntypedValue> const* valueTable = nullptr;
+    return GetCreatorTables(className, actionTable, triggerTable, valueTable);
+}
+
+bool AiObjectContext::GetCreatorTables(std::string const& className,
+                                       SharedNamedObjectContextList<Action> const*& actionTable,
+                                       SharedNamedObjectContextList<Trigger> const*& triggerTable,
+                                       SharedNamedObjectContextList<UntypedValue> const*& valueTable)
+{
     struct ClassTables
     {
         char const* name;
         SharedNamedObjectContextList<Action> const* actions;
         SharedNamedObjectContextList<Trigger> const* triggers;
+        SharedNamedObjectContextList<UntypedValue> const* values;
     };
 
     ClassTables const tables[] = {
-        {"base", &sharedActionContexts, &sharedTriggerContexts},
-        {"warrior", &WarriorAiObjectContext::sharedActionContexts, &WarriorAiObjectContext::sharedTriggerContexts},
-        {"paladin", &PaladinAiObjectContext::sharedActionContexts, &PaladinAiObjectContext::sharedTriggerContexts},
-        {"hunter", &HunterAiObjectContext::sharedActionContexts, &HunterAiObjectContext::sharedTriggerContexts},
-        {"rogue", &RogueAiObjectContext::sharedActionContexts, &RogueAiObjectContext::sharedTriggerContexts},
-        {"priest", &PriestAiObjectContext::sharedActionContexts, &PriestAiObjectContext::sharedTriggerContexts},
-        {"dk", &DKAiObjectContext::sharedActionContexts, &DKAiObjectContext::sharedTriggerContexts},
-        {"deathknight", &DKAiObjectContext::sharedActionContexts, &DKAiObjectContext::sharedTriggerContexts},
-        {"shaman", &ShamanAiObjectContext::sharedActionContexts, &ShamanAiObjectContext::sharedTriggerContexts},
-        {"mage", &MageAiObjectContext::sharedActionContexts, &MageAiObjectContext::sharedTriggerContexts},
-        {"warlock", &WarlockAiObjectContext::sharedActionContexts, &WarlockAiObjectContext::sharedTriggerContexts},
-        {"druid", &DruidAiObjectContext::sharedActionContexts, &DruidAiObjectContext::sharedTriggerContexts},
+        {"base", &sharedActionContexts, &sharedTriggerContexts, &sharedValueContexts},
+        {"warrior", &WarriorAiObjectContext::sharedActionContexts, &WarriorAiObjectContext::sharedTriggerContexts,
+         &WarriorAiObjectContext::sharedValueContexts},
+        {"paladin", &PaladinAiObjectContext::sharedActionContexts, &PaladinAiObjectContext::sharedTriggerContexts,
+         &PaladinAiObjectContext::sharedValueContexts},
+        {"hunter", &HunterAiObjectContext::sharedActionContexts, &HunterAiObjectContext::sharedTriggerContexts,
+         &HunterAiObjectContext::sharedValueContexts},
+        {"rogue", &RogueAiObjectContext::sharedActionContexts, &RogueAiObjectContext::sharedTriggerContexts,
+         &RogueAiObjectContext::sharedValueContexts},
+        {"priest", &PriestAiObjectContext::sharedActionContexts, &PriestAiObjectContext::sharedTriggerContexts,
+         &PriestAiObjectContext::sharedValueContexts},
+        {"dk", &DKAiObjectContext::sharedActionContexts, &DKAiObjectContext::sharedTriggerContexts,
+         &DKAiObjectContext::sharedValueContexts},
+        {"deathknight", &DKAiObjectContext::sharedActionContexts, &DKAiObjectContext::sharedTriggerContexts,
+         &DKAiObjectContext::sharedValueContexts},
+        {"shaman", &ShamanAiObjectContext::sharedActionContexts, &ShamanAiObjectContext::sharedTriggerContexts,
+         &ShamanAiObjectContext::sharedValueContexts},
+        {"mage", &MageAiObjectContext::sharedActionContexts, &MageAiObjectContext::sharedTriggerContexts,
+         &MageAiObjectContext::sharedValueContexts},
+        {"warlock", &WarlockAiObjectContext::sharedActionContexts, &WarlockAiObjectContext::sharedTriggerContexts,
+         &WarlockAiObjectContext::sharedValueContexts},
+        {"druid", &DruidAiObjectContext::sharedActionContexts, &DruidAiObjectContext::sharedTriggerContexts,
+         &DruidAiObjectContext::sharedValueContexts},
     };
 
     for (ClassTables const& entry : tables)
@@ -90,6 +111,7 @@ bool AiObjectContext::GetCreatorTables(std::string const& className,
 
         actionTable = entry.actions;
         triggerTable = entry.triggers;
+        valueTable = entry.values;
         return true;
     }
 

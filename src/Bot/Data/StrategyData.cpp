@@ -18,6 +18,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <map>
 #include <mutex>
 #include <set>
 #include <sstream>
@@ -156,13 +157,30 @@ std::string StripQualifier(std::string const& name)
     return name.substr(0, name.find("::"));
 }
 
+// Everything one file contributes, merged into the snapshot only when the whole file validated.
+struct FileOutput
+{
+    std::unordered_map<std::string, std::vector<StrategyRow>> strategies;
+    std::unordered_map<std::string, std::string> strategyClass;
+    std::unordered_map<std::string, std::vector<NamedCondition>> namedConditions;
+};
+
+bool IsIdentifier(std::string const& text)
+{
+    if (text.empty() || !(std::isalpha(static_cast<unsigned char>(text[0])) || text[0] == '_'))
+        return false;
+
+    return std::all_of(text.begin(), text.end(),
+                       [](char c) { return std::isalnum(static_cast<unsigned char>(c)) || c == '_'; });
+}
+
 class FileCompiler
 {
 public:
     FileCompiler(std::string file, std::vector<std::string>& errors) : _file(std::move(file)), _errors(errors) {}
 
     // Returns false when the file produced errors; strategies then holds partial output and must be dropped.
-    bool Compile(std::string const& content, std::unordered_map<std::string, std::vector<StrategyRow>>& strategies)
+    bool Compile(std::string const& content, FileOutput& output)
     {
         size_t const errorsBefore = _errors.size();
 
@@ -175,7 +193,7 @@ public:
                     continue;
 
                 _documentPrefix = documents.size() > 1 ? "document " + std::to_string(i + 1) + ": " : "";
-                CompileDocument(documents[i], strategies);
+                CompileDocument(documents[i], output);
             }
         }
         catch (fkyaml::exception const& e)
@@ -226,8 +244,115 @@ private:
         return true;
     }
 
-    void CompileDocument(fkyaml::node const& doc,
-                         std::unordered_map<std::string, std::vector<StrategyRow>>& strategies)
+    void FailExpr(std::string const& path, ExprError const& error)
+    {
+        Fail(path, error.column ? "column " + std::to_string(error.column) + ": " + error.message : error.message);
+    }
+
+    struct NamedState
+    {
+        enum class Status : uint8
+        {
+            Pending,
+            Compiling,
+            Done,
+            Failed
+        };
+
+        std::string text;
+        ExprPtr compiled;
+        Status status = Status::Pending;
+    };
+
+    // The expression compiler's hook for a bare identifier: compiles the named condition on first use, so entries
+    // may refer to each other in any order, and reports a cycle with the chain that closed it.
+    ExprPtr ResolveNamed(std::string const& name, std::string& error)
+    {
+        auto const it = _named.find(name);
+        if (it == _named.end())
+            return nullptr;
+
+        NamedState& state = it->second;
+        if (state.status == NamedState::Status::Done)
+            return state.compiled;
+
+        if (state.status == NamedState::Status::Failed)
+        {
+            error = "condition '" + name + "' has errors (reported at conditions." + name + ")";
+            return nullptr;
+        }
+
+        if (state.status == NamedState::Status::Compiling)
+        {
+            std::string chain;
+            bool inCycle = false;
+            for (std::string const& entry : _compiling)
+            {
+                inCycle = inCycle || entry == name;
+                if (inCycle)
+                    chain += entry + " -> ";
+            }
+
+            error = "condition '" + name + "' refers to itself (" + chain + name + ")";
+            return nullptr;
+        }
+
+        state.status = NamedState::Status::Compiling;
+        _compiling.push_back(name);
+        ExprError compileError;
+        ExprPtr result;
+        bool const ok = CompileExpression(state.text, _env, result, compileError);
+        _compiling.pop_back();
+        if (!ok)
+        {
+            state.status = NamedState::Status::Failed;
+            FailExpr("conditions." + name, compileError);
+            error = "condition '" + name + "' has errors (reported at conditions." + name + ")";
+            return nullptr;
+        }
+
+        state.compiled = result;
+        state.status = NamedState::Status::Done;
+        return result;
+    }
+
+    void ReadConditions(fkyaml::node const& node)
+    {
+        if (!node.is_mapping())
+        {
+            Fail("conditions", "expected a mapping of condition name to expression");
+            return;
+        }
+
+        for (auto const& entry : node.as_map())
+        {
+            std::string name;
+            if (!KeyName(entry.first, name))
+            {
+                Fail("conditions", "condition names must be strings");
+                continue;
+            }
+
+            std::string const path = "conditions." + name;
+            if (!IsIdentifier(name))
+            {
+                Fail(path, "a condition name is letters, digits and '_', starting with a letter or '_'");
+                continue;
+            }
+
+            if (IsReservedConditionName(name))
+            {
+                Fail(path, "'" + name + "' is a function or keyword name");
+                continue;
+            }
+
+            NamedState state;
+            if (ReadString(entry.second, path, state.text))
+                _named[name] = std::move(state);
+        }
+    }
+
+    void CompileDocument(fkyaml::node const& doc, FileOutput& output)
     {
         if (!doc.is_mapping())
         {
@@ -238,6 +363,7 @@ private:
         std::string key;
         std::string className;
         fkyaml::node const* rows = nullptr;
+        fkyaml::node const* conditions = nullptr;
         bool haveKey = false;
         bool haveClass = false;
         for (auto const& entry : doc.as_map())
@@ -253,10 +379,12 @@ private:
                 haveKey = ReadString(entry.second, "strategy", key);
             else if (name == "class")
                 haveClass = ReadString(entry.second, "class", className);
+            else if (name == "conditions")
+                conditions = &entry.second;
             else if (name == "rows")
                 rows = &entry.second;
             else
-                Fail("", "unknown key '" + name + "' (expected strategy, class, rows)");
+                Fail("", "unknown key '" + name + "' (expected strategy, class, conditions, rows)");
         }
 
         if (!haveKey && !doc.contains("strategy"))
@@ -275,15 +403,41 @@ private:
             return;
         }
 
-        if (haveKey && strategies.count(key))
+        if (haveKey && output.strategies.count(key))
             Fail("strategy", "duplicate strategy key '" + key + "' in this file");
 
         SharedNamedObjectContextList<Action> const* actionTable = nullptr;
         SharedNamedObjectContextList<Trigger> const* triggerTable = nullptr;
-        if (haveClass && !AiObjectContext::GetCreatorTables(Lower(className), actionTable, triggerTable))
+        SharedNamedObjectContextList<UntypedValue> const* valueTable = nullptr;
+        if (haveClass &&
+            !AiObjectContext::GetCreatorTables(Lower(className), actionTable, triggerTable, valueTable))
         {
             Fail("class", "unknown class '" + className + "'");
             return;
+        }
+
+        _env = ExprEnv();
+        if (valueTable)
+            _env.hasValue = [valueTable](std::string const& name) { return valueTable->creators.count(name) > 0; };
+        if (triggerTable)
+            _env.hasTrigger = [triggerTable](std::string const& name)
+            { return triggerTable->creators.count(name) > 0; };
+        _env.namedCondition = [this](std::string const& name, std::string& error)
+        { return ResolveNamed(name, error); };
+
+        _named.clear();
+        _compiling.clear();
+        if (conditions)
+            ReadConditions(*conditions);
+
+        // Compile every entry, used or not, so a broken one is reported
+        std::vector<NamedCondition> namedOut;
+        for (auto const& entry : _named)
+        {
+            std::string error;
+            ExprPtr compiled = ResolveNamed(entry.first, error);
+            if (compiled)
+                namedOut.push_back({entry.first, compiled, _file + ": conditions." + entry.first});
         }
 
         std::vector<StrategyRow> compiled;
@@ -295,7 +449,11 @@ private:
         }
 
         if (haveKey)
-            strategies[key] = std::move(compiled);
+        {
+            output.strategies[key] = std::move(compiled);
+            output.strategyClass[key] = Lower(className);
+            output.namedConditions[key] = std::move(namedOut);
+        }
     }
 
     void CompileRow(fkyaml::node const& row, std::string const& path,
@@ -304,13 +462,14 @@ private:
     {
         if (!row.is_mapping())
         {
-            Fail(path, "a row must be a mapping with 'do', 'trigger' and 'relevance'");
+            Fail(path, "a row must be a mapping with 'do', 'when' or 'trigger', and 'relevance'");
             return;
         }
 
         StrategyRow compiled;
         bool haveActions = false;
         bool haveTrigger = false;
+        bool haveCondition = false;
         bool haveRelevance = false;
         bool ok = true;
         for (auto const& entry : row.as_map())
@@ -339,32 +498,53 @@ private:
                     Fail(keyPath, "unknown trigger '" + compiled.trigger + "'");
                     ok = false;
                 }
+                else if (StripQualifier(compiled.trigger) == "data")
+                {
+                    Fail(keyPath, "'data' triggers are generated from 'when', not named in a row");
+                    ok = false;
+                }
+            }
+            else if (name == "when")
+            {
+                haveCondition = true;
+                std::string text;
+                ExprError error;
+                if (!ReadString(entry.second, keyPath, text))
+                    ok = false;
+                else if (!CompileExpression(text, _env, compiled.condition, error))
+                {
+                    FailExpr(keyPath, error);
+                    ok = false;
+                }
+
+                compiled.origin = _file + ": " + keyPath;
             }
             else if (name == "relevance")
             {
                 haveRelevance = true;
                 ok &= ReadRelevance(entry.second, keyPath, compiled.relevance);
             }
-            else if (name == "when")
-            {
-                Fail(keyPath, "inline conditions arrive in Y2; use 'trigger' with an existing trigger name");
-                ok = false;
-            }
             else
             {
-                Fail(keyPath, "unknown key '" + name + "' (expected do, trigger, relevance)");
+                Fail(keyPath, "unknown key '" + name + "' (expected do, when, trigger, relevance)");
                 ok = false;
             }
         }
 
         if (!haveActions)
             Fail(path, "missing required key 'do'");
-        if (!haveTrigger)
-            Fail(path, "missing required key 'trigger'");
+        if (!haveTrigger && !haveCondition)
+            Fail(path, "missing required key 'when' (a condition) or 'trigger' (an existing trigger name)");
+        if (haveTrigger && haveCondition)
+        {
+            Fail(path, "'when' and 'trigger' are exclusive; use one");
+            ok = false;
+        }
+
         if (!haveRelevance)
             Fail(path, "missing required key 'relevance'");
 
-        if (ok && haveActions && haveTrigger && haveRelevance)
+        if (ok && haveActions && (haveTrigger != haveCondition) && haveRelevance)
             out.push_back(std::move(compiled));
     }
 
@@ -445,6 +625,9 @@ private:
     std::string _file;
     std::string _documentPrefix;
     std::vector<std::string>& _errors;
+    ExprEnv _env;
+    std::map<std::string, NamedState> _named;
+    std::vector<std::string> _compiling;
 };
 #endif  // PLAYERBOTS_HAS_FKYAML
 }  // namespace
@@ -501,12 +684,12 @@ LoadResult LoadFromDisk(std::string const& path)
         std::stringstream buffer;
         buffer << stream.rdbuf();
 
-        std::unordered_map<std::string, std::vector<StrategyRow>> fileStrategies;
-        if (!FileCompiler(relative, result.errors).Compile(buffer.str(), fileStrategies))
+        FileOutput fileOutput;
+        if (!FileCompiler(relative, result.errors).Compile(buffer.str(), fileOutput))
             continue;
 
         bool duplicate = false;
-        for (auto const& entry : fileStrategies)
+        for (auto const& entry : fileOutput.strategies)
         {
             if (data->strategies.count(entry.first))
             {
@@ -519,14 +702,32 @@ LoadResult LoadFromDisk(std::string const& path)
         if (duplicate)
             continue;
 
-        for (auto& entry : fileStrategies)
+        for (auto& entry : fileOutput.strategies)
             data->strategies[entry.first] = std::move(entry.second);
+        for (auto& entry : fileOutput.strategyClass)
+            data->strategyClass[entry.first] = std::move(entry.second);
+        for (auto& entry : fileOutput.namedConditions)
+            data->namedConditions[entry.first] = std::move(entry.second);
 
         ++data->fileCount;
     }
 #endif
 
     return result;
+}
+
+StrategyRow const* StrategyData::FindRow(std::string const& key, size_t index) const
+{
+    auto const it = strategies.find(key);
+    if (it == strategies.end() || index >= it->second.size())
+        return nullptr;
+
+    return &it->second[index];
+}
+
+std::string ConditionTriggerName(std::string const& key, size_t index)
+{
+    return "data::" + key + "#" + std::to_string(index);
 }
 
 std::string ResolveDataPath()
@@ -596,6 +797,7 @@ void AppendRows(std::string const& key, std::vector<TriggerNode*>& triggers)
     if (it == snapshot->strategies.end())
         return;
 
+    size_t index = 0;
     for (StrategyRow const& row : it->second)
     {
         std::vector<NextAction> actions;
@@ -603,7 +805,9 @@ void AppendRows(std::string const& key, std::vector<TriggerNode*>& triggers)
         for (std::string const& action : row.actions)
             actions.emplace_back(action, row.relevance);
 
-        triggers.push_back(new TriggerNode(row.trigger, std::move(actions)));
+        triggers.push_back(
+            new TriggerNode(row.condition ? ConditionTriggerName(key, index) : row.trigger, std::move(actions)));
+        ++index;
     }
 }
 }  // namespace ai::data
