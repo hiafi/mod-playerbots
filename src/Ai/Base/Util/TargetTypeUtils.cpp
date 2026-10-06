@@ -6,6 +6,7 @@
 
 #include "TargetTypeUtils.h"
 #include "Creature.h"
+#include "Playerbots.h"
 
 namespace ai::target
 {
@@ -29,6 +30,19 @@ bool IsControlled(Unit* unit)
             unit->HasAuraType(SPELL_AURA_MOD_SILENCE) || unit->HasAuraType(SPELL_AURA_MOD_PACIFY_SILENCE) ||
             unit->HasAuraType(SPELL_AURA_MOD_DISARM) || unit->HasAuraType(SPELL_AURA_MOD_DISARM_OFFHAND) ||
             unit->HasAuraType(SPELL_AURA_MOD_DISARM_RANGED));
+}
+
+float EstimatedLifetime(PlayerbotAI* botAI, Unit* unit)
+{
+    if (!unit || !unit->IsAlive())
+        return 0.0f;
+
+    AiObjectContext* context = botAI->GetAiObjectContext();
+    float dps = context->GetValue<float>("estimated group dps")->Get();
+    if (context->GetValue<uint8>("attacker count")->Get() >= 3)
+        dps *= 0.75f;
+
+    return unit->GetHealth() / dps;
 }
 
 }  // namespace ai::target

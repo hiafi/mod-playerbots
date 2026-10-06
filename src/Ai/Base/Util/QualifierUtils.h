@@ -54,6 +54,58 @@ inline std::vector<float> ParseNumbers(std::string const& qualifier, size_t coun
     return numbers;
 }
 
+// Splits on a separator and keeps empty fields, so two adjacent separators give an empty field between them.
+inline std::vector<std::string> Split(std::string const& qualifier, char separator)
+{
+    std::vector<std::string> fields;
+    size_t start = 0;
+    while (true)
+    {
+        size_t const end = qualifier.find(separator, start);
+        if (end == std::string::npos)
+        {
+            fields.push_back(qualifier.substr(start));
+            break;
+        }
+
+        fields.push_back(qualifier.substr(start, end - start));
+        start = end + 1;
+    }
+
+    return fields;
+}
+
+// Parses a comma-separated list of spell ids such as "589,594". Returns an empty vector if the list is empty
+// or any entry is not a positive whole number.
+inline std::vector<uint32> ParseIds(std::string const& list)
+{
+    std::vector<uint32> ids;
+    for (std::string const& token : Split(list, ','))
+    {
+        char* parsedEnd = nullptr;
+        errno = 0;
+        unsigned long long const id = std::strtoull(token.c_str(), &parsedEnd, 10);
+        if (token.empty() || token[0] == '-' || parsedEnd != token.c_str() + token.size() || errno != 0 || id == 0 ||
+            id > std::numeric_limits<int32>::max())
+            return {};
+
+        ids.push_back(static_cast<uint32>(id));
+    }
+
+    return ids;
+}
+
+// Parses one finite number; false (and `out` untouched) on anything else.
+inline bool ParseNumber(std::string const& token, float& out)
+{
+    std::vector<float> const numbers = ParseNumbers(token, 1);
+    if (numbers.empty())
+        return false;
+
+    out = numbers[0];
+    return true;
+}
+
 }  // namespace ai::qualifier
 
 #endif

@@ -8,6 +8,7 @@
 #define PLAYERBOTS_TRIGGERCONTEXT_H
 
 #include "CureTriggers.h"
+#include "FightDurationTriggers.h"
 #include "FishingTriggers.h"
 #include "GenericTriggers.h"
 #include "GuildTriggers.h"
@@ -41,6 +42,8 @@ public:
         creators["target is boss"] = &TriggerContext::target_is_boss;
         creators["target is elite"] = &TriggerContext::target_is_elite;
         creators["target controlled"] = &TriggerContext::target_controlled;
+        creators["combat time"] = &TriggerContext::combat_time;
+        creators["target lifetime at least"] = &TriggerContext::target_lifetime_at_least;
         creators["moving"] = &TriggerContext::moving;
         creators["not moving"] = &TriggerContext::not_moving;
 
@@ -261,6 +264,8 @@ private:
     static Trigger* target_is_boss(PlayerbotAI* botAI) { return new TargetIsBossTrigger(botAI); }
     static Trigger* target_is_elite(PlayerbotAI* botAI) { return new TargetIsEliteTrigger(botAI); }
     static Trigger* target_controlled(PlayerbotAI* botAI) { return new TargetControlledTrigger(botAI); }
+    static Trigger* combat_time(PlayerbotAI* botAI) { return new CombatTimeTrigger(botAI); }
+    static Trigger* target_lifetime_at_least(PlayerbotAI* botAI) { return new TargetLifetimeAtLeastTrigger(botAI); }
     static Trigger* moving(PlayerbotAI* botAI) { return new MovingTrigger(botAI); }
     static Trigger* not_moving(PlayerbotAI* botAI) { return new NoMovementTrigger(botAI, "not moving"); }
     static Trigger* give_food(PlayerbotAI* botAI) { return new GiveFoodTrigger(botAI); }

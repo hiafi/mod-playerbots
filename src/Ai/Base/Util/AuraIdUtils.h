@@ -24,6 +24,8 @@ Aura* FindAura(Unit* unit, std::vector<uint32> const& ids, ObjectGuid caster = O
 bool HasAnyAura(Unit* unit, std::vector<uint32> const& ids, ObjectGuid caster = ObjectGuid::Empty);
 // Stack count of the found aura, 0 if absent.
 uint8 AuraStacks(Unit* unit, std::vector<uint32> const& ids, ObjectGuid caster = ObjectGuid::Empty);
+// Charge count of the found aura, 0 if absent. Charges are separate from stacks: a charged aura keeps one stack.
+uint8 AuraCharges(Unit* unit, std::vector<uint32> const& ids, ObjectGuid caster = ObjectGuid::Empty);
 // Remaining duration in ms; 0 if absent; -1 if permanent.
 int32 AuraRemainingMs(Unit* unit, std::vector<uint32> const& ids, ObjectGuid caster = ObjectGuid::Empty);
 // True if `unit` has an aura with id `spellId` applied by any caster other than `unit` itself.

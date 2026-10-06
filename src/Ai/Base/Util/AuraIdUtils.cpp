@@ -34,6 +34,12 @@ uint8 AuraStacks(Unit* unit, std::vector<uint32> const& ids, ObjectGuid caster)
     return aura ? aura->GetStackAmount() : 0;
 }
 
+uint8 AuraCharges(Unit* unit, std::vector<uint32> const& ids, ObjectGuid caster)
+{
+    Aura* aura = FindAura(unit, ids, caster);
+    return aura ? aura->GetCharges() : 0;
+}
+
 int32 AuraRemainingMs(Unit* unit, std::vector<uint32> const& ids, ObjectGuid caster)
 {
     Aura* aura = FindAura(unit, ids, caster);

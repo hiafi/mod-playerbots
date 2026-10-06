@@ -7,6 +7,7 @@
 #include "PartyRoleValues.h"
 #include "AuraIdUtils.h"
 #include "Group.h"
+#include "GroupUtils.h"
 #include "Playerbots.h"
 #include "QualifierUtils.h"
 #include "Timer.h"
@@ -14,45 +15,14 @@
 #include <limits>
 #include <unordered_map>
 
+using ai::group::GetGroupPlayers;
+using ai::group::HEAL_RANGE;
+using ai::group::IsInHealRange;
+using ai::group::IsInHealRangeAndSight;
+
 namespace
 {
-constexpr float HEAL_RANGE = 40.0f;
 constexpr float TANK_RANGE = 100.0f;
-
-// Living group players in the bot's map instance, bot included. Without a group, just the bot. IsInMap compares
-// the Map* itself, so members in another instance of the same map id, which run on another map thread, are left out.
-std::vector<Player*> GetGroupPlayers(Player* bot)
-{
-    std::vector<Player*> players;
-    Group* group = bot->GetGroup();
-    if (!group)
-    {
-        if (bot->IsAlive())
-            players.push_back(bot);
-
-        return players;
-    }
-
-    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
-    {
-        Player* member = ref->GetSource();
-        if (member && member->IsInWorld() && member->IsInMap(bot) && member->IsAlive())
-            players.push_back(member);
-    }
-
-    return players;
-}
-
-// A member on another map is still in the world but belongs to another map thread
-bool IsInHealRange(Player* bot, Unit* unit)
-{
-    return unit == bot || (unit->IsInWorld() && unit->IsInMap(bot) && bot->IsWithinDist(unit, HEAL_RANGE));
-}
-
-bool IsInHealRangeAndSight(Player* bot, Unit* unit)
-{
-    return unit == bot || (IsInHealRange(bot, unit) && bot->IsWithinLOSInMap(unit));
-}
 
 struct HealCluster
 {

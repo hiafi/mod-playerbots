@@ -12,6 +12,7 @@
 #include "AlwaysLootListValue.h"
 #include "AoeHealValues.h"
 #include "AoeValues.h"
+#include "AttackerAuraValues.h"
 #include "AttackerCountValues.h"
 #include "AttackerWithoutAuraTargetValue.h"
 #include "AttackersValue.h"
@@ -89,6 +90,7 @@
 #include "SkipSpellsListValue.h"
 #include "SnareTargetValue.h"
 #include "SpellCastUsefulValue.h"
+#include "SpellCooldownValues.h"
 #include "SpellIdValue.h"
 #include "Stances.h"
 #include "StatsValues.h"
@@ -191,6 +193,13 @@ public:
         creators["elite enemies within"] = &ValueContext::elite_enemies_within;
         creators["most clustered enemy"] = &ValueContext::most_clustered_enemy;
         creators["enemies near target"] = &ValueContext::enemies_near_target;
+        creators["most clustered enemy count"] = &ValueContext::most_clustered_enemy_count;
+        creators["unsafe aoe units"] = &ValueContext::unsafe_aoe_units;
+        creators["attacker without aura id"] = &ValueContext::attacker_without_aura_id;
+        creators["attackers with aura id"] = &ValueContext::attackers_with_aura_id;
+        creators["lowest health attacker below"] = &ValueContext::lowest_health_attacker_below;
+        creators["spell cooldown remaining"] = &ValueContext::spell_cooldown_remaining;
+        creators["target lifetime"] = &ValueContext::target_lifetime;
         creators["enemies in cone"] = &ValueContext::enemies_in_cone;
         creators["party has healer"] = &ValueContext::party_has_healer;
         creators["party members below"] = &ValueContext::party_members_below;
@@ -405,6 +414,19 @@ private:
     static UntypedValue* elite_enemies_within(PlayerbotAI* botAI) { return new EliteEnemiesWithinValue(botAI); }
     static UntypedValue* most_clustered_enemy(PlayerbotAI* botAI) { return new MostClusteredEnemyValue(botAI); }
     static UntypedValue* enemies_near_target(PlayerbotAI* botAI) { return new EnemiesNearTargetValue(botAI); }
+    static UntypedValue* most_clustered_enemy_count(PlayerbotAI* botAI)
+    {
+        return new MostClusteredEnemyCountValue(botAI);
+    }
+    static UntypedValue* unsafe_aoe_units(PlayerbotAI* botAI) { return new UnsafeAoeUnitsValue(botAI); }
+    static UntypedValue* attacker_without_aura_id(PlayerbotAI* botAI) { return new AttackerWithoutAuraIdValue(botAI); }
+    static UntypedValue* attackers_with_aura_id(PlayerbotAI* botAI) { return new AttackersWithAuraIdValue(botAI); }
+    static UntypedValue* lowest_health_attacker_below(PlayerbotAI* botAI)
+    {
+        return new LowestHealthAttackerBelowValue(botAI);
+    }
+    static UntypedValue* spell_cooldown_remaining(PlayerbotAI* botAI) { return new SpellCooldownRemainingValue(botAI); }
+    static UntypedValue* target_lifetime(PlayerbotAI* botAI) { return new TargetLifetimeValue(botAI); }
     static UntypedValue* enemies_in_cone(PlayerbotAI* botAI) { return new EnemiesInConeValue(botAI); }
     static UntypedValue* party_has_healer(PlayerbotAI* botAI) { return new PartyHasHealerValue(botAI); }
     static UntypedValue* party_members_below(PlayerbotAI* botAI) { return new PartyMembersBelowValue(botAI); }

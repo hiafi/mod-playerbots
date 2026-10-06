@@ -11,21 +11,13 @@
 #include "PlayerbotFactory.h"
 #include "Playerbots.h"
 #include "SharedDefines.h"
+#include "TargetTypeUtils.h"
 
-float EstimatedLifetimeValue::Calculate()
+float EstimatedLifetimeValue::Calculate() { return ai::target::EstimatedLifetime(botAI, AI_VALUE(Unit*, qualifier)); }
+
+float TargetLifetimeValue::Calculate()
 {
-    Unit* target = AI_VALUE(Unit*, qualifier);
-    if (!target || !target->IsAlive())
-    {
-        return 0.0f;
-    }
-    float dps = AI_VALUE(float, "estimated group dps");
-    bool aoePenalty = AI_VALUE(uint8, "attacker count") >= 3;
-    if (aoePenalty)
-        dps *= 0.75;
-    float res = target->GetHealth() / dps;
-    // bot->Say(target->GetName() + " lifetime: " + std::to_string(res), LANG_UNIVERSAL);
-    return res;
+    return ai::target::EstimatedLifetime(botAI, AI_VALUE(Unit*, "current target"));
 }
 
 float EstimatedGroupDpsValue::Calculate()

@@ -87,6 +87,39 @@ private:
     int32 _belowMs;
 };
 
+// Current-target versions of the four triggers above, for debuffs and DoTs. Same base-class rules apply.
+class TargetHasAuraIdTrigger : public HasAuraIdTrigger
+{
+public:
+    using HasAuraIdTrigger::HasAuraIdTrigger;
+
+    std::string const GetTargetName() override { return "current target"; }
+};
+
+class TargetNoAuraIdTrigger : public NoAuraIdTrigger
+{
+public:
+    using NoAuraIdTrigger::NoAuraIdTrigger;
+
+    std::string const GetTargetName() override { return "current target"; }
+};
+
+class TargetAuraIdStacksTrigger : public AuraIdStacksTrigger
+{
+public:
+    using AuraIdStacksTrigger::AuraIdStacksTrigger;
+
+    std::string const GetTargetName() override { return "current target"; }
+};
+
+class TargetAuraIdExpiringTrigger : public AuraIdExpiringTrigger
+{
+public:
+    using AuraIdExpiringTrigger::AuraIdExpiringTrigger;
+
+    std::string const GetTargetName() override { return "current target"; }
+};
+
 // Active when AI_VALUE2(uint8, valueName, qualifier) >= minCount, e.g. "3+ enemies within 8 yd".
 class CountAtLeastTrigger : public Trigger
 {
