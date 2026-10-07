@@ -26,8 +26,8 @@ public:
     std::string const getName() override { return "nc"; }
 };
 
-// Registered as "boost": "druid/boost" for every druid and "druid/boost-feral" for a Bear bot. The spec is read at
-// InitTriggers, so a respec switches lists on the next engine re-init.
+// Registered as "boost": "druid/boost" for every druid (the treants' pet stance). Berserk is a row of the Cat and Bear
+// rotations, so there is nothing else to boost.
 class DruidReworkBoostStrategy : public Strategy
 {
 public:

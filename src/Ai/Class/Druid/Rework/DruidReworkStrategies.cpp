@@ -32,11 +32,8 @@ void DruidReworkNonCombatStrategy::InitTriggers(std::vector<TriggerNode*>& trigg
 
 void DruidReworkBoostStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
+    // Berserk is a row of the Cat and Bear rotations
     ai::data::AppendRows("druid/boost", triggers);
-
-    // Berserk is a row of the Cat rotation; the Bear keeps the stock one until the Bear stage
-    if (GetDruidSpec(botAI->GetBot()) == DruidSpec::Bear)
-        ai::data::AppendRows("druid/boost-feral", triggers);
 }
 
 void DruidReworkCcStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)

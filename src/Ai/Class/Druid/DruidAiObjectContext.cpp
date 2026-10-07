@@ -11,6 +11,7 @@
 #include "DruidActions.h"
 #include "DruidBalanceContext.h"
 #include "DruidBearActions.h"
+#include "DruidBearContext.h"
 #include "DruidCatContext.h"
 #include "DruidCatActions.h"
 #include "DruidPullStrategy.h"
@@ -71,7 +72,7 @@ public:
     }
 
 private:
-    static Strategy* bear(PlayerbotAI* botAI) { return new BearDruidStrategy(botAI); }
+    static Strategy* bear(PlayerbotAI* botAI) { return new DruidReworkBearStrategy(botAI); }
     static Strategy* cat(PlayerbotAI* botAI) { return new DruidReworkCatStrategy(botAI); }
     static Strategy* balance(PlayerbotAI* botAI) { return new DruidReworkBalanceStrategy(botAI); }
     static Strategy* heal(PlayerbotAI* botAI) { return new DruidReworkRestoStrategy(botAI); }
@@ -420,6 +421,7 @@ void DruidAiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextLis
     actionContexts.Add(new DruidAiObjectContextInternal());
     actionContexts.Add(new DruidReworkActionFactory());
     actionContexts.Add(new DruidCatActionFactory());
+    actionContexts.Add(new DruidBearActionFactory());
     actionContexts.Add(new DruidBalanceActionFactory());
     actionContexts.Add(new DruidRestoActionFactory());
 }
@@ -429,6 +431,7 @@ void DruidAiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextLi
     AiObjectContext::BuildSharedTriggerContexts(triggerContexts);
     triggerContexts.Add(new DruidTriggerFactoryInternal());
     triggerContexts.Add(new DruidBalanceTriggerFactory());
+    triggerContexts.Add(new DruidBearTriggerFactory());
 }
 
 class DruidValueContextInternal : public NamedObjectContext<UntypedValue>
@@ -450,5 +453,6 @@ void DruidAiObjectContext::BuildSharedValueContexts(SharedNamedObjectContextList
     AiObjectContext::BuildSharedValueContexts(valueContexts);
     valueContexts.Add(new DruidValueContextInternal());
     valueContexts.Add(new DruidBalanceValueFactory());
+    valueContexts.Add(new DruidBearValueFactory());
     valueContexts.Add(new DruidRestoValueFactory());
 }

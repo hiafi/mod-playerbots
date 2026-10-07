@@ -1,8 +1,8 @@
 # Rows every reworked druid shares, one document per list. The shells in DruidReworkStrategies.cpp append them:
 # "druid/nc" plus "druid/nc-oil" or "druid/nc-stone" and "druid/nc-heal" or "druid/nc-resto" to the "nc" strategy,
-# "druid/boost" and "druid/boost-feral" to "boost", "druid/cc" to "cc" and "druid/feral-charge-bear" to
-# "feral charge". Each row queues its actions at the relevance when its condition holds (`when`, the expression
-# language of StrategyExpression.h) or when an existing C++ trigger fires (`trigger`). Execution order is by
+# "druid/boost" to "boost", "druid/cc" to "cc" and "druid/feral-charge-bear" to "feral charge". Each row queues its
+# actions at the relevance when its condition holds (`when`, the expression language of StrategyExpression.h) or when
+# an existing C++ trigger fires (`trigger`). Execution order is by
 # relevance, not by position in this file. Actions named "druid ..." are RowCheckedAction (they re-check their own row
 # before casting). Spell ids: DruidReworkIds.h and the druid rework plan, section 2.
 #
@@ -50,14 +50,14 @@ rows:
 strategy: druid/nc-heal
 class: druid
 rows:
-  # Rejuvenation is not castable in Cat Form
+  # Neither heal is castable in Cat or Bear Form; a Bear leaves combat still in form
   - do: druid nc rejuv::80;774
-    when: not aura(self, 768) and exists("party member without own aura::80;774")
+    when: not aura(self, 768) and not aura(self, "5487,9634") and exists("party member without own aura::80;774")
     relevance: normal + 9
   - do: druid nc regrowth::50,50
     when: >-
-      alive("tank first heal target::50,50") and health_pct("tank first heal target::50,50") < 50
-      and not moving(self)
+      not aura(self, "5487,9634") and alive("tank first heal target::50,50")
+      and health_pct("tank first heal target::50,50") < 50 and not moving(self)
     relevance: normal + 8
 ---
 # Pet stance for Force of Nature's treants
@@ -67,14 +67,6 @@ rows:
   - do: set pet stance
     trigger: new pet
     relevance: raid
----
-# The whole Feral tab until the Bear stage takes Berserk into its own rotation
-strategy: druid/boost-feral
-class: druid
-rows:
-  - do: berserk
-    trigger: berserk
-    relevance: high + 7.5
 ---
 strategy: druid/cc
 class: druid
@@ -89,10 +81,13 @@ rows:
     trigger: entangling roots
     relevance: interrupt
 ---
-# The stock bear's charge, until the Bear stage replaces it
+# The Bear's charge (opener step 2 and the guide's utility row): Feral Charge (Bear) at 8 to 25 yd, to open on a target
+# that is not yet attacking the bot or to close on a caster (the Mangle that follows is a free Stampede cast)
 strategy: druid/feral-charge-bear
 class: druid
 rows:
-  - do: feral charge - bear
-    trigger: enemy out of melee
-    relevance: normal + 8
+  - do: bear feral charge
+    when: >-
+      known(16979) and cooldown(16979) == 0 and alive(target) and in_range(target, 25) and not in_range(target, 8)
+      and (value("my attacker count") == 0 or trigger("bear target casting"))
+    relevance: high + 6

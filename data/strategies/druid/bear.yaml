@@ -1,0 +1,171 @@
+# The reworked Bear tank's rotation, from the user's bear guide (docs/reworks/bot-strategy/druid-feral-tank-strat.md):
+# "druid/bear" is appended to the "bear" (and "tank") combat strategy by DruidReworkBearStrategy::InitTriggers. Each row
+# queues its action at the relevance when its condition holds (`when`, the expression language of StrategyExpression.h)
+# or when an existing C++ trigger fires (`trigger`). Execution order is by relevance, not by position in this file.
+# Actions named "bear ..." and "druid ..." are RowCheckedAction (they re-check their own row before casting); only
+# "reach melee" is a stock action. The charge row is the `druid/feral-charge-bear` document of common.yaml.
+#
+# Bands: defensives (emergency) > Bash (interrupt) > form, off-the-GCD rows, opener, `reach melee` (high) > pack
+# (normal + 9.x, so Swipe fills before any single-target row) > single target > the default `melee`. Ironfur, Enrage and
+# Growl are off the GCD, so the engine skips the GCD-blocked rows above them and they still fire during the GCD;
+# Berserk has a 1 s GCD on this server.
+#
+# Rows that queue the same action name and qualifier merge into one basket that keeps the first pusher's event, so only
+# that row is re-checked. The overlaps are on purpose (a failed re-check costs one tick): Ironfur I1/I2, Mangle
+# S1/O3/A2, Thrash S3/S1b/A1, Roar S2/A3, Maul S5/A5. The broadest row of each basket (S1, S2, S3, S5) is first in
+# this file, since the engine walks the triggers in file order and the kept event is the first row that holds.
+#
+# Every spell a bot may not know yet carries `known()`: `cooldown()` of an unknown spell reads 0. Every row on the
+# target has `alive(target)`. Rage is `value("rage::self target")`; "tanking" is `value("my attacker count")`, every
+# unit whose victim is the bot. The guide's Do-Not rules are conditions: Ironfur is the first spender (I1); Maul needs
+# 45 rage so an Ironfur (20) is still affordable after it (retuning `maul_ok` below 40 needs "stacks >= 3 or rage >=
+# 40" added); nothing casts Bestial Fury and the build takes none; every action is castable in Bear Form (5487).
+# "Equivalent debuffs" are the server's own non-stacking groups (spell_group 1016 for Thrash: Faerie Fire 770; 1062 and
+# 1063 for the Roar: Demoralizing Shout, Curse of Weakness, Vindication, Demoralizing Screech, every rank).
+# Spell ids: Bear Form 5487 (Dire Bear Form 9634 is not trained), Ironfur 200420, Pulverize 200421, Upheaval 200422,
+# Thrash 200423 (its group id with Faerie Fire 770), Stampede 200433 (free Mangle after Feral Charge), Lacerate 33745,
+# Mangle (Bear) 33878, Maul 6807, Swipe (Bear) 779, Demoralizing Roar 99, Enrage 5229, Berserk 50334, Frenzied
+# Regeneration 22842, Survival Instincts 61336, Barkskin 22812, Growl 6795, Feral Charge (Bear) 16979, Faerie Fire
+# (Feral) 16857, Bash 5211, Challenging Roar 5209.
+strategy: druid/bear
+class: druid
+conditions:
+  in_bear: aura(self, "5487,9634")
+  rage: value("rage::self target")
+  tanking: value("my attacker count") >= 1
+  pack: alive(target) and value("my attacker count") >= 3
+  mangle_ok: known(33878) and cooldown(33878) == 0 and alive(target)
+  thrash_ok: known(200423) and cooldown(200423) == 0 and alive(target)
+  # The bot's own Thrash, or the armor reduction of Faerie Fire from anyone
+  thrash_up: remaining(target, 200423, own) >= 3000 or aura(target, 770)
+  # The Roar (any caster) or an equivalent attack power reduction
+  demo_up: remaining(target, 99) >= 3000 or aura(target, "1160,6190,11554,11555,11556,25202,25203,47437,702,1108,6205,7646,11707,11708,27224,30909,50511,67,26017,24423,24577,24578,24579,27051,55487")
+  # 45 rage so that an Ironfur (20) is still affordable after the Maul
+  maul_ok: known(6807) and cooldown(6807) == 0 and alive(target) and rage >= 45
+rows:
+  # S1: Mangle first, off cooldown
+  - do: bear mangle
+    when: mangle_ok
+    relevance: normal + 8.5
+  # S2: Demoralizing Roar when its debuff is gone or nearly gone
+  - do: bear demoralizing roar
+    when: alive(target) and not demo_up
+    relevance: normal + 8.3
+  # S3: Thrash when its debuff is gone or nearly gone
+  - do: bear thrash
+    when: thrash_ok and not thrash_up
+    relevance: normal + 8.2
+  # S5: Maul at 45 rage or more
+  - do: bear maul
+    when: maul_ok
+    relevance: normal + 7.5
+
+  # D1: Survival Instincts before Frenzied Regeneration at very low health (it raises the maximum the heal is a share
+  # of)
+  - do: bear survival instincts
+    when: known(61336) and cooldown(61336) == 0 and health_pct(self) < 30
+    relevance: emergency + 3
+  # D2: Barkskin while tanking
+  - do: druid barkskin
+    when: known(22812) and cooldown(22812) == 0 and tanking and health_pct(self) < 60
+    relevance: emergency + 2
+  # D3: Frenzied Regeneration
+  - do: bear frenzied regeneration
+    when: known(22842) and cooldown(22842) == 0 and health_pct(self) < 50
+    relevance: emergency + 1
+
+  # U1: Bash the casting target, unless it is stun-immune (the trigger checks both)
+  - do: bear bash
+    when: known(5211) and cooldown(5211) == 0 and in_range(target, 5) and trigger("bear bash interrupt")
+    relevance: interrupt
+  # U2 (DQ9): Bash a casting enemy healer within reach
+  - do: bear bash enemy healer
+    when: known(5211) and cooldown(5211) == 0 and alive("bear bash healer")
+    relevance: interrupt
+
+  # F: Bear Form (Bestial Fury's form reads "not in form"; nothing here casts it)
+  - do: bear bear form
+    when: known(5487) and not in_bear
+    relevance: high + 9
+
+  # I1: Ironfur, never at 0 stacks while tanking, and kept above 2 stacks
+  - do: bear ironfur
+    when: >-
+      known(200420) and tanking and rage >= 20
+      and (stacks(self, 200420, own) < 3 or remaining(self, 200420, own) < 2000)
+    relevance: high + 8.5
+  # I2: Ironfur up to 5 stacks with spare rage
+  - do: bear ironfur
+    when: known(200420) and tanking and rage >= 70 and stacks(self, 200420, own) < 5
+    relevance: high + 8.5
+
+  # C1 (DQ9): Challenging Roar when two or more enemies are on a non-tank party member
+  - do: bear challenging roar
+    when: known(5209) and cooldown(5209) == 0 and trigger("bear loose enemies")
+    relevance: high + 8.2
+
+  # G1: Growl a mob that has turned on someone else
+  - do: bear growl
+    when: known(6795) and cooldown(6795) == 0 and alive(target) and trigger("lose aggro")
+    relevance: high + 8
+
+  # E1: Enrage at 60 rage or less (also opener step 4)
+  - do: bear enrage
+    when: known(5229) and cooldown(5229) == 0 and rage <= 60
+    relevance: high + 7.5
+
+  # B1: Berserk against 3 or more attackers, or when hurt (also opener step 5)
+  - do: bear berserk
+    when: >-
+      known(50334) and cooldown(50334) == 0 and alive(target)
+      and (value("my attacker count") >= 3 or health_pct(self) < 50)
+    relevance: high + 7
+
+  # O2: Faerie Fire (Feral) to pull from range when nothing is attacking the bot yet
+  - do: bear faerie fire feral
+    when: >-
+      known(16857) and cooldown(16857) == 0 and alive(target) and not tanking
+      and in_range(target, 30) and not in_range(target, 5)
+    relevance: high + 5.5
+  # O3: the free Mangle that Stampede grants after Feral Charge
+  - do: bear mangle
+    when: mangle_ok and aura(self, 200433, own)
+    relevance: high + 5
+
+  # M1: walk to a target out of melee range
+  - do: reach melee
+    trigger: enemy out of melee
+    relevance: high + 1
+
+  # Pack: 3 or more enemies attacking the bot
+  - do: bear thrash
+    when: pack and thrash_ok
+    relevance: normal + 9.5
+  - do: bear mangle
+    when: pack and mangle_ok
+    relevance: normal + 9.4
+  - do: bear demoralizing roar
+    when: pack and exists("attacker without aura id::99,1160,6190,11554,11555,11556,25202,25203,47437,702,1108,6205,7646,11707,11708,27224,30909,50511,67,26017,24423,24577,24578,24579,27051,55487;0;0;0;10")
+    relevance: normal + 9.3
+  - do: bear upheaval
+    when: pack and known(200422) and rage >= 50
+    relevance: normal + 9.2
+  - do: bear maul
+    when: pack and maul_ok
+    relevance: normal + 9.1
+  - do: bear swipe
+    when: pack and known(779)
+    relevance: normal + 9
+
+  # S1b: on the pull, Thrash before the Roar (opener step 6)
+  - do: bear thrash
+    when: thrash_ok and not thrash_up and combat_time() <= 6000
+    relevance: normal + 8.4
+  # S4: Pulverize at 3 Lacerate stacks of the bot's own
+  - do: bear pulverize
+    when: known(200421) and alive(target) and stacks(target, 33745, own) >= 3
+    relevance: normal + 8
+  # S6: Lacerate, which also fills (guide rows 6 and 7 collapse: nothing sits between them)
+  - do: bear lacerate
+    when: known(33745) and alive(target)
+    relevance: normal + 7
