@@ -160,11 +160,11 @@ rows:
     when: alive(target) and cooldown(8092) == 0 and not moving(self)
     relevance: normal + 8.8
 
-  # S8: Shadow Word: Death above 60% health, or above 40% when the target is under 20% (the kill). Single target
+  # S8: Shadow Word: Death only while the bot is above 70% health (PR48b: the backlash is 40% of the hit, less Pain and
+  # Suffering's share; no relaxed floor for a killing hit). Single target
   - do: shadow death
     when: >-
-      known(32379) and alive(target) and not pack and not focus and cooldown(32379) == 0 and health_pct(self) > 35
-      and (health_pct(self) > 60 or (health_pct(target) < 20 and health_pct(self) > 40))
+      known(32379) and alive(target) and not pack and not focus and cooldown(32379) == 0 and health_pct(self) > 70
     relevance: normal + 8.7
 ---
 # The Shadow pack rows, appended to the "shadow aoe" / "aoe" strategy. Every row needs `pack and not focus`: 4+
@@ -191,10 +191,11 @@ rows:
       and exists("attacker without aura id::589;1;0;0;30")
     relevance: normal + 9.4
 
-  # P3: Shadow Word: Death on the lowest attacker under 15% (or the 30% line the value takes), bot above 40% health
+  # P3: Shadow Word: Death on the lowest attacker under 15% (or the 30% line the value takes), bot above 70% health
+  # (PR48b)
   - do: shadow pack death::15,30
     when: >-
-      pack and not focus and known(32379) and cooldown(32379) == 0 and health_pct(self) > 40
+      pack and not focus and known(32379) and cooldown(32379) == 0 and health_pct(self) > 70
       and exists("lowest health attacker below::15,30")
     relevance: normal + 8.7
 
