@@ -525,6 +525,10 @@ bool UseTrinketAction::UseTrinket(Item* item)
     if (bot->CanUseItem(item) != EQUIP_ERR_OK || bot->IsNonMeleeSpellCast(true))
         return false;
 
+    // AiPlayerbot.BotGlyphs = 0: a glyph item would apply into slot 0 through the use packet
+    if (!sPlayerbotAIConfig.botGlyphs && item->GetTemplate()->Class == ITEM_CLASS_GLYPH)
+        return false;
+
     uint8 bagIndex = item->GetBagSlot();
     uint8 slot = item->GetSlot();
     uint8 cast_count = 1;

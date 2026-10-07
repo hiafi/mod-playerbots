@@ -90,6 +90,8 @@ public:
     void InitConsumables();
     void InitPotions();
     void InitGlyphs(bool increment = false);
+    // Clears every glyph slot and the glyph auras (and auras they triggered); true if any slot held a glyph
+    static bool StripGlyphs(Player* bot);
     void InitFood();
     void InitMounts();
     void InitBags(bool destroyOld = true);

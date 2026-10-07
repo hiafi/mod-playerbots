@@ -1775,6 +1775,16 @@ AiPlayerbot.PermanentlyInWorldTime = 31104000
 # INFORMATION
 #
 
+# AiPlayerbot.BotGlyphs
+#     Description: Whether bots (random bots and alts) get glyphs.
+#                  0 = bots carry no glyphs: every glyph slot is cleared whenever glyphs would be assigned
+#                      (randomize, trainer, talent change, alt maintenance, "glyph equip", using a glyph item)
+#                      and any glyph a bot already has is stripped when it logs in and again on every dual-spec
+#                      switch. The AiPlayerbot.PremadeSpecGlyph lines below are ignored. A spec the bot has not
+#                      been switched into yet keeps its glyphs in the database until the switch strips them.
+#     Default:     1 (bots get the premade glyphs)
+AiPlayerbot.BotGlyphs = 1
+
 # AiPlayerbot.PremadeSpecName.<class>.<specno> = <name>         #Name of the talent specialisation
 # AiPlayerbot.PremadeSpecLink.<class>.<specno>.<level> = <link> #Wowhead style link the bot should work towards at given level.
 # AiPlayerbot.PremadeSpecGlyph.<class>.<specno> = <major 1>,<minor 1>,<major 2>,<minor 2>,<minor 3>,<major 3>   #ItemId of the glyphs

@@ -446,6 +446,7 @@ public:
             altMaintenanceSpecialSpells,
             altMaintenanceMounts,
             altMaintenanceGlyphs,
+            botGlyphs,
             altMaintenanceKeyring,
             altMaintenanceGemsEnchants;
     int32 autoGearCommand, autoGearCommandAltBots, autoGearQualityLimit, autoGearScoreLimit;

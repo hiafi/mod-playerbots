@@ -21,6 +21,7 @@
 #include "PlayerScript.h"
 #include "PlayerbotAIConfig.h"
 #include "PlayerbotCommandScript.h"
+#include "PlayerbotFactory.h"
 #include "PlayerbotGuildMgr.h"
 #include "PlayerbotSpellRepository.h"
 #include "PlayerbotWorldThreadProcessor.h"
@@ -139,8 +140,18 @@ public:
         PLAYERHOOK_CAN_PLAYER_USE_GUILD_CHAT,
         PLAYERHOOK_CAN_PLAYER_USE_CHANNEL_CHAT,
         PLAYERHOOK_ON_GIVE_EXP,
-        PLAYERHOOK_ON_BEFORE_TELEPORT
+        PLAYERHOOK_ON_BEFORE_TELEPORT,
+        PLAYERHOOK_ON_AFTER_SPEC_SLOT_CHANGED
     }) {}
+
+    // AiPlayerbot.BotGlyphs = 0: ActivateSpec re-applies the new spec's stored glyphs, so strip them again
+    // (self-bots are real players, so they keep their glyphs)
+    void OnPlayerAfterSpecSlotChanged(Player* player, uint8 /*newSlot*/) override
+    {
+        if (!sPlayerbotAIConfig.botGlyphs && GET_PLAYERBOT_AI(player) && !IsSelfBot(player) &&
+            PlayerbotFactory::StripGlyphs(player))
+            player->SendTalentsInfoData(false);
+    }
 
     void OnPlayerLogin(Player* player) override
     {

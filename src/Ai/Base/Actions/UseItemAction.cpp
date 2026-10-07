@@ -68,6 +68,10 @@ bool UseItemAction::UseItemOnItem(Item* item, Item* itemTarget) { return UseItem
 
 bool UseItemAction::UseItem(Item* item, ObjectGuid goGuid, Item* itemTarget, Unit* unitTarget)
 {
+    // AiPlayerbot.BotGlyphs = 0: a glyph item would apply into slot 0 through the use packet
+    if (!sPlayerbotAIConfig.botGlyphs && item->GetTemplate()->Class == ITEM_CLASS_GLYPH)
+        return false;
+
     if (bot->CanUseItem(item) != EQUIP_ERR_OK)
         return false;
 

@@ -4449,41 +4449,63 @@ void PlayerbotFactory::CleanupConsumables() // remove old consumables as part of
         bot->DestroyItem(item->GetBagSlot(), item->GetSlot(), true);
 }
 
+bool PlayerbotFactory::StripGlyphs(Player* bot)
+{
+    bool stripped = false;
+    for (uint32 slotIndex = 0; slotIndex < MAX_GLYPH_SLOT_INDEX; ++slotIndex)
+    {
+        uint32 glyph = bot->GetGlyph(slotIndex);
+        if (!glyph)
+            continue;
+
+        if (GlyphPropertiesEntry const* glyphEntry = sGlyphPropertiesStore.LookupEntry(glyph))
+        {
+            bot->RemoveAurasDueToSpell(glyphEntry->SpellId);
+
+            // Removed any triggered auras
+            Unit::AuraMap& ownedAuras = bot->GetOwnedAuras();
+            for (Unit::AuraMap::iterator iter = ownedAuras.begin(); iter != ownedAuras.end();)
+            {
+                Aura* aura = iter->second;
+                if (SpellInfo const* triggeredByAuraSpellInfo = aura->GetTriggeredByAuraSpellInfo())
+                {
+                    if (triggeredByAuraSpellInfo->Id == glyphEntry->SpellId)
+                    {
+                        bot->RemoveOwnedAura(iter);
+                        continue;
+                    }
+                }
+                ++iter;
+            }
+
+            // an unresolvable glyph entry is left alone, exactly as the pre-BotGlyphs loop did
+            bot->SetGlyph(slotIndex, 0, true);
+            stripped = true;
+        }
+    }
+    return stripped;
+}
+
 void PlayerbotFactory::InitGlyphs(bool increment)
 {
     bot->InitGlyphsForLevel();
+
+    // AiPlayerbot.BotGlyphs = 0: bots carry no glyphs. Strip whatever is there and never pick any, ahead of the
+    // custom_glyphs early-out below so a hand-set glyph is removed too.
+    if (!sPlayerbotAIConfig.botGlyphs)
+    {
+        StripGlyphs(bot);
+        bot->SendTalentsInfoData(false);
+        return;
+    }
+
     if (!increment && botAI &&
         botAI->GetAiObjectContext()->GetValue<bool>("custom_glyphs")->Get())
         return;   // // Added for custom Glyphs - custom glyphs flag test
 
     if (!increment)
     {
-        for (uint32 slotIndex = 0; slotIndex < MAX_GLYPH_SLOT_INDEX; ++slotIndex)
-        {
-            uint32 glyph = bot->GetGlyph(slotIndex);
-            if (GlyphPropertiesEntry const* glyphEntry = sGlyphPropertiesStore.LookupEntry(glyph))
-            {
-                bot->RemoveAurasDueToSpell(glyphEntry->SpellId);
-
-                // Removed any triggered auras
-                Unit::AuraMap& ownedAuras = bot->GetOwnedAuras();
-                for (Unit::AuraMap::iterator iter = ownedAuras.begin(); iter != ownedAuras.end();)
-                {
-                    Aura* aura = iter->second;
-                    if (SpellInfo const* triggeredByAuraSpellInfo = aura->GetTriggeredByAuraSpellInfo())
-                    {
-                        if (triggeredByAuraSpellInfo->Id == glyphEntry->SpellId)
-                        {
-                            bot->RemoveOwnedAura(iter);
-                            continue;
-                        }
-                    }
-                    ++iter;
-                }
-
-                bot->SetGlyph(slotIndex, 0, true);
-            }
-        }
+        StripGlyphs(bot);
     }
 
     if (sPlayerbotAIConfig.limitTalentsExpansion && bot->GetLevel() <= 70)

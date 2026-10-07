@@ -5942,6 +5942,10 @@ void PlayerbotAI::ImbueItem(Item* item, uint32 targetFlag, ObjectGuid targetGUID
     if (!item)
         return;
 
+    // AiPlayerbot.BotGlyphs = 0: a glyph item would apply into slot 0 through the use packet
+    if (!sPlayerbotAIConfig.botGlyphs && item->GetTemplate()->Class == ITEM_CLASS_GLYPH)
+        return;
+
     uint32 glyphIndex = 0;
     uint8 castFlags = 0;
     uint8 bagIndex = item->GetBagSlot();
