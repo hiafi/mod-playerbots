@@ -1,0 +1,98 @@
+# Rows every reworked druid shares, one document per list. The shells in DruidReworkStrategies.cpp append them:
+# "druid/nc" plus "druid/nc-oil" or "druid/nc-stone" and "druid/nc-heal" or "druid/nc-resto" to the "nc" strategy,
+# "druid/boost" and "druid/boost-feral" to "boost", "druid/cc" to "cc" and "druid/feral-charge-bear" to
+# "feral charge". Each row queues its actions at the relevance when its condition holds (`when`, the expression
+# language of StrategyExpression.h) or when an existing C++ trigger fires (`trigger`). Execution order is by
+# relevance, not by position in this file. Actions named "druid ..." are RowCheckedAction (they re-check their own row
+# before casting). Spell ids: DruidReworkIds.h and the druid rework plan, section 2.
+#
+# The stock rows keep their stock action names (their action nodes still add the "caster form" prerequisite when the
+# stock "buff" strategy is on); only the heal tiers are replaced by "druid/nc-heal".
+strategy: druid/nc
+class: druid
+rows:
+  - do: mark of the wild
+    trigger: mark of the wild
+    relevance: normal + 4
+  - do: abolish poison on party
+    trigger: party member cure poison
+    relevance: high
+  - do: revive
+    trigger: party member dead
+    relevance: critical heal + 10
+  - do: remove curse on party
+    trigger: party member remove curse
+    relevance: dispel + 7
+  - do: set pet stance
+    trigger: new pet
+    relevance: raid
+  - do: aquatic form
+    trigger: aquatic form
+    relevance: normal
+---
+# Balance and Restoration: weapon oil
+strategy: druid/nc-oil
+class: druid
+rows:
+  - do: apply oil
+    trigger: often
+    relevance: bg
+---
+# Cat and Bear: sharpening stone
+strategy: druid/nc-stone
+class: druid
+rows:
+  - do: apply stone
+    trigger: often
+    relevance: bg
+---
+# Out-of-combat heals of Balance, Cat and Bear: mana-efficient first, and nobody at full health
+strategy: druid/nc-heal
+class: druid
+rows:
+  # Rejuvenation is not castable in Cat Form
+  - do: druid nc rejuv::80;774
+    when: not aura(self, 768) and exists("party member without own aura::80;774")
+    relevance: normal + 9
+  - do: druid nc regrowth::50,50
+    when: >-
+      alive("tank first heal target::50,50") and health_pct("tank first heal target::50,50") < 50
+      and not moving(self)
+    relevance: normal + 8
+---
+# Pet stance for Force of Nature's treants
+strategy: druid/boost
+class: druid
+rows:
+  - do: set pet stance
+    trigger: new pet
+    relevance: raid
+---
+# The whole Feral tab until the Bear stage takes Berserk into its own rotation
+strategy: druid/boost-feral
+class: druid
+rows:
+  - do: berserk
+    trigger: berserk
+    relevance: high + 7.5
+---
+strategy: druid/cc
+class: druid
+rows:
+  - do: cyclone on cc
+    trigger: cyclone
+    relevance: interrupt + 2
+  - do: hibernate on cc
+    trigger: hibernate
+    relevance: interrupt + 1
+  - do: entangling roots on cc
+    trigger: entangling roots
+    relevance: interrupt
+---
+# The stock bear's charge, until the Bear stage replaces it
+strategy: druid/feral-charge-bear
+class: druid
+rows:
+  - do: feral charge - bear
+    trigger: enemy out of melee
+    relevance: normal + 8

@@ -152,6 +152,37 @@ protected:
     ObjectGuid CalculateGuid() override;
 };
 
+// The lowest-health member below a health percent that carries at least one of the listed auras applied by the bot,
+// the bot included: the counterpart of PartyMemberWithoutOwnAuraValue. Qualifier: "pct;ids", ids comma-separated spell
+// ids, e.g. "40;774,8936". A pct of 101 means anyone. Members within 40 yd and in line of sight. Null when nobody
+// qualifies, which a row reads as a missing unit (health 0), so it also asks `alive(...)`.
+class PartyMemberWithOwnAuraValue : public GuidCachedUnitValue, public Qualified
+{
+public:
+    PartyMemberWithOwnAuraValue(PlayerbotAI* botAI, std::string const name = "party member with own aura")
+        : GuidCachedUnitValue(botAI, name, IN_MILLISECONDS)
+    {
+    }
+
+protected:
+    ObjectGuid CalculateGuid() override;
+};
+
+// The group member with the lowest mana percent below a threshold, the bot excluded: mana users only, within 40 yd and
+// in line of sight. Qualifier: "pct;healer" keeps only members PlayerbotAI::IsHeal accepts, "pct;any" every mana
+// user, e.g. "100;healer". Null when nobody qualifies.
+class PartyMemberBelowManaValue : public GuidCachedUnitValue, public Qualified
+{
+public:
+    PartyMemberBelowManaValue(PlayerbotAI* botAI, std::string const name = "party member below mana")
+        : GuidCachedUnitValue(botAI, name, IN_MILLISECONDS)
+    {
+    }
+
+protected:
+    ObjectGuid CalculateGuid() override;
+};
+
 // The lowest-health member below healthPct whose absorb is short: the listed auras (applied by the bot when owned is 1,
 // any caster when 0) hold less than absorbPct percent of the member's max health in effect effIndex, or are absent.
 // Qualifier: "healthPct;absorbPct;ids;owned[;effIndex]", effIndex 0 by default, e.g. "101;50;200167;1". A healthPct of

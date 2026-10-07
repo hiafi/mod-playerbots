@@ -191,8 +191,20 @@ The shared party values a healer row reads, besides `value()` counts:
 | Value | Qualifier | Yields |
 |---|---|---|
 | `party member without own aura` | `pct;ids[;any]` | lowest member below pct lacking the bot's auras; `any` counts an aura from any caster (Weakened Soul) |
+| `party member with own aura` | `pct;ids` | lowest member below pct (101 = anyone) carrying any listed aura the bot applied; the counterpart of `party member without own aura` (a Swiftmend target) |
+| `party member below mana` | `pct;healer\|any` | the mana user with the lowest mana percent below pct, the bot excluded; `healer` keeps `PlayerbotAI::IsHeal` members only (an Innervate target). Unlike `party members below mana` it yields the unit, not a count |
 | `party member absorb below` | `healthPct;absorbPct;ids;owned[;effIndex]` | lowest member below healthPct whose listed absorb auras hold under absorbPct of max health (`ai::aura::AuraEffectAmount`) |
 | `injured allies in cone` | `yards,degrees,pct;unitValue` | members below pct inside a cone from the bot centred on the unit value, the bot excluded (`uint8`) |
+
+**Missing units.** A Unit* value that finds nobody (no tank, nobody below the threshold) yields a missing unit, and
+`health_pct()` of it reads 0. A row that compares a unit value's health with `<` therefore also asks `alive(<unit
+value>)`, or it holds with nobody there (0 < 50):
+`alive("tank first heal target::50,50") and health_pct("tank first heal target::50,50") < 50`.
+
+**Melee resources.** Combo points, energy, rage and facing are plain values, read through `value()`:
+`value("combo::current target")` (0 unless the combo target is the current target), `value("energy::self target")`
+(absolute energy), `value("rage::self target")` (rage units, 0-100) and `value("behind::current target")` (bool). No
+class-local value is needed for them; name them once in `conditions:` (`cp: value("combo::current target")`).
 
 The `unitValue` inside the `injured allies in cone` qualifier (`...;heal cluster unit::27,85`) is not checked when the
 YAML loads: a mistyped name resolves to no value and the count reads 0, so check it by hand.

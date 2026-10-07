@@ -72,6 +72,10 @@ bool IsBelowManaPct(Player* member, float pct)
 constexpr size_t WITHOUT_OWN_AURA_MIN_FIELDS = 2;
 constexpr size_t WITHOUT_OWN_AURA_MAX_FIELDS = 3;
 constexpr char const* ANY_CASTER_FLAG = "any";
+constexpr size_t WITH_OWN_AURA_FIELDS = 2;
+constexpr size_t BELOW_MANA_FIELDS = 2;
+constexpr char const* HEALER_ONLY_FLAG = "healer";
+constexpr char const* ANY_MEMBER_FLAG = "any";
 constexpr size_t ABSORB_BELOW_MIN_FIELDS = 4;
 constexpr size_t ABSORB_BELOW_MAX_FIELDS = 5;
 constexpr size_t CONE_NUMBERS = 3;
@@ -309,6 +313,60 @@ ObjectGuid PartyMemberWithoutOwnAuraValue::CalculateGuid()
 
         if (!lowest || member->GetHealthPct() < lowest->GetHealthPct())
             lowest = member;
+    }
+
+    return lowest ? lowest->GetGUID() : ObjectGuid::Empty;
+}
+
+ObjectGuid PartyMemberWithOwnAuraValue::CalculateGuid()
+{
+    std::vector<std::string> const fields = ai::qualifier::Split(qualifier, ';');
+    float pct = 0.0f;
+    if (fields.size() != WITH_OWN_AURA_FIELDS || !ai::qualifier::ParseNumber(fields[0], pct))
+        return ObjectGuid::Empty;
+
+    std::vector<uint32> const ids = ai::qualifier::ParseIds(fields[1]);
+    if (ids.empty())
+        return ObjectGuid::Empty;
+
+    Player* lowest = nullptr;
+    for (Player* member : GetGroupPlayers(bot))
+    {
+        if (member->GetHealthPct() >= pct || !IsInHealRangeAndSight(bot, member) ||
+            !ai::aura::HasAnyAura(member, ids, bot->GetGUID()))
+            continue;
+
+        if (!lowest || member->GetHealthPct() < lowest->GetHealthPct())
+            lowest = member;
+    }
+
+    return lowest ? lowest->GetGUID() : ObjectGuid::Empty;
+}
+
+ObjectGuid PartyMemberBelowManaValue::CalculateGuid()
+{
+    std::vector<std::string> const fields = ai::qualifier::Split(qualifier, ';');
+    float pct = 0.0f;
+    if (fields.size() != BELOW_MANA_FIELDS || !ai::qualifier::ParseNumber(fields[0], pct) ||
+        (fields[1] != HEALER_ONLY_FLAG && fields[1] != ANY_MEMBER_FLAG))
+        return ObjectGuid::Empty;
+
+    bool const healersOnly = fields[1] == HEALER_ONLY_FLAG;
+    Player* lowest = nullptr;
+    float lowestPct = 0.0f;
+    for (Player* member : GetGroupPlayers(bot))
+    {
+        if (member == bot || !IsBelowManaPct(member, pct) || !IsInHealRangeAndSight(bot, member) ||
+            (healersOnly && !PlayerbotAI::IsHeal(member)))
+            continue;
+
+        float const manaPct = static_cast<float>(member->GetPower(POWER_MANA)) * 100.0f /
+                              static_cast<float>(member->GetMaxPower(POWER_MANA));
+        if (!lowest || manaPct < lowestPct)
+        {
+            lowest = member;
+            lowestPct = manaPct;
+        }
     }
 
     return lowest ? lowest->GetGUID() : ObjectGuid::Empty;

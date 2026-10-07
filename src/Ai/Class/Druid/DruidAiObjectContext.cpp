@@ -12,6 +12,7 @@
 #include "DruidBearActions.h"
 #include "DruidCatActions.h"
 #include "DruidPullStrategy.h"
+#include "DruidReworkContext.h"
 #include "DruidShapeshiftActions.h"
 #include "DruidTriggers.h"
 #include "GenericDruidNonCombatStrategy.h"
@@ -414,6 +415,7 @@ void DruidAiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextLis
 {
     AiObjectContext::BuildSharedActionContexts(actionContexts);
     actionContexts.Add(new DruidAiObjectContextInternal());
+    actionContexts.Add(new DruidReworkActionFactory());
 }
 
 void DruidAiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextList<Trigger>& triggerContexts)

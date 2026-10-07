@@ -209,7 +209,9 @@ public:
         creators["party has healer"] = &ValueContext::party_has_healer;
         creators["party members below"] = &ValueContext::party_members_below;
         creators["party members below mana"] = &ValueContext::party_members_below_mana;
+        creators["party member below mana"] = &ValueContext::party_member_below_mana;
         creators["party member without own aura"] = &ValueContext::party_member_without_own_aura;
+        creators["party member with own aura"] = &ValueContext::party_member_with_own_aura;
         creators["party member absorb below"] = &ValueContext::party_member_absorb_below;
         creators["injured allies in cone"] = &ValueContext::injured_allies_in_cone;
         creators["party members with aura"] = &ValueContext::party_members_with_aura;
@@ -452,6 +454,11 @@ private:
     static UntypedValue* party_member_without_own_aura(PlayerbotAI* botAI)
     {
         return new PartyMemberWithoutOwnAuraValue(botAI);
+    }
+    static UntypedValue* party_member_below_mana(PlayerbotAI* botAI) { return new PartyMemberBelowManaValue(botAI); }
+    static UntypedValue* party_member_with_own_aura(PlayerbotAI* botAI)
+    {
+        return new PartyMemberWithOwnAuraValue(botAI);
     }
     static UntypedValue* party_member_absorb_below(PlayerbotAI* botAI)
     {
