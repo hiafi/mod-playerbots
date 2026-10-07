@@ -1,0 +1,211 @@
+# The reworked Discipline priest's heal rotation, "priest/disc", appended to the healer base rows (priest/healer in
+# common.yaml) by PriestReworkDiscStrategy::InitTriggers, and its out-of-combat rows, "priest/nc-disc", appended to the
+# "nc" strategy by PriestReworkNonCombatStrategy::InitTriggers. Each row queues its action at the relevance when its
+# condition holds (`when`, the expression language of StrategyExpression.h) or when an existing C++ trigger fires
+# (`trigger`). Execution order is by relevance, not by position in this file. Every action is a RowCheckedAction (it
+# re-checks its own row before casting), and a value-target action takes its value's qualifier from its `do:` name, so
+# the `do:` qualifier and the unit qualifier in `when:` are always the same literal ("priest flash heal::35,35" with
+# health_pct("tank first heal target::35,35") < 35): otherwise the action heals another unit than the one checked.
+# Rows that can fire together never share an action name and qualifier (they would merge into one basket, and only the
+# first row's condition would be re-checked): the names below differ by qualifier or by name.
+# Spell ids: PRIEST.PLAN section 2 (2.2 Discipline) and the Disc table of PRIEST.YAML-PASS section 2. The numbers in the
+# comments are the guide's line numbers.
+strategy: priest/disc
+class: priest
+conditions:
+  # Borrowed Time (3 ranks of the buff) or Copious Power (3 ranks of the buff): the next cast-time heal is hasted
+  bt_cp: aura(self, "59887,59888,59889,200150,200151,200152", own)
+  # Spirit Shell is up: direct heals turn into absorbs
+  shell: aura(self, 200166, own)
+  # The effective tank (the main tank within 100 yd, else the most attacked member) is in reach of a 40 yd heal
+  tank_ok: alive("effective tank") and in_range("effective tank", 40)
+  # Line 2: the tank-first target is under 35% (the tank wins when it qualifies, else the lowest other member)
+  fh_target: health_pct("tank first heal target::35,35") < 35
+rows:
+  # 1: Pain Suppression on the most injured member that something is hitting, the bot included
+  - do: disc pain suppression::30
+    when: known(33206) and cooldown(33206) == 0 and exists("attacked party member below::30")
+    relevance: emergency + 7
+
+  # PR20: an ally under 35% inside the Spirit Shell window makes the bot drop the shell (its heals would only absorb)
+  # and Flash Heal next tick
+  - do: disc cancel spirit shell
+    when: shell and fh_target
+    relevance: emergency + 6.5
+
+  # 2: Flash Heal under 35% overrides everything (outside the window; inside it the row above comes first)
+  - do: priest flash heal::35,35
+    when: not shell and fh_target
+    relevance: emergency + 6
+
+  # 3: Power Word: Barrier on the densest group of 3+ allies under 70% (a ground spell: the action checks the 40 yd
+  # range and the line of sight itself)
+  - do: disc power word barrier::10,70
+    when: known(200132) and cooldown(200132) == 0 and value("heal cluster count::10,70") >= 3
+    relevance: emergency + 5
+
+  # 4: Spirit Shell when 3+ allies are under 90% and none under 50%, with damage incoming (PR21)
+  - do: disc spirit shell
+    when: >-
+      known(200166) and cooldown(200166) == 0 and value("party members below::90") >= 3
+      and value("party members below::50") == 0 and exists("attacked party member below::101")
+    relevance: normal + 9.5
+
+  # PR20: inside the window, Greater Heal the lowest ally whose Spirit Shell absorb (200167, effect 0) is under 50%
+  # of their max health
+  - do: disc shell greater heal::101;50;200167;1
+    when: shell and exists("party member absorb below::101;50;200167;1")
+    relevance: normal + 9.45
+
+  # 5: Power Infusion on itself when 3+ allies are under 70%
+  - do: disc power infusion
+    when: known(10060) and cooldown(10060) == 0 and value("party members below::70") >= 3
+    relevance: normal + 9.4
+
+  # 6: the Greater Power Word: Shield proc on the heal cluster centre (the extras take the absorb with no Weakened
+  # Soul), skipping a centre that already carries Weakened Soul; the bot itself only under 50%
+  - do: disc greater shield::20,95
+    when: >-
+      aura(self, 200161, own) and value("party members below::95") >= 2 and exists("heal cluster unit::20,95")
+      and not aura("heal cluster unit::20,95", 6788)
+      and (not is_self("heal cluster unit::20,95") or health_pct(self) < 50)
+    relevance: normal + 9.0
+
+  # 6b: the same proc when the cluster centre can't take a shield: shield the tank instead
+  - do: disc greater shield tank
+    when: >-
+      aura(self, 200161, own) and value("party members below::95") >= 2 and aura("heal cluster unit::20,95", 6788)
+      and tank_ok and not aura("effective tank", 6788)
+    relevance: normal + 8.95
+
+  # 7: Power Word: Shield on the tank, unconditionally (Borrowed Time and Copious Power; PR19); the bot only under 50%
+  - do: disc shield tank
+    when: >-
+      tank_ok and not aura("effective tank", 6788)
+      and (not is_self("effective tank") or health_pct(self) < 50)
+    relevance: normal + 8.5
+
+  # 8: Power Word: Shield on the lowest member under 80% with no Weakened Soul from anyone (G5 "any"); the bot only
+  # under 50%
+  - do: disc shield ally::80;6788;any
+    when: >-
+      exists("party member without own aura::80;6788;any")
+      and (not is_self("party member without own aura::80;6788;any") or health_pct(self) < 50)
+    relevance: normal + 8.0
+
+  # 9: Penance on the heal cluster centre with the Empowered Penance proc (the extra bolt hits 3 allies within 10 yd
+  # of the target); Penance reaches 30 yd, so a farther pick skips the row
+  - do: disc penance cluster::10,90
+    when: >-
+      known(47540) and aura(self, 200159, own) and cooldown(47540) == 0 and value("heal cluster count::10,90") >= 2
+      and in_range("heal cluster unit::10,90", 30) and not moving(self)
+    relevance: normal + 7.5
+
+  # 10: Penance on the tank-first target under 75%, within 30 yd
+  - do: disc penance::75,75
+    when: >-
+      known(47540) and cooldown(47540) == 0 and health_pct("tank first heal target::75,75") < 75
+      and in_range("tank first heal target::75,75", 30) and not moving(self)
+    relevance: normal + 7.0
+
+  # 11: Greater Heal under 85% while Borrowed Time or Copious Power is up
+  - do: priest greater heal::85,85
+    when: bt_cp and health_pct("tank first heal target::85,85") < 85
+    relevance: normal + 6.5
+
+  # 12: Prayer of Healing when 3+ members are under 75% (PR37: the whole group, not one party)
+  - do: priest prayer of healing::75,75
+    when: value("party members below::75") >= 3
+    relevance: normal + 6.0
+
+  # 13: Greater Heal under 65%
+  - do: priest greater heal::65,65
+    when: health_pct("tank first heal target::65,65") < 65
+    relevance: normal + 5.5
+
+  # 14: Flash Heal under 55%
+  - do: priest flash heal::55,55
+    when: health_pct("tank first heal target::55,55") < 55
+    relevance: normal + 5.0
+
+  # 15: cures, as copies the healer cure multiplier gates (only while the cure strategy is on and nobody is under 50%)
+  - do: priest dispel magic
+    trigger: dispel magic
+    relevance: normal + 4.5
+  - do: priest abolish disease
+    trigger: cure disease
+    relevance: normal + 4.5
+  - do: priest dispel magic on party
+    trigger: dispel magic on party
+    relevance: normal + 4.4
+  - do: priest abolish disease on party
+    trigger: party member cure disease
+    relevance: normal + 4.4
+
+  # 16: Prayer of Mending on the tank
+  - do: priest prayer of mending tank
+    when: known(33076) and cooldown(33076) == 0 and tank_ok
+    relevance: normal + 4.0
+
+  # 17: Renew on the tank
+  - do: priest renew tank
+    when: tank_ok and not aura("effective tank", 139, own)
+    relevance: normal + 3.5
+
+  # 18: Divine Star toward the heal cluster centre when 3+ allies under 85% stand in its path (27 yd, 60 degrees; the
+  # cone is centred on the direction to the cluster centre, so the action faces it first)
+  - do: disc divine star::27,85
+    when: >-
+      known(200133) and cooldown(200133) == 0
+      and value("injured allies in cone::27,60,85;heal cluster unit::27,85") >= 3
+    relevance: normal + 3.0
+
+  # 19: Smite when nobody is under 95% and mana is above 70%, never spending Borrowed Time or Copious Power on it (PR28)
+  - do: priest smite filler
+    when: alive(target) and value("party members below::95") == 0 and mana(self) > 70 and not bt_cp
+    relevance: normal + 2.0
+
+  # 20: Shadowfiend under 35% mana (trained at 66: no-op at 60, PR3)
+  - do: priest shadowfiend
+    when: known(34433) and cooldown(34433) == 0 and mana(self) < 35 and alive(target)
+    relevance: normal + 1.5
+
+  # 21: Hymn of Hope under 20% mana while nobody is under 70% (trained at 80: no-op at 60, PR3)
+  - do: disc hymn of hope
+    when: known(64901) and cooldown(64901) == 0 and mana(self) < 20 and value("party members below::70") == 0
+    relevance: normal + 1.2
+---
+# The Discipline priest's out-of-combat rows: the heal lines it may need after a pull or a fall, with the combat
+# rotation's own actions. Every row is gated on Penance (known(47540)), the Discipline talent, since the "nc" strategy
+# appends the spec documents for every priest. The shield and the Renew only go on a tank that is hurt, so a full-health
+# party doesn't drain the bot's mana re-shielding every Weakened Soul.
+strategy: priest/nc-disc
+class: priest
+conditions:
+  is_disc: known(47540)
+  tank_ok: alive("effective tank") and in_range("effective tank", 40)
+rows:
+  # Flash Heal under 55% and Greater Heal under 65%, the tank-first target (same qualifiers as lines 14 and 13)
+  - do: priest flash heal::55,55
+    when: is_disc and health_pct("tank first heal target::55,55") < 55
+    relevance: normal + 9
+  - do: priest greater heal::65,65
+    when: is_disc and health_pct("tank first heal target::65,65") < 65
+    relevance: normal + 8
+
+  # Power Word: Shield and Renew on a hurt tank
+  - do: disc shield tank
+    when: >-
+      is_disc and tank_ok and health_pct("effective tank") < 100 and not aura("effective tank", 6788)
+      and (not is_self("effective tank") or health_pct(self) < 50)
+    relevance: normal + 3
+  - do: priest renew tank
+    when: is_disc and tank_ok and health_pct("effective tank") < 100 and not aura("effective tank", 139, own)
+    relevance: normal + 2
+
+  # Fear Ward on the tank before the pull (PR13); the combat row is in priest/healer
+  - do: priest fear ward
+    when: >-
+      is_disc and known(6346) and cooldown(6346) == 0 and alive("effective tank")
+      and in_range("effective tank", 30) and not aura("effective tank", 6346)
+    relevance: normal + 1

@@ -10,6 +10,7 @@
 #include "NamedObjectContext.h"
 #include "Playerbots.h"
 #include "PriestActions.h"
+#include "PriestDiscContext.h"
 #include "PriestNonCombatStrategy.h"
 #include "PriestReworkContext.h"
 #include "PriestTriggers.h"
@@ -38,17 +39,14 @@ public:
 private:
     static Strategy* cc(PlayerbotAI* botAI) { return new PriestCcStrategy(botAI); }
     static Strategy* rshadow(PlayerbotAI* botAI) { return new PriestShadowResistanceStrategy(botAI); }
-    // re-pointed in Stage PD, see PRIEST.YAML-PASS §2
-    static Strategy* boost(PlayerbotAI* botAI) { return new PriestBoostStrategy(botAI); }
+    static Strategy* boost(PlayerbotAI* botAI) { return new PriestReworkBoostStrategy(botAI); }
     static Strategy* buff(PlayerbotAI* botAI) { return new PriestBuffStrategy(botAI); }
-    // re-pointed in Stage PD, see PRIEST.YAML-PASS §2
-    static Strategy* nc(PlayerbotAI* botAI) { return new PriestNonCombatStrategy(botAI); }
+    static Strategy* nc(PlayerbotAI* botAI) { return new PriestReworkNonCombatStrategy(botAI); }
     static Strategy* shadow_aoe(PlayerbotAI* botAI) { return new ShadowPriestAoeStrategy(botAI); }
     static Strategy* pull(PlayerbotAI* botAI) { return new PullStrategy(botAI, "shoot"); }
     static Strategy* shadow_debuff(PlayerbotAI* botAI) { return new ShadowPriestDebuffStrategy(botAI); }
     static Strategy* cure(PlayerbotAI* botAI) { return new PriestCureStrategy(botAI); }
-    // re-pointed in Stage PD, see PRIEST.YAML-PASS §2
-    static Strategy* healer_dps(PlayerbotAI* botAI) { return new PriestHealerDpsStrategy(botAI); }
+    static Strategy* healer_dps(PlayerbotAI* botAI) { return new PriestReworkHealerDpsStrategy(botAI); }
 };
 
 class PriestCombatStrategyFactoryInternal : public NamedObjectContext<Strategy>
@@ -64,7 +62,7 @@ public:
     }
 
 private:
-    static Strategy* heal(PlayerbotAI* botAI) { return new HealPriestStrategy(botAI); }
+    static Strategy* heal(PlayerbotAI* botAI) { return new PriestReworkDiscStrategy(botAI); }
     static Strategy* dps(PlayerbotAI* botAI) { return new ShadowPriestStrategy(botAI); }
     static Strategy* holy_dps(PlayerbotAI* botAI) { return new HolyPriestStrategy(botAI); }
     static Strategy* holy_heal(PlayerbotAI* botAI) { return new HolyHealPriestStrategy(botAI); }
@@ -371,6 +369,7 @@ void PriestAiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextLi
     AiObjectContext::BuildSharedActionContexts(actionContexts);
     actionContexts.Add(new PriestAiObjectContextInternal());
     actionContexts.Add(new PriestReworkActionFactory());
+    actionContexts.Add(new PriestDiscActionFactory());
 }
 
 void PriestAiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextList<Trigger>& triggerContexts)
