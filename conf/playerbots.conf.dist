@@ -1948,30 +1948,38 @@ AiPlayerbot.PremadeSpecLink.4.5.80 = 3023031-3-5120212030320121350135231251
 # PRIEST
 #
 
+# Priest rework (custom talent trees): the links are the level-60 guide builds for Discipline, Holy and Shadow
+# (docs/reworks/bot-strategy/ bot guides; rework-bot-strategies PRIEST plan D7). Each string is "<disc>-<holy>-<shadow>"
+# with one digit per talent in (tier, column) order, so a leading "-" or "--" is an empty Discipline / Holy tab and the
+# build sits in the tab its prefix points at. The stock links decoded as garbage on the reworked grid. .80 repeats .60
+# (at level 80 only the .80 entry is read) until there are level-80 builds, and the PvP slots 3-5 reuse the PvE builds.
+# PremadeSpecName and PremadeSpecGlyph are unchanged: bot glyphs are off on this server (AiPlayerbot.BotGlyphs = 0),
+# so the glyph lists are never applied.
+
 AiPlayerbot.PremadeSpecName.5.0 = disc pve
 AiPlayerbot.PremadeSpecGlyph.5.0 = 42408,43371,42400,43374,43342,45756
-AiPlayerbot.PremadeSpecLink.5.0.60 = 0503203130300512301323131051
-AiPlayerbot.PremadeSpecLink.5.0.80 = 0503203130300512331323231251-03520103
+AiPlayerbot.PremadeSpecLink.5.0.60 = 05302303303032013031323021131
+AiPlayerbot.PremadeSpecLink.5.0.80 = 05302303303032013031323021131
 AiPlayerbot.PremadeSpecName.5.1 = holy pve
 AiPlayerbot.PremadeSpecGlyph.5.1 = 42408,43371,42400,43374,43342,42396
-AiPlayerbot.PremadeSpecLink.5.1.60 = -035050031301152530000331331
-AiPlayerbot.PremadeSpecLink.5.1.80 = 05032031-235050032302152530000331351
+AiPlayerbot.PremadeSpecLink.5.1.60 = -233230030301000331013131000330010331001
+AiPlayerbot.PremadeSpecLink.5.1.80 = -233230030301000331013131000330010331001
 AiPlayerbot.PremadeSpecName.5.2 = shadow pve
 AiPlayerbot.PremadeSpecGlyph.5.2 = 45753,43371,42407,43374,43370,42415
-AiPlayerbot.PremadeSpecLink.5.2.60 = --325003041203010323150301351
-AiPlayerbot.PremadeSpecLink.5.2.80 = 0503203--325023051223010323152301351
+AiPlayerbot.PremadeSpecLink.5.2.60 = --303320310102313132313110330131
+AiPlayerbot.PremadeSpecLink.5.2.80 = --303320310102313132313110330131
 AiPlayerbot.PremadeSpecName.5.3 = disc pvp
 AiPlayerbot.PremadeSpecGlyph.5.3 = 42408,43371,45760,43370,43374,45756
-AiPlayerbot.PremadeSpecLink.5.3.60 = 5003203130320512201323031051
-AiPlayerbot.PremadeSpecLink.5.3.80 = 5003203130322512331013231151-23050113
+AiPlayerbot.PremadeSpecLink.5.3.60 = 05302303303032013031323021131
+AiPlayerbot.PremadeSpecLink.5.3.80 = 05302303303032013031323021131
 AiPlayerbot.PremadeSpecName.5.4 = holy pvp
 AiPlayerbot.PremadeSpecGlyph.5.4 = 42411,43371,42408,43370,43374,45755
-AiPlayerbot.PremadeSpecLink.5.4.60 = -235501031000152430320031151
-AiPlayerbot.PremadeSpecLink.5.4.80 = 500320313-235501031000152530320031351
+AiPlayerbot.PremadeSpecLink.5.4.60 = -233230030301000331013131000330010331001
+AiPlayerbot.PremadeSpecLink.5.4.80 = -233230030301000331013131000330010331001
 AiPlayerbot.PremadeSpecName.5.5 = shadow pvp
 AiPlayerbot.PremadeSpecGlyph.5.5 = 42407,43371,45753,43370,43374,42408
-AiPlayerbot.PremadeSpecLink.5.5.60 = --005323241223112003102311351
-AiPlayerbot.PremadeSpecLink.5.5.80 = 50332031003--005323241223112003102311351
+AiPlayerbot.PremadeSpecLink.5.5.60 = --303320310102313132313110330131
+AiPlayerbot.PremadeSpecLink.5.5.80 = --303320310102313132313110330131
 
 #
 #

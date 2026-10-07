@@ -3584,7 +3584,8 @@ void PlayerbotFactory::InitClassSpells()
             break;
         case CLASS_PRIEST:
             bot->learnSpell(585, true);
-            bot->learnSpell(2050, true);
+            // Rework: Lesser Heal (2050) is retired on this server; Greater Heal is the starter heal
+            bot->learnSpell(2060, true);
             break;
         case CLASS_MAGE:
             bot->learnSpell(133, true);
