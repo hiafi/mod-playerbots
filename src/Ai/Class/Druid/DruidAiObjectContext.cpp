@@ -9,6 +9,7 @@
 #include "BearDruidStrategy.h"
 #include "CatDruidStrategy.h"
 #include "DruidActions.h"
+#include "DruidBalanceContext.h"
 #include "DruidBearActions.h"
 #include "DruidCatActions.h"
 #include "DruidPullStrategy.h"
@@ -42,10 +43,10 @@ public:
 private:
     static Strategy* nc(PlayerbotAI* botAI) { return new GenericDruidNonCombatStrategy(botAI); }
     static Strategy* pull(PlayerbotAI* botAI) { return new DruidPullStrategy(botAI); }
-    static Strategy* aoe(PlayerbotAI* botAI) { return new DruidAoeStrategy(botAI); }
+    static Strategy* aoe(PlayerbotAI* botAI) { return new DruidReworkAoeStrategy(botAI); }
     static Strategy* cure(PlayerbotAI* botAI) { return new DruidCureStrategy(botAI); }
     static Strategy* buff(PlayerbotAI* botAI) { return new GenericDruidBuffStrategy(botAI); }
-    static Strategy* boost(PlayerbotAI* botAI) { return new DruidBoostStrategy(botAI); }
+    static Strategy* boost(PlayerbotAI* botAI) { return new DruidReworkBoostStrategy(botAI); }
     static Strategy* cc(PlayerbotAI* botAI) { return new DruidCcStrategy(botAI); }
     static Strategy* healer_dps(PlayerbotAI* botAI) { return new DruidHealerDpsStrategy(botAI); }
     static Strategy* offheal(PlayerbotAI* botAI) { return new CatOffhealStrategy(botAI); }
@@ -70,7 +71,7 @@ public:
 private:
     static Strategy* bear(PlayerbotAI* botAI) { return new BearDruidStrategy(botAI); }
     static Strategy* cat(PlayerbotAI* botAI) { return new CatDruidStrategy(botAI); }
-    static Strategy* balance(PlayerbotAI* botAI) { return new BalanceDruidStrategy(botAI); }
+    static Strategy* balance(PlayerbotAI* botAI) { return new DruidReworkBalanceStrategy(botAI); }
     static Strategy* heal(PlayerbotAI* botAI) { return new RestoDruidStrategy(botAI); }
 };
 
@@ -416,12 +417,14 @@ void DruidAiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextLis
     AiObjectContext::BuildSharedActionContexts(actionContexts);
     actionContexts.Add(new DruidAiObjectContextInternal());
     actionContexts.Add(new DruidReworkActionFactory());
+    actionContexts.Add(new DruidBalanceActionFactory());
 }
 
 void DruidAiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextList<Trigger>& triggerContexts)
 {
     AiObjectContext::BuildSharedTriggerContexts(triggerContexts);
     triggerContexts.Add(new DruidTriggerFactoryInternal());
+    triggerContexts.Add(new DruidBalanceTriggerFactory());
 }
 
 class DruidValueContextInternal : public NamedObjectContext<UntypedValue>
@@ -442,4 +445,5 @@ void DruidAiObjectContext::BuildSharedValueContexts(SharedNamedObjectContextList
 {
     AiObjectContext::BuildSharedValueContexts(valueContexts);
     valueContexts.Add(new DruidValueContextInternal());
+    valueContexts.Add(new DruidBalanceValueFactory());
 }

@@ -1,0 +1,158 @@
+# The reworked Balance druid's rotation, one document: "druid/balance", appended to the "balance" combat strategy by
+# DruidReworkBalanceStrategy::InitTriggers. Each row queues its action at the relevance when its condition holds (`when`,
+# the expression language of StrategyExpression.h) or when an existing C++ trigger fires (`trigger`). Execution order is
+# by relevance, not by position in this file. Actions named "balance ..." and "druid ..." are RowCheckedAction (they
+# re-check their own row before casting); the stock actions (flee, nature's grasp, rebirth) are kept from the stock
+# strategy. Rows that can fire together never share an action name and qualifier (they would merge into one basket and
+# only the first row would be re-checked): Fury of Elune S3/P2, Starfall S4/P1 and Force of Nature S5/P4 differ by
+# name, Innervate D3a/D3b by qualifier and D3c by name. The `do:` qualifier and the unit qualifier in `when:` are the
+# same literal ("druid innervate::100;healer"): otherwise the action targets another unit than the one checked.
+# Only the instants act while the bot moves (Moonfire, Insect Swarm, Fury of Elune, Starfall, Force of Nature,
+# Starsurge): Wrath, Starfire and Hurricane carry `not moving(self)`.
+# Spell ids: Moonkin Form 24858, Barkskin 22812, Innervate 29166, Moonfire 8921, Insect Swarm 5570, Starfall 48505,
+# Fury of Elune 200336 (its aura on the bot is Celestial Alignment 200340), Hurricane 16914, Force of Nature 33831,
+# Starsurge 200333, Starfire 2912, Solar Eclipse 48517, Lunar Eclipse 48518.
+strategy: druid/balance
+class: druid
+conditions:
+  lunar: aura(self, 48518)
+  solar: aura(self, 48517)
+  # Moonfire is refreshed early inside a Lunar Eclipse window (>= 13 s or <= 2 s of the buff left), while the DoT has
+  # under 13 s left
+  mf_window: >-
+    lunar and (remaining(self, 48518) >= 13000 or remaining(self, 48518) <= 2000)
+    and remaining(target, 8921, own) < 13000
+  # The same for Insect Swarm in a Solar Eclipse window
+  is_window: >-
+    solar and (remaining(self, 48517) >= 13000 or remaining(self, 48517) <= 2000)
+    and remaining(target, 5570, own) < 13000
+  # Starfall hits every hostile within 30 yd of the bot, unengaged ones included (DQ3): target-centred approximation
+  starfall_ok: known(48505) and cooldown(48505) == 0 and value("unsafe aoe units::30") == 0
+  # The "aoe" strategy is on (`co +aoe` / `co -aoe`), 3+ enemies are around the target and none is unsafe to hit
+  pack: >-
+    value("balance aoe enabled") and alive(target) and enemies_near_target(8) >= 3
+    and value("unsafe aoe units::8") == 0
+rows:
+  # D1: Moonkin Form back on (healing drops it server-side)
+  - do: balance moonkin form
+    when: known(24858) and not aura(self, 24858)
+    relevance: high
+
+  # D2: Barkskin under half health or while something is hitting the bot (DR24)
+  - do: druid barkskin
+    when: >-
+      known(22812) and cooldown(22812) == 0 and (health_pct(self) < 50 or value("my attacker count") >= 1)
+    relevance: emergency + 1
+
+  # D3a: Innervate on the healer with the lowest mana, when the bot is under 50% mana (the target cannot already have it)
+  - do: druid innervate::100;healer
+    when: >-
+      mana(self) < 50 and value("group") and known(29166) and cooldown(29166) == 0
+      and alive("party member below mana::100;healer")
+      and not aura("party member below mana::100;healer", 29166)
+    relevance: high + 1
+
+  # D3b: no healer needs it: any mana user with the lowest mana
+  - do: druid innervate::100;any
+    when: >-
+      mana(self) < 50 and value("group") and known(29166) and cooldown(29166) == 0
+      and alive("party member below mana::100;any")
+      and not aura("party member below mana::100;any", 29166)
+    relevance: high + 0.9
+
+  # D3c: solo, Innervate on itself
+  - do: druid innervate self
+    when: mana(self) < 50 and not value("group") and known(29166) and cooldown(29166) == 0
+    relevance: high + 0.8
+
+  # D4/D5: Solar Beam on a casting target and on a casting enemy healer
+  - do: balance solar beam
+    trigger: balance solar beam
+    relevance: interrupt + 1
+  - do: balance solar beam on enemy healer
+    trigger: balance solar beam on enemy healer
+    relevance: interrupt
+
+  # D6: flee from an enemy too close for a spell, kept from the stock strategy (DR14)
+  - do: flee
+    trigger: enemy too close for spell
+    relevance: move + 9
+
+  # D7: Nature's Grasp when attacked (DR27)
+  - do: nature's grasp
+    trigger: being attacked
+    relevance: move + 8.9
+
+  # D8: Rebirth on a dead party member in combat
+  - do: rebirth
+    trigger: combat party member dead
+    relevance: high + 9
+
+  # S0: stop Hurricane once fewer than 3 attackers stand in it (DR21)
+  - do: balance stop hurricane
+    trigger: hurricane channel check
+    relevance: normal + 9.95
+
+  # S1: Moonfire when missing, or inside the Lunar Eclipse window
+  - do: balance moonfire
+    when: alive(target) and (not aura(target, 8921, own) or mf_window)
+    relevance: normal + 9.0
+
+  # S2: Insect Swarm (a talent) when missing, or inside the Solar Eclipse window
+  - do: balance insect swarm
+    when: known(5570) and alive(target) and (not aura(target, 5570, own) or is_window)
+    relevance: normal + 8.5
+
+  # P1: Starfall on a pack
+  - do: balance pack starfall
+    when: pack and starfall_ok
+    relevance: normal + 8.4
+
+  # P2: Fury of Elune on a pack, on cooldown
+  - do: balance pack fury of elune
+    when: pack and known(200336) and cooldown(200336) == 0
+    relevance: normal + 8.3
+
+  # P3: Hurricane on 5+ enemies under a Solar Eclipse (a channel: never while moving)
+  - do: balance hurricane
+    when: >-
+      pack and known(16914) and enemies_near_target(8) >= 5 and solar and mana(self) > 40 and not moving(self)
+    relevance: normal + 8.2
+
+  # S3: Fury of Elune on a target that lives 8 s
+  - do: balance fury of elune
+    when: known(200336) and cooldown(200336) == 0 and alive(target) and lifetime(target) >= 8
+    relevance: normal + 8.0
+
+  # P4: Force of Nature on a pack, on cooldown
+  - do: balance pack force of nature
+    when: pack and known(33831) and cooldown(33831) == 0
+    relevance: normal + 7.9
+
+  # S4: Starfall inside Celestial Alignment (Fury of Elune's aura), or when Fury of Elune is not coming soon (DR19)
+  - do: balance starfall
+    when: >-
+      starfall_ok and alive(target)
+      and (aura(self, 200340) or not known(200336) or cooldown(200336) > 10000)
+    relevance: normal + 7.5
+
+  # S5: Force of Nature on a target that lives 30 s
+  - do: balance force of nature
+    when: known(33831) and cooldown(33831) == 0 and alive(target) and lifetime(target) >= 30
+    relevance: normal + 7.0
+
+  # S6: Starsurge on cooldown
+  - do: balance starsurge
+    when: known(200333) and cooldown(200333) == 0 and alive(target)
+    relevance: normal + 6.5
+
+  # S7/S8: the Eclipse side alternates. "balance eclipse side" records a side only when it is read, so it is the first
+  # term of both rows: 2 = Lunar up (or none up and Lunar last), Starfire grants Solar; otherwise Wrath grants Lunar.
+  # A bot below the Eclipse talent never sees a side (0) and casts Wrath only.
+  - do: balance starfire
+    when: >-
+      value("balance eclipse side") == 2 and known(2912) and alive(target) and not moving(self)
+    relevance: normal + 6.0
+  - do: balance wrath
+    when: value("balance eclipse side") != 2 and alive(target) and not moving(self)
+    relevance: normal + 5.5
