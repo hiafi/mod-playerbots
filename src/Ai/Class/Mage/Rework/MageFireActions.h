@@ -59,8 +59,8 @@ public:
     bool isUseful() override;
 };
 
-// Fire Blast (20 yd) that re-checks the crit-streak rule: a non-crit starter landing between queueing and casting
-// resets the core counter, and the queued Fire Blast would then reach only 1.
+// Fire Blast (20 yd) that re-checks the streak rule: Heating Up on the bot and Hot Streak not (a non-crit starter
+// landing between queueing and casting removes Heating Up, and the queued Fire Blast would then reach only 1).
 class MageFireCritStreakFireBlastAction : public MageReworkFireBlastAction
 {
 public:

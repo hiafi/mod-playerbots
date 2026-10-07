@@ -10,7 +10,6 @@
 #include "MageReworkIds.h"
 #include "MageReworkUtils.h"
 #include "MageReworkValues.h"
-#include "OwnSpellResultValues.h"
 #include "Playerbots.h"
 
 using namespace ai::mage_rework;
@@ -72,15 +71,6 @@ bool FlashpointWindowOpen(PlayerbotAI* botAI, Unit* target)
     // Hold it until Combustion has run 4 s, so the bank fills at the raised crit rate
     int32 const combustion = ai::aura::AuraRemainingMs(bot, COMBUSTION, bot->GetGUID());
     return combustion >= 0 && combustion <= COMBUSTION_REMAINING_FOR_FLASHPOINT_MS;
-}
-
-bool CritStreakReady(PlayerbotAI* botAI)
-{
-    // The core resets its streak counter when Hot Streak procs, and the Hot Streak Pyroblast always crits. A starter
-    // crit older than the last Pyroblast completed the previous streak, and a Fire Blast after it would reach only 1.
-    AiObjectContext* context = botAI->GetAiObjectContext();
-    uint32 const crit = AI_VALUE2(uint32, "last own spell crit", HOT_STREAK_STARTER_IDS);
-    return crit != ai::spell::NO_OWN_SPELL_CRIT && crit < AI_VALUE2(uint32, "last own spell crit", PYROBLAST_IDS);
 }
 
 bool LivingBombOnTargetAllowed(PlayerbotAI* botAI, Unit* target)

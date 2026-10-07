@@ -82,6 +82,7 @@ constexpr uint32 SPELL_SCORCH = 2948;
 constexpr uint32 SPELL_IMPROVED_SCORCH = 22959;  // the debuff, 30 s, shared by every mage
 constexpr uint32 SPELL_PYROBLAST = 11366;
 constexpr uint32 SPELL_HOT_STREAK_PROC = 48108;  // 10 s; the talent ranks are 44445, 44446, 44448
+constexpr uint32 SPELL_HEATING_UP = 200044;  // 10 s; the core's streak state, Stage HU
 constexpr uint32 SPELL_LIVING_BOMB = 44457;      // the DoT, 12 s
 constexpr uint32 SPELL_LIVING_BOMB_EXPLOSION = 44461;
 constexpr uint32 SPELL_IGNITE = 12654;  // the accumulator DoT: stacks x 100 = banked damage, 4 s, refreshed on a crit
@@ -149,6 +150,7 @@ inline std::vector<uint32> const ARCANE_OVERLOAD_BUFF = {SPELL_ARCANE_OVERLOAD_B
 inline std::vector<uint32> const NETHERWIND_PRESENCE = {SPELL_NETHERWIND_PRESENCE_1, SPELL_NETHERWIND_PRESENCE_2,
                                                         SPELL_NETHERWIND_PRESENCE_3};
 inline std::vector<uint32> const HOT_STREAK_PROC = {SPELL_HOT_STREAK_PROC};
+inline std::vector<uint32> const HEATING_UP = {SPELL_HEATING_UP};
 inline std::vector<uint32> const FANNED_FLAMES_READY = {SPELL_FANNED_FLAMES_READY};
 inline std::vector<uint32> const IGNITE = {SPELL_IGNITE};
 inline std::vector<uint32> const LIVING_BOMB = {SPELL_LIVING_BOMB};

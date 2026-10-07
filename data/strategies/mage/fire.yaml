@@ -14,6 +14,8 @@ conditions:
   pack: alive(target) and enemies_near_target(10) >= 3
 
   hot_streak: aura(self, 48108)
+  # The core's streak state (Stage HU): the first Hot Streak starter crit leaves this for 10 s, the next converts it
+  heating_up: aura(self, 200044)
   fanned_flames: aura(self, 200118)
   meteor_ready: known(200095) and cooldown(200095) == 0
   # Fewer than 3 own Living Bombs out ("attackers with aura id": own 44457, 35 yd)
@@ -81,11 +83,9 @@ rows:
   - do: combustion
     when: target_alive and known(11129) and cooldown(11129) == 0 and lifetime(target) >= 10
     relevance: normal + 3.5
-  # The last Hot Streak starter crit is newer than the last Pyroblast
+  # Heating Up is up and Hot Streak is not: Fire Blast always crits, so it completes the streak
   - do: fire crit streak fire blast
-    when: >-
-      target_alive and known(2136) and cooldown(2136) == 0
-      and last_crit("133,25306,2136,59637,2948,44614") < last_crit(11366)
+    when: target_alive and known(2136) and cooldown(2136) == 0 and heating_up and not hot_streak
     relevance: normal + 2.5
 
   # The last row

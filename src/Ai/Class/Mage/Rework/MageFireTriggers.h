@@ -15,17 +15,6 @@ class Player;
 class PlayerbotAI;
 class Unit;
 
-namespace ai::mage_rework
-{
-
-// The spells whose crit advances the core's Hot Streak streak (spell_proc -44445: Fireball, Fire Blast, Scorch,
-// Frostfire Bolt, every rank the bot can cast). Pyroblast and Living Bomb are not starters. Qualifiers of
-// "last own spell crit".
-constexpr char const* const HOT_STREAK_STARTER_IDS = "133,25306,2136,59637,2948,44614";
-constexpr char const* const PYROBLAST_IDS = "11366";
-
-}  // namespace ai::mage_rework
-
 // Checks shared by a trigger and the action it queues: a queued action outlives the tick that queued it by up to 5 s,
 // so the action re-checks the same condition before it runs.
 namespace ai::mage_fire
@@ -36,8 +25,6 @@ bool EvocationAllowed(PlayerbotAI* botAI);
 // MG31's target-side gates: own Ignite on the target, Combustion absent or at most 6 s left, 4 s since the target
 // changed. Combat time is checked by the trigger.
 bool FlashpointWindowOpen(PlayerbotAI* botAI, Unit* target);
-// MG25 option b: the last Hot Streak starter crit is newer than the last Pyroblast.
-bool CritStreakReady(PlayerbotAI* botAI);
 // No own Living Bomb on the target, and in a pack fewer than 3 bombs out (MG28).
 bool LivingBombOnTargetAllowed(PlayerbotAI* botAI, Unit* target);
 // MG32: 3+ enemies within 8 yd of the target, for the pack Flashpoint.

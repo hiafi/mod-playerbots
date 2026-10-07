@@ -5,6 +5,8 @@
  */
 
 #include "MageFireActions.h"
+#include "AuraIdUtils.h"
+#include "MageReworkIds.h"
 #include "MageFireTriggers.h"
 #include "Playerbots.h"
 
@@ -28,7 +30,11 @@ bool MageFireEvocationAction::isUseful()
 
 bool MageFireCritStreakFireBlastAction::isUseful()
 {
-    return ai::mage_fire::CritStreakReady(botAI) && MageReworkFireBlastAction::isUseful();
+    // Stage HU: the core shows the streak as Heating Up. A non-crit starter landing between queueing and casting
+    // removes it, and Hot Streak already up would waste the crit. The row's condition is the same pair.
+    Player* bot = botAI->GetBot();
+    return ai::aura::HasAnyAura(bot, HEATING_UP, bot->GetGUID()) &&
+           !ai::aura::HasAnyAura(bot, HOT_STREAK_PROC, bot->GetGUID()) && MageReworkFireBlastAction::isUseful();
 }
 
 MageFireLivingBombSpreadAction::MageFireLivingBombSpreadAction(PlayerbotAI* botAI)
