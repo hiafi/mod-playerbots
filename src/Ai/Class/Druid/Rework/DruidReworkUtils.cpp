@@ -13,8 +13,10 @@ using namespace ai::druid_rework;
 
 bool ai::druid_rework::IsBearBuild(Player* bot)
 {
-    return bot->HasSpell(SPELL_ELDER_HIDE_RANK_1) || bot->HasSpell(SPELL_ELDER_HIDE_RANK_2) ||
-           bot->HasSpell(SPELL_ELDER_HIDE_RANK_3);
+    // Elder Hide is a passive talent: it is never in the spellbook, so HasSpell would always be false
+    uint8 const spec = bot->GetActiveSpec();
+    return bot->HasTalent(SPELL_ELDER_HIDE_RANK_1, spec) || bot->HasTalent(SPELL_ELDER_HIDE_RANK_2, spec) ||
+           bot->HasTalent(SPELL_ELDER_HIDE_RANK_3, spec);
 }
 
 DruidSpec GetDruidSpec(Player* bot)

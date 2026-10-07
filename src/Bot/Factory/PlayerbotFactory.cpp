@@ -13,6 +13,7 @@
 #include "ArenaTeamMgr.h"
 #include "DBCStores.h"
 #include "DBCStructure.h"
+#include "DruidReworkUtils.h"
 #include "GuildMgr.h"
 #include "InventoryAction.h"
 #include "Item.h"
@@ -107,7 +108,6 @@ std::vector<uint32> PlayerbotFactory::ccBreakTrinketCache;
 
 namespace
 {
-constexpr uint32 SPELL_DRUID_THICK_HIDE = 16931;
 constexpr uint32 SPELL_OWLKIN_FRENZY = 48393;
 constexpr uint32 SPELL_PRIMAL_TENACITY = 33957;
 constexpr uint32 SPELL_IMPROVED_BARKSKIN = 63411;
@@ -1717,7 +1717,8 @@ uint32 PlayerbotFactory::InitTalentsTree(bool increment /*false*/, bool use_temp
         /// @todo: fix cat druid hardcode
         if (bot->getClass() == CLASS_DRUID && specTab == DRUID_TAB_FERAL && bot->GetLevel() >= 20)
         {
-            bool isCat = !bot->HasAura(SPELL_DRUID_THICK_HIDE);
+            // Rework: a bear is the build with Elder Hide, not Thick Hide
+            bool isCat = !ai::druid_rework::IsBearBuild(bot);
             if (!isCat && bot->GetLevel() == 20)
             {
                 uint32 bearP = sPlayerbotAIConfig.randomClassSpecProb[cls][1];
@@ -4673,8 +4674,9 @@ void PlayerbotFactory::InitGlyphs(bool increment)
     // Druid PvE/PvP exceptions
     if (bot->getClass() == CLASS_DRUID)
     {
-        // Cat PvE (spec index 3): If the bot is Feral spec, level 20 or higher, and does NOT have the Thick Hide talent
-        if (tab == DRUID_TAB_FERAL && bot->GetLevel() >= 20 && !bot->HasAura(SPELL_DRUID_THICK_HIDE))
+        // Cat PvE (spec index 3): If the bot is Feral spec, level 20 or higher, and does NOT have the Elder Hide talent
+        // Rework: Elder Hide marks a bear build, Thick Hide is gone from the reworked Feral tree
+        if (tab == DRUID_TAB_FERAL && bot->GetLevel() >= 20 && !ai::druid_rework::IsBearBuild(bot))
             tab = 3;
         // Balance PvP (spec index 4): If the bot has the Owlkin Frenzy talent
         else if (bot->HasAura(SPELL_OWLKIN_FRENZY))
