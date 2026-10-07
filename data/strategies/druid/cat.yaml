@@ -1,0 +1,123 @@
+# The reworked Cat druid's rotation and its offheal overlay, one document each: "druid/cat" is appended to the "cat"
+# (and "dps") combat strategy by DruidReworkCatStrategy::InitTriggers, "druid/cat-offheal" to the optional "offheal"
+# strategy by DruidReworkCatOffhealStrategy::InitTriggers. Each row queues its action at the relevance when its
+# condition holds (`when`, the expression language of StrategyExpression.h) or when an existing C++ trigger fires
+# (`trigger`). Execution order is by relevance, not by position in this file. Actions named "cat ..." and "druid ..."
+# are RowCheckedAction (they re-check their own row before casting); the stock actions (dash, reach melee, reach party
+# member to heal) are kept from the stock strategy. Rows that can fire together never share an action name and
+# qualifier (they would merge into one basket and only the first row would be re-checked): Mangle's debuff row and its
+# builder row, and Rip and Ferocious Bite, have their own names. The `do:` qualifier and the unit qualifier in `when:`
+# are the same literal ("cat offheal regrowth::40,40"): otherwise the action targets another unit than the one checked.
+# Every spell a bot may not know yet carries `known()`: `cooldown()` of an unknown spell reads 0.
+# Combo points, energy and position are plain values: `value("combo::current target")` (0 unless the combo target is the
+# current target), `value("energy::self target")` (absolute energy) and `value("behind::current target")`.
+# Spell ids: Cat Form 768, Predator's Swiftness 69369, Barkskin 22812, Feral Charge - Cat 49376, Ravage 6785 (its free
+# cast is the Stampede buff 200434), Berserk 50334, Tiger's Fury 5217, Rip 1079, Rake 1822, Ferocious Bite 22568, Mangle
+# (Cat) 33876 (the debuff on the target is the spell itself, 33878 is the Bear's; 46856 and 46857 are Trauma).
+strategy: druid/cat
+class: druid
+conditions:
+  in_cat: aura(self, 768)
+  cp: value("combo::current target")
+  energy: value("energy::self target")
+  behind: value("behind::current target")
+  # Mangle (Cat) and (Bear) or the Trauma debuffs, from any caster
+  mangled: aura(target, "33876,33878,46856,46857")
+  berserking: aura(self, 50334)
+rows:
+  # F: Cat Form (also back into it after leaving form, e.g. the out-of-combat heals)
+  - do: cat cat form
+    when: known(768) and not in_cat
+    relevance: high
+
+  # E1: Regrowth from Cat Form on Predator's Swiftness (instant) when hurt (DR31)
+  - do: cat regrowth
+    when: aura(self, 69369, own) and health_pct(self) < 50
+    relevance: emergency + 3
+
+  # E2: Barkskin when low
+  - do: druid barkskin
+    when: known(22812) and cooldown(22812) == 0 and health_pct(self) < 35
+    relevance: emergency + 1
+
+  # BG: Dash with the flag, or after an enemy flag carrier
+  - do: dash
+    trigger: player has flag
+    relevance: emergency + 2
+  - do: dash
+    trigger: enemy flagcarrier near
+    relevance: emergency + 2
+
+  # M1: walk to a target out of melee range
+  - do: reach melee
+    trigger: enemy out of melee
+    relevance: high + 1
+
+  # M2: Cower to shed threat (DR16)
+  - do: cat cower
+    trigger: medium threat
+    relevance: high + 0.9
+
+  # O1: Feral Charge from 8 to 25 yd (DR30)
+  - do: cat feral charge
+    when: >-
+      known(49376) and cooldown(49376) == 0 and in_cat and alive(target) and in_range(target, 25)
+      and not in_range(target, 8)
+    relevance: high + 9
+
+  # O2: Ravage on the Stampede the charge grants
+  - do: cat ravage
+    when: known(6785) and alive(target) and aura(self, 200434, own)
+    relevance: normal + 9.9
+
+  # G1: Berserk once Rip and Rake are both up
+  - do: cat berserk
+    when: >-
+      known(50334) and cooldown(50334) == 0 and alive(target) and aura(target, 1079, own)
+      and aura(target, 1822, own)
+    relevance: normal + 9.8
+
+  # G2: Tiger's Fury under 40 energy, never inside Berserk (DR28)
+  - do: cat tigers fury
+    when: known(5217) and cooldown(5217) == 0 and alive(target) and energy < 40 and not berserking
+    relevance: normal + 9.7
+
+  # 1: the Mangle debuff, while no combo-point cap is in the way
+  - do: cat mangle debuff
+    when: alive(target) and not mangled and cp < 5
+    relevance: normal + 9.0
+
+  # 2, 3: five combo points go into Rip, or into Ferocious Bite while Rip has 2 s or more left
+  - do: cat rip
+    when: known(1079) and alive(target) and cp >= 5 and remaining(target, 1079, own) < 2000
+    relevance: normal + 8.5
+  - do: cat ferocious bite
+    when: known(22568) and alive(target) and cp >= 5 and remaining(target, 1079, own) >= 2000
+    relevance: normal + 8.0
+
+  # 4, 5, 6: the builders. `cp < 5` stops a builder from wasting a point while a finisher waits for energy: an
+  # energy-starved finisher fails to cast, and the engine would otherwise run the next basket, a builder
+  - do: cat rake
+    when: known(1822) and alive(target) and cp < 5 and remaining(target, 1822, own) < 3000
+    relevance: normal + 7.5
+  - do: cat shred
+    when: alive(target) and cp < 5 and behind
+    relevance: normal + 7.0
+  - do: cat mangle
+    when: alive(target) and cp < 5 and not behind
+    relevance: normal + 6.5
+---
+# `co +offheal`: heals from Cat Form (DR13, DQ2)
+strategy: druid/cat-offheal
+class: druid
+rows:
+  - do: reach party member to heal
+    trigger: party member to heal out of spell range
+    relevance: emergency + 3
+
+  # Regrowth in form on the tank-first heal target; instant with Predator's Swiftness, else only while standing
+  - do: cat offheal regrowth::40,40
+    when: >-
+      alive("tank first heal target::40,40") and health_pct("tank first heal target::40,40") < 40
+      and (not moving(self) or aura(self, 69369, own))
+    relevance: high + 6

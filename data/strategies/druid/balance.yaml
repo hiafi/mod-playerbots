@@ -1,14 +1,14 @@
 # The reworked Balance druid's rotation, one document: "druid/balance", appended to the "balance" combat strategy by
-# DruidReworkBalanceStrategy::InitTriggers. Each row queues its action at the relevance when its condition holds (`when`,
-# the expression language of StrategyExpression.h) or when an existing C++ trigger fires (`trigger`). Execution order is
-# by relevance, not by position in this file. Actions named "balance ..." and "druid ..." are RowCheckedAction (they
-# re-check their own row before casting); the stock actions (flee, nature's grasp, rebirth) are kept from the stock
-# strategy. Rows that can fire together never share an action name and qualifier (they would merge into one basket and
-# only the first row would be re-checked): Fury of Elune S3/P2, Starfall S4/P1 and Force of Nature S5/P4 differ by
+# DruidReworkBalanceStrategy::InitTriggers. Each row queues its action at the relevance when its condition holds
+# (`when`, the expression language of StrategyExpression.h) or when an existing C++ trigger fires (`trigger`). Execution
+# order is by relevance, not by position in this file. Actions named "balance ..." and "druid ..." are RowCheckedAction
+# (they re-check their own row before casting); the stock actions (flee, nature's grasp, rebirth) are kept from the
+# stock strategy. Rows that can fire together never share an action name and qualifier (they would merge into one basket
+# and only the first row would be re-checked): Fury of Elune S3/P2, Starfall S4/P1 and Force of Nature S5/P4 differ by
 # name, Innervate D3a/D3b by qualifier and D3c by name. The `do:` qualifier and the unit qualifier in `when:` are the
-# same literal ("druid innervate::100;healer"): otherwise the action targets another unit than the one checked.
-# Only the instants act while the bot moves (Moonfire, Insect Swarm, Fury of Elune, Starfall, Force of Nature,
-# Starsurge): Wrath, Starfire and Hurricane carry `not moving(self)`.
+# same literal ("druid innervate::100;healer"): otherwise the action targets another unit than the one checked. Only the
+# instants act while the bot moves (Moonfire, Insect Swarm, Fury of Elune, Starfall, Force of Nature, Starsurge): Wrath,
+# Starfire and Hurricane carry `not moving(self)`.
 # Spell ids: Moonkin Form 24858, Barkskin 22812, Innervate 29166, Moonfire 8921, Insect Swarm 5570, Starfall 48505,
 # Fury of Elune 200336 (its aura on the bot is Celestial Alignment 200340), Hurricane 16914, Force of Nature 33831,
 # Starsurge 200333, Starfire 2912, Solar Eclipse 48517, Lunar Eclipse 48518.
@@ -44,7 +44,8 @@ rows:
       known(22812) and cooldown(22812) == 0 and (health_pct(self) < 50 or value("my attacker count") >= 1)
     relevance: emergency + 1
 
-  # D3a: Innervate on the healer with the lowest mana, when the bot is under 50% mana (the target cannot already have it)
+  # D3a: Innervate on the healer with the lowest mana, when the bot is under 50% mana (the target cannot already have
+  # it)
   - do: druid innervate::100;healer
     when: >-
       mana(self) < 50 and value("group") and known(29166) and cooldown(29166) == 0

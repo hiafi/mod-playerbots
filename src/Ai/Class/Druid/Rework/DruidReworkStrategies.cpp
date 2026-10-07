@@ -34,9 +34,8 @@ void DruidReworkBoostStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
     ai::data::AppendRows("druid/boost", triggers);
 
-    // The whole Feral tab for now; the Cat stage narrows it to the Bear
-    DruidSpec const spec = GetDruidSpec(botAI->GetBot());
-    if (spec == DruidSpec::Cat || spec == DruidSpec::Bear)
+    // Berserk is a row of the Cat rotation; the Bear keeps the stock one until the Bear stage
+    if (GetDruidSpec(botAI->GetBot()) == DruidSpec::Bear)
         ai::data::AppendRows("druid/boost-feral", triggers);
 }
 

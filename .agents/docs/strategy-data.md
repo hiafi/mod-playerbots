@@ -204,10 +204,11 @@ YAML loads: a mistyped name resolves to no value and the count reads 0, so check
 value>)`, or it holds with nobody there (0 < 50):
 `alive("tank first heal target::50,50") and health_pct("tank first heal target::50,50") < 50`.
 
-**Melee resources.** Combo points, energy, rage and the position behind the target are plain values, read through `value()`:
-`value("combo::current target")` (0 unless the combo target is the current target), `value("energy::self target")`
-(absolute energy), `value("rage::self target")` (rage units, 0-100) and `value("behind::current target")` (bool). No
-class-local value is needed for them; name them once in `conditions:` (`cp: value("combo::current target")`).
+**Melee resources.** Combo points, energy, rage and the position behind the target are plain values, read through
+`value()`: `value("combo::current target")` (0 unless the combo target is the current target),
+`value("energy::self target")` (absolute energy), `value("rage::self target")` (rage units, 0-100) and
+`value("behind::current target")` (bool). No class-local value is needed for them; name them once in `conditions:`
+(`cp: value("combo::current target")`).
 
 ## 4. Lessons
 

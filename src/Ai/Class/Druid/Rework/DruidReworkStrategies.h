@@ -26,7 +26,7 @@ public:
     std::string const getName() override { return "nc"; }
 };
 
-// Registered as "boost": "druid/boost" for every druid and "druid/boost-feral" for a Feral bot. The spec is read at
+// Registered as "boost": "druid/boost" for every druid and "druid/boost-feral" for a Bear bot. The spec is read at
 // InitTriggers, so a respec switches lists on the next engine re-init.
 class DruidReworkBoostStrategy : public Strategy
 {

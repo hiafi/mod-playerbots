@@ -11,6 +11,7 @@
 #include "DruidActions.h"
 #include "DruidBalanceContext.h"
 #include "DruidBearActions.h"
+#include "DruidCatContext.h"
 #include "DruidCatActions.h"
 #include "DruidPullStrategy.h"
 #include "DruidReworkContext.h"
@@ -47,12 +48,12 @@ private:
     static Strategy* cure(PlayerbotAI* botAI) { return new DruidCureStrategy(botAI); }
     static Strategy* buff(PlayerbotAI* botAI) { return new GenericDruidBuffStrategy(botAI); }
     static Strategy* boost(PlayerbotAI* botAI) { return new DruidReworkBoostStrategy(botAI); }
-    static Strategy* cc(PlayerbotAI* botAI) { return new DruidCcStrategy(botAI); }
+    static Strategy* cc(PlayerbotAI* botAI) { return new DruidReworkCcStrategy(botAI); }
     static Strategy* healer_dps(PlayerbotAI* botAI) { return new DruidHealerDpsStrategy(botAI); }
-    static Strategy* offheal(PlayerbotAI* botAI) { return new CatOffhealStrategy(botAI); }
+    static Strategy* offheal(PlayerbotAI* botAI) { return new DruidReworkCatOffhealStrategy(botAI); }
     static Strategy* blanketing(PlayerbotAI* botAI) { return new DruidBlanketStrategy(botAI); }
     static Strategy* tranquility(PlayerbotAI* botAI) { return new DruidTranquilityStrategy(botAI); }
-    static Strategy* feral_charge(PlayerbotAI* botAI) { return new FeralChargeDruidStrategy(botAI); }
+    static Strategy* feral_charge(PlayerbotAI* botAI) { return new DruidReworkFeralChargeStrategy(botAI); }
 };
 
 class DruidDruidStrategyFactoryInternal : public NamedObjectContext<Strategy>
@@ -70,7 +71,7 @@ public:
 
 private:
     static Strategy* bear(PlayerbotAI* botAI) { return new BearDruidStrategy(botAI); }
-    static Strategy* cat(PlayerbotAI* botAI) { return new CatDruidStrategy(botAI); }
+    static Strategy* cat(PlayerbotAI* botAI) { return new DruidReworkCatStrategy(botAI); }
     static Strategy* balance(PlayerbotAI* botAI) { return new DruidReworkBalanceStrategy(botAI); }
     static Strategy* heal(PlayerbotAI* botAI) { return new RestoDruidStrategy(botAI); }
 };
@@ -417,6 +418,7 @@ void DruidAiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextLis
     AiObjectContext::BuildSharedActionContexts(actionContexts);
     actionContexts.Add(new DruidAiObjectContextInternal());
     actionContexts.Add(new DruidReworkActionFactory());
+    actionContexts.Add(new DruidCatActionFactory());
     actionContexts.Add(new DruidBalanceActionFactory());
 }
 
