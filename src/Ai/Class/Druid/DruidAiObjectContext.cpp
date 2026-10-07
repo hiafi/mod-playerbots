@@ -14,6 +14,7 @@
 #include "DruidCatContext.h"
 #include "DruidCatActions.h"
 #include "DruidPullStrategy.h"
+#include "DruidRestoContext.h"
 #include "DruidReworkContext.h"
 #include "DruidShapeshiftActions.h"
 #include "DruidTriggers.h"
@@ -42,17 +43,17 @@ public:
     }
 
 private:
-    static Strategy* nc(PlayerbotAI* botAI) { return new GenericDruidNonCombatStrategy(botAI); }
+    static Strategy* nc(PlayerbotAI* botAI) { return new DruidReworkNonCombatStrategy(botAI); }
     static Strategy* pull(PlayerbotAI* botAI) { return new DruidPullStrategy(botAI); }
     static Strategy* aoe(PlayerbotAI* botAI) { return new DruidReworkAoeStrategy(botAI); }
     static Strategy* cure(PlayerbotAI* botAI) { return new DruidCureStrategy(botAI); }
     static Strategy* buff(PlayerbotAI* botAI) { return new GenericDruidBuffStrategy(botAI); }
     static Strategy* boost(PlayerbotAI* botAI) { return new DruidReworkBoostStrategy(botAI); }
     static Strategy* cc(PlayerbotAI* botAI) { return new DruidReworkCcStrategy(botAI); }
-    static Strategy* healer_dps(PlayerbotAI* botAI) { return new DruidHealerDpsStrategy(botAI); }
+    static Strategy* healer_dps(PlayerbotAI* botAI) { return new DruidReworkHealerDpsStrategy(botAI); }
     static Strategy* offheal(PlayerbotAI* botAI) { return new DruidReworkCatOffhealStrategy(botAI); }
-    static Strategy* blanketing(PlayerbotAI* botAI) { return new DruidBlanketStrategy(botAI); }
-    static Strategy* tranquility(PlayerbotAI* botAI) { return new DruidTranquilityStrategy(botAI); }
+    static Strategy* blanketing(PlayerbotAI* botAI) { return new DruidReworkBlanketStrategy(botAI); }
+    static Strategy* tranquility(PlayerbotAI* botAI) { return new DruidReworkTranquilityStrategy(botAI); }
     static Strategy* feral_charge(PlayerbotAI* botAI) { return new DruidReworkFeralChargeStrategy(botAI); }
 };
 
@@ -73,7 +74,7 @@ private:
     static Strategy* bear(PlayerbotAI* botAI) { return new BearDruidStrategy(botAI); }
     static Strategy* cat(PlayerbotAI* botAI) { return new DruidReworkCatStrategy(botAI); }
     static Strategy* balance(PlayerbotAI* botAI) { return new DruidReworkBalanceStrategy(botAI); }
-    static Strategy* heal(PlayerbotAI* botAI) { return new RestoDruidStrategy(botAI); }
+    static Strategy* heal(PlayerbotAI* botAI) { return new DruidReworkRestoStrategy(botAI); }
 };
 
 class DruidTriggerFactoryInternal : public NamedObjectContext<Trigger>
@@ -420,6 +421,7 @@ void DruidAiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextLis
     actionContexts.Add(new DruidReworkActionFactory());
     actionContexts.Add(new DruidCatActionFactory());
     actionContexts.Add(new DruidBalanceActionFactory());
+    actionContexts.Add(new DruidRestoActionFactory());
 }
 
 void DruidAiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextList<Trigger>& triggerContexts)
@@ -448,4 +450,5 @@ void DruidAiObjectContext::BuildSharedValueContexts(SharedNamedObjectContextList
     AiObjectContext::BuildSharedValueContexts(valueContexts);
     valueContexts.Add(new DruidValueContextInternal());
     valueContexts.Add(new DruidBalanceValueFactory());
+    valueContexts.Add(new DruidRestoValueFactory());
 }

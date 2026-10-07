@@ -1,0 +1,242 @@
+# The reworked Restoration druid, four documents. "druid/resto" is the heal rotation, appended to the "resto" combat
+# strategy by DruidReworkRestoStrategy::InitTriggers. "druid/nc-resto" is its out-of-combat heals, appended to the "nc"
+# strategy by DruidReworkNonCombatStrategy::InitTriggers. "druid/healer-dps" is the "healer dps" strategy and
+# "druid/blanketing" the non-default "blanketing" one. Each row queues its action at the relevance when its condition
+# holds (`when`, the expression language of StrategyExpression.h) or when an existing C++ trigger fires (`trigger`).
+# Execution order is by relevance, not by position in this file. Actions named "resto ..." and "druid ..." are
+# RowCheckedAction (they re-check their own row before casting); the stock actions (reach party member to heal, flee,
+# rebirth, nature's grasp, the blanket casts) are kept from the stock strategy. A value-target action takes its value's
+# qualifier from its `do:` name, so the `do:` qualifier and the unit qualifier in `when:` are always the same literal
+# ("resto regrowth::45,45" with health_pct("tank first heal target::45,45")): otherwise the action heals another unit
+# than the one checked. Rows that can fire together never share an action name and qualifier (they would merge into one
+# basket, and only the first row would be re-checked): Rejuvenation 3T / 15T differ by qualifier, 7 / 17 and 15 / 15T by
+# name; 12 / 13 by name; Regrowth 3 / 14 and Healing Touch 2b / 16 by name; Lifebloom 10a / 10b by name.
+# Spell ids: Barkskin 22812, Swiftmend 18562, Natural Alacrity 17116 (the charge; 200566 is its heal buff, never
+# checked), Rejuvenation 774, Germination 200568, Regrowth 8936, Lifebloom 33763, Wild Growth 48438, Tranquility 740,
+# Tree of Life 33891, Innervate 29166, Proliferation 200570 (the proc; the talent is 200592-200594), Bloom 200560,
+# Flourish 200564, Cenarion Ward 200562 (the ward; 200563 is the released HoT), Gift of the Earthmother 51181,
+# Moonfire 8921. The dependent HoT list of Flourish also holds Cenarion Ward's HoT 200563 and Cultivation 200567.
+# Only the instants act while the bot moves; Regrowth, Healing Touch and Tranquility carry `not moving(self)`. The
+# numbers in the comments are the guide's line numbers (docs/reworks/bot-strategy/druid-resto-strat.md).
+strategy: druid/resto
+class: druid
+conditions:
+  # The effective tank (the main tank within 100 yd, else the most attacked member) is in reach of a 40 yd heal
+  tank_ok: >-
+    alive("effective tank") and in_range("effective tank", 40) and not is_self("effective tank")
+  tol: aura(self, 33891)
+  # Lifebloom on the tank: three stacks, refreshed under 2 s
+  lb_tank: >-
+    tank_ok and (stacks("effective tank", 33763, own) < 3 or remaining("effective tank", 33763, own) < 2000)
+  # The same on the sticky second target (DR35)
+  lb_second: >-
+    alive("resto lifebloom second") and in_range("resto lifebloom second", 40)
+    and (stacks("resto lifebloom second", 33763, own) < 3 or remaining("resto lifebloom second", 33763, own) < 2000)
+  # Somebody under 25%: the Natural Alacrity Healing Touch pair
+  ht25: alive("tank first heal target::25,25") and health_pct("tank first heal target::25,25") < 25
+rows:
+  # PC1: Barkskin under 60% while something is hitting the bot
+  - do: druid barkskin
+    when: >-
+      known(22812) and cooldown(22812) == 0 and health_pct(self) < 60 and value("my attacker count") > 0
+    relevance: emergency + 2
+
+  # 1: Swiftmend the most hurt member under 40% that carries one of the bot's HoTs
+  - do: resto swiftmend::40;774,200568,8936,33763
+    when: >-
+      known(18562) and cooldown(18562) == 0
+      and exists("party member with own aura::40;774,200568,8936,33763")
+    relevance: emergency + 7
+
+  # 2: Natural Alacrity for an instant Healing Touch (DR43), then the Healing Touch itself; two rows, one per step
+  - do: resto natural alacrity
+    when: known(17116) and cooldown(17116) == 0 and not aura(self, 17116, own) and ht25
+    relevance: emergency + 6.5
+  - do: resto instant healing touch::25,25
+    when: aura(self, 17116, own) and ht25
+    relevance: emergency + 6
+
+  # 3: Regrowth under 45%; with Tree of Life up, Rejuvenation on whoever is under 45% and lacks it comes first (DR37)
+  - do: resto tol rejuv::45;774
+    when: tol and exists("party member without own aura::45;774")
+    relevance: emergency + 5.5
+  - do: resto regrowth::45,45
+    when: >-
+      known(8936) and alive("tank first heal target::45,45") and health_pct("tank first heal target::45,45") < 45
+      and not moving(self)
+    relevance: emergency + 5
+
+  # 4: Tranquility with 4+ members under 55% and nothing hitting the bot (DR44). A channel: only movement breaks it
+  - do: resto tranquility
+    when: >-
+      known(740) and cooldown(740) == 0 and value("party members below::55") >= 4
+      and value("my attacker count") == 0 and not moving(self)
+    relevance: emergency + 4
+
+  # Walk into range of a hurt member
+  - do: reach party member to heal
+    trigger: party member to heal out of spell range
+    relevance: emergency + 3
+
+  # Stock keeps (DRUID.YAML-PASS section 7): step away from a melee enemy, resurrect, root an attacker
+  - do: flee
+    trigger: enemy too close for spell
+    relevance: move + 9
+  - do: rebirth
+    trigger: combat party member dead
+    relevance: high + 9
+  - do: nature's grasp
+    trigger: being attacked
+    relevance: move + 8.9
+
+  # PC2: Innervate itself under 40% mana while nobody is under 50%
+  - do: druid innervate self
+    when: >-
+      known(29166) and cooldown(29166) == 0 and mana(self) < 40 and value("party members below::50") == 0
+    relevance: normal + 9.9
+
+  # 5: Tree of Life with 4+ members under 80%
+  - do: resto tree of life
+    when: >-
+      known(33891) and cooldown(33891) == 0 and not tol and value("party members below::80") >= 4
+    relevance: normal + 9.8
+
+  # 6: Wild Growth on the member with the most injured allies within 15 yd, 3+ of them under 85% (2+ in Tree of Life)
+  - do: resto wild growth::15,85
+    when: >-
+      known(48438) and cooldown(48438) == 0
+      and (value("heal cluster count::15,85") >= 3 or (tol and value("heal cluster count::15,85") >= 2))
+    relevance: normal + 9.5
+
+  # 7: Rejuvenation on whoever lacks it while the Proliferation proc is up (it spreads to two more)
+  - do: resto proliferation rejuv::101;774
+    when: aura(self, 200570, own) and exists("party member without own aura::101;774")
+    relevance: normal + 9.0
+
+  # 8: Bloom on the most hurt carrier of a Rejuvenation when 4+ allies under 85% carry one
+  - do: resto bloom::85;774,200568
+    when: >-
+      known(200560) and cooldown(200560) == 0
+      and value("party members with aura::85;1;1;774,200568") >= 4
+      and exists("party member with own aura::85;774,200568")
+    relevance: normal + 8.5
+
+  # 9: Flourish when 3+ allies carry two of the bot's HoTs and 2+ are under 90%
+  - do: resto flourish
+    when: >-
+      known(200564) and cooldown(200564) == 0
+      and value("party members with aura::101;2;1;774,200568,8936,33763,48438,200563,200567") >= 3
+      and value("party members below::90") >= 2
+    relevance: normal + 8.0
+
+  # DR9: cures between the Flourish and Lifebloom lines, only while nobody is under 50% (DruidHealerCureMultiplier)
+  - do: resto abolish poison on party
+    trigger: party member cure poison
+    relevance: normal + 7.8
+  - do: resto remove curse on party
+    trigger: party member remove curse
+    relevance: normal + 7.7
+
+  # 10: Lifebloom on the tank, and with Gift of the Earthmother rank 3 on the sticky second target (DR35). Never on
+  # anyone else: a third target would evict the oldest
+  - do: resto lifebloom tank
+    when: known(33763) and lb_tank
+    relevance: normal + 7.5
+  - do: resto lifebloom second target
+    when: known(33763) and known(51181) and lb_second
+    relevance: normal + 7.4
+
+  # 11: Cenarion Ward on the tank (DR40)
+  - do: resto cenarion ward
+    when: >-
+      known(200562) and cooldown(200562) == 0 and tank_ok and not aura("effective tank", 200562, own)
+    relevance: normal + 7.0
+
+  # 12: Rejuvenation on the tank
+  - do: resto rejuv tank
+    when: tank_ok and not aura("effective tank", 774, own)
+    relevance: normal + 6.5
+
+  # 13: the Germination copy on a hurt tank that already carries Rejuvenation (Proliferation rank 3)
+  - do: resto germination tank
+    when: >-
+      known(200594) and tank_ok and health_pct("effective tank") < 70 and aura("effective tank", 774, own)
+      and not aura("effective tank", 200568, own)
+    relevance: normal + 6.0
+
+  # 15T: with Tree of Life up, Rejuvenation on every member under 90% that lacks it, before the tank's Regrowth
+  - do: resto tol rejuv::90;774
+    when: tol and exists("party member without own aura::90;774")
+    relevance: normal + 5.6
+
+  # 14: Regrowth on the tank under 70% or without the bot's Regrowth
+  - do: resto regrowth tank
+    when: >-
+      known(8936) and tank_ok and (health_pct("effective tank") < 70 or not aura("effective tank", 8936, own))
+      and not moving(self)
+    relevance: normal + 5.5
+
+  # 15: Rejuvenation on whoever is under 90% and lacks it
+  - do: resto rejuv lacking::90;774
+    when: exists("party member without own aura::90;774")
+    relevance: normal + 5.0
+
+  # 16: Healing Touch under 60% with mana to spare; under 25% only through Natural Alacrity (DR34)
+  - do: resto healing touch::60,60
+    when: >-
+      mana(self) > 40 and alive("tank first heal target::60,60") and health_pct("tank first heal target::60,60") < 60
+      and (health_pct("tank first heal target::60,60") >= 25 or aura(self, 17116, own)) and not moving(self)
+    relevance: normal + 4.5
+
+  # 17: Rejuvenation on anyone lacking it while the group is calm (DR42)
+  - do: resto rejuv lacking::101;774
+    when: >-
+      value("party members below::90") == 0 and mana(self) > 80
+      and exists("party member without own aura::101;774")
+    relevance: normal + 3.0
+---
+# Out of combat (DQ1): heal injured members only, mana-efficient first. No Lifebloom, Cenarion Ward or Rejuvenation on
+# members at full health: Lifebloom on an idle tank would recast every few seconds for as long as the bot travels.
+strategy: druid/nc-resto
+class: druid
+rows:
+  - do: resto rejuv lacking::95;774
+    when: exists("party member without own aura::95;774")
+    relevance: normal + 9
+  - do: resto regrowth::60,60
+    when: >-
+      known(8936) and alive("tank first heal target::60,60") and health_pct("tank first heal target::60,60") < 60
+      and not moving(self)
+    relevance: normal + 8
+  - do: resto healing touch::40,40
+    when: >-
+      alive("tank first heal target::40,40") and health_pct("tank first heal target::40,40") < 40
+      and not moving(self)
+    relevance: normal + 7
+---
+# "healer dps" (DR8): acts only while the bot is alone, Moonfire if missing, then Wrath. Grouped it does nothing, and it
+# never cancels Tree of Life (the buff lets Wrath cast through it).
+strategy: druid/healer-dps
+class: druid
+conditions:
+  # Only the bot is within 40 yd and in sight: the count includes the bot
+  alone: value("party members below::101") <= 1
+rows:
+  - do: resto solo moonfire
+    when: alone and alive(target) and not aura(target, 8921, own)
+    relevance: normal + 1.5
+  - do: resto solo wrath
+    when: alone and alive(target) and not moving(self)
+    relevance: normal + 1.0
+---
+# "blanketing" (non-default): Wild Growth and Rejuvenation on everyone, without the stock Tree of Life step, and
+# neither casts Lifebloom
+strategy: druid/blanketing
+class: druid
+rows:
+  - do: wild growth blanket
+    trigger: wild growth blanket
+    relevance: default + 3
+  - do: rejuvenation blanket
+    trigger: rejuvenation blanket
+    relevance: default + 1
