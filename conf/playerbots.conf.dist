@@ -2136,34 +2136,45 @@ AiPlayerbot.PremadeSpecLink.9.5.80 = -2032003311302-05230015220331351005031051
 # DRUID
 #
 
+# Druid rework (custom talent trees): the links are the level-60 guide builds for Balance, Bear, Restoration and Cat
+# (docs/reworks/bot-strategy/ bot guides: druid-balance-strat.md, druid-feral-tank-strat.md, druid-resto-strat.md,
+# druid-feral-dps-strat.md; rework-bot-strategies DRUID plan). Each string is "<balance>-<feral>-<resto>" with one digit
+# per talent in (tier, column) order, so a leading "-" or "--" is an empty Balance / Balance+Feral tab and the build
+# sits in the tab its prefix points at (bear and cat are Feral, one "-"; resto is "--"). The stock links decoded as garbage
+# on the reworked grid. Elder Hide in the bear link is what marks a bear: the factory and AI read it (IsBearBuild),
+# and the cat link has none. .80 repeats .60 (at level 80 only the .80 entry is read) until there are level-80 builds,
+# and the PvP slots 4-6 (balance, cat, resto) reuse the PvE builds; there is no PvP bear slot.
+# PremadeSpecName and PremadeSpecGlyph are unchanged: bot glyphs are off on this server (AiPlayerbot.BotGlyphs = 0),
+# so the glyph lists are never applied.
+
 AiPlayerbot.PremadeSpecName.11.0 = balance pve
 AiPlayerbot.PremadeSpecGlyph.11.0 = 40916,43331,40921,43335,44922,40919
-AiPlayerbot.PremadeSpecLink.11.0.60 = 5032003125031003213304301231
-AiPlayerbot.PremadeSpecLink.11.0.80 = 5032003125331303213305301231--205003012
+AiPlayerbot.PremadeSpecLink.11.0.60 = 303301313203031303301330131031
+AiPlayerbot.PremadeSpecLink.11.0.80 = 303301313203031303301330131031
 AiPlayerbot.PremadeSpecName.11.1 = bear pve
 AiPlayerbot.PremadeSpecGlyph.11.1 = 40897,43331,46372,43335,43332,40899
-AiPlayerbot.PremadeSpecLink.11.1.60 = -503232132322010303120300013501
-AiPlayerbot.PremadeSpecLink.11.1.80 = -503232132322010353120303013511-20350001
+AiPlayerbot.PremadeSpecLink.11.1.60 = -353020032130002003003300120333200031
+AiPlayerbot.PremadeSpecLink.11.1.80 = -353020032130002003003300120333200031
 AiPlayerbot.PremadeSpecName.11.2 = resto pve
 AiPlayerbot.PremadeSpecGlyph.11.2 = 40906,43331,45602,43335,43674,45603
-AiPlayerbot.PremadeSpecLink.11.2.60 = --230033312031502331050313031
-AiPlayerbot.PremadeSpecLink.11.2.80 = 05320031--230033312031502431053313051
+AiPlayerbot.PremadeSpecLink.11.2.60 = --2003303330103031223331030113031
+AiPlayerbot.PremadeSpecLink.11.2.80 = --2003303330103031223331030113031
 AiPlayerbot.PremadeSpecName.11.3 = cat pve
 AiPlayerbot.PremadeSpecGlyph.11.3 = 40902,43331,40901,43674,43335,45604
-AiPlayerbot.PremadeSpecLink.11.3.60 = -552202032322010053100030310501
-AiPlayerbot.PremadeSpecLink.11.3.80 = -553202032322010053120030310511-203503012
+AiPlayerbot.PremadeSpecLink.11.3.60 = -350023002032302300023003103303003101
+AiPlayerbot.PremadeSpecLink.11.3.80 = -350023002032302300023003103303003101
 AiPlayerbot.PremadeSpecName.11.4 = balance pvp
 AiPlayerbot.PremadeSpecGlyph.11.4 = 40921,43331,45622,43674,43335,45623
-AiPlayerbot.PremadeSpecLink.11.4.60 = 5012203115331002213032311231
-AiPlayerbot.PremadeSpecLink.11.4.80 = 5022203125331003213035311231--230033012
+AiPlayerbot.PremadeSpecLink.11.4.60 = 303301313203031303301330131031
+AiPlayerbot.PremadeSpecLink.11.4.80 = 303301313203031303301330131031
 AiPlayerbot.PremadeSpecName.11.5 = cat pvp
 AiPlayerbot.PremadeSpecGlyph.11.5 = 40902,43331,45601,43674,43335,40901
-AiPlayerbot.PremadeSpecLink.11.5.60 = -513202032322010053103030310501
-AiPlayerbot.PremadeSpecLink.11.5.80 = -523202032322010053103030310511-205503012
+AiPlayerbot.PremadeSpecLink.11.5.60 = -350023002032302300023003103303003101
+AiPlayerbot.PremadeSpecLink.11.5.80 = -350023002032302300023003103303003101
 AiPlayerbot.PremadeSpecName.11.6 = resto pvp
 AiPlayerbot.PremadeSpecGlyph.11.6 = 40913,43331,40906,43335,43674,45623
-AiPlayerbot.PremadeSpecLink.11.6.60 = --230033312031500511350013051
-AiPlayerbot.PremadeSpecLink.11.6.80 = 05320021--230033312031500531353013251
+AiPlayerbot.PremadeSpecLink.11.6.60 = --2003303330103031223331030113031
+AiPlayerbot.PremadeSpecLink.11.6.80 = --2003303330103031223331030113031
 
 #
 #
