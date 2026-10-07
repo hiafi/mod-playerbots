@@ -14,9 +14,9 @@
 #include "PriestHolyContext.h"
 #include "PriestNonCombatStrategy.h"
 #include "PriestReworkContext.h"
+#include "PriestShadowContext.h"
 #include "PriestTriggers.h"
 #include "PullStrategy.h"
-#include "ShadowPriestStrategy.h"
 
 class PriestStrategyFactoryInternal : public NamedObjectContext<Strategy>
 {
@@ -43,9 +43,9 @@ private:
     static Strategy* boost(PlayerbotAI* botAI) { return new PriestReworkBoostStrategy(botAI); }
     static Strategy* buff(PlayerbotAI* botAI) { return new PriestBuffStrategy(botAI); }
     static Strategy* nc(PlayerbotAI* botAI) { return new PriestReworkNonCombatStrategy(botAI); }
-    static Strategy* shadow_aoe(PlayerbotAI* botAI) { return new ShadowPriestAoeStrategy(botAI); }
+    static Strategy* shadow_aoe(PlayerbotAI* botAI) { return new PriestReworkShadowAoeStrategy(botAI); }
     static Strategy* pull(PlayerbotAI* botAI) { return new PullStrategy(botAI, "shoot"); }
-    static Strategy* shadow_debuff(PlayerbotAI* botAI) { return new ShadowPriestDebuffStrategy(botAI); }
+    static Strategy* shadow_debuff(PlayerbotAI* botAI) { return new PriestReworkShadowDebuffStrategy(botAI); }
     static Strategy* cure(PlayerbotAI* botAI) { return new PriestCureStrategy(botAI); }
     static Strategy* healer_dps(PlayerbotAI* botAI) { return new PriestReworkHealerDpsStrategy(botAI); }
 };
@@ -64,7 +64,7 @@ public:
 
 private:
     static Strategy* heal(PlayerbotAI* botAI) { return new PriestReworkDiscStrategy(botAI); }
-    static Strategy* dps(PlayerbotAI* botAI) { return new ShadowPriestStrategy(botAI); }
+    static Strategy* dps(PlayerbotAI* botAI) { return new PriestReworkShadowStrategy(botAI); }
     static Strategy* holy_dps(PlayerbotAI* botAI) { return new PriestReworkSoloStrategy(botAI); }
     static Strategy* holy_heal(PlayerbotAI* botAI) { return new PriestReworkHolyStrategy(botAI); }
 };
@@ -370,6 +370,7 @@ void PriestAiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextLi
     AiObjectContext::BuildSharedActionContexts(actionContexts);
     actionContexts.Add(new PriestAiObjectContextInternal());
     actionContexts.Add(new PriestReworkActionFactory());
+    actionContexts.Add(new PriestShadowActionFactory());
     actionContexts.Add(new PriestDiscActionFactory());
     actionContexts.Add(new PriestHolyActionFactory());
 }
@@ -383,4 +384,5 @@ void PriestAiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextL
 void PriestAiObjectContext::BuildSharedValueContexts(SharedNamedObjectContextList<UntypedValue>& valueContexts)
 {
     AiObjectContext::BuildSharedValueContexts(valueContexts);
+    valueContexts.Add(new PriestShadowValueFactory());
 }

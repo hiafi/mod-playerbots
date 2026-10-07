@@ -1,0 +1,221 @@
+# The reworked Shadow priest's rotation, in three documents: "priest/shadow" (appended to the "shadow" / "dps" combat
+# strategy by PriestReworkShadowStrategy::InitTriggers), "priest/shadow-aoe" (the "shadow aoe" / "aoe" strategy,
+# PriestReworkShadowAoeStrategy) and "priest/nc-shadow" (appended to "nc" by PriestReworkNonCombatStrategy). Each row
+# queues its action at the relevance when its condition holds (`when`, the expression language of StrategyExpression.h)
+# or when an existing C++ trigger fires (`trigger`). Execution order is by relevance, not by position in this file.
+# Every action is a RowCheckedAction (it re-checks its own row before casting). Rows that can fire together never share
+# an action name and qualifier (they would merge into one basket and only the first row would be re-checked): Void
+# Eruption S4/P1, Shadow Word: Death S8/P3 and the two channel cancels are distinct names; Shadow Word: Pain on the
+# current target (S1) and on an attacker (P2) differ by name. The `do:` qualifier and the unit qualifier in `when:`
+# are the same literal ("shadow pack pain::589;1;0;0;30"): otherwise the action targets another unit than the one
+# checked.
+# Named conditions are per document, so `is_shadow`, `focus` and `pack` are repeated word for word in the two combat
+# documents (keep them identical).
+# Spell ids: PRIEST.PLAN section 2 (2.3 Shadow) and the Shadow table of PRIEST.YAML-PASS section 2: Shadowform 15473,
+# Surrender to Madness 200269, Sundered Mind 200270, Madness 200271 (the Insanity stacks), Call of the Void 200248 and
+# its tentacle (creature 300102), Void Eruption 200139, Dispersion 47585, Mind Flay 15407, Mind Sear 48045,
+# Shadow Word: Pain 589, Vampiric Touch 34914, Devouring Plague 2944, Mind Blast 8092, Shadow Word: Death 32379,
+# Psychic Scream 8122, Weakened Soul 6788. Guide thresholds are in the comments where the bot's number differs.
+strategy: priest/shadow
+class: priest
+conditions:
+  # The bot has Shadowform (the Shadow talent spell); healers and talentless priests never match
+  is_shadow: known(15473)
+  # PR60: Surrender to Madness is up, so the DoT upkeep, Death and Void Eruption rows stand down and the stacks go
+  # into Mind Flay and Mind Blast
+  focus: aura(self, 200269, own)
+  # Sundered Mind, the debuff Surrender leaves behind
+  sundered: aura(self, 200270)
+  # Tentacles of Madness the bot controls (Call of the Void), read from its controlled units and summon slots
+  tentacles: value("controlled units by entry::300102")
+  # Void Eruption has been cast this fight (it is on cooldown)
+  ve_used: cooldown(200139) > 0
+  # PR57/PR58: pack mode. The "shadow aoe" strategy is on, the target is alive, 4+ enemies are engaged and the target
+  # is not a boss. `is_shadow` keeps the ungrouped Disc and Holy bots (AiFactory gives them "shadow aoe") out of it.
+  pack: >-
+    is_shadow and value("shadow aoe enabled") and alive(target) and value("attacker count") >= 4 and not boss(target)
+  # D3: no healer in the group, under 35% and Dispersion is on cooldown: Flash Heal itself (leaving Shadowform first)
+  solo_heal: >-
+    not value("party has healer") and health_pct(self) < 35 and known(47585) and cooldown(47585) > 0
+    and not moving(self) and not aura(self, "200269,200270")
+  # PR42 main trigger: 75+ Madness (the guide's 150 internal), healthy, and the target dies within 18 s
+  surrender_main: stacks(self, 200271) >= 75 and health_pct(self) >= 80 and lifetime(target) < 18
+  # PR42 fallback: a healer is in the group, 125+ Madness (the guide's 250 internal), 90% health, 90 s into the fight
+  surrender_fallback: >-
+    value("party has healer") and stacks(self, 200271) >= 125 and health_pct(self) >= 90 and combat_time() >= 90000
+rows:
+  # D1: Dispersion under 30% health or 20% mana (not during Surrender, which locks it out)
+  - do: shadow dispersion
+    when: >-
+      known(47585) and cooldown(47585) == 0 and (health_pct(self) < 30 or mana(self) < 20)
+      and not aura(self, "200269,200270")
+    relevance: emergency + 3
+
+  # D2: Power Word: Shield on itself under 35% while something is hitting it (not under Sundered Mind)
+  - do: priest self shield
+    when: >-
+      health_pct(self) < 35 and value("my attacker count") > 0 and not aura(self, 6788) and not sundered
+    relevance: emergency + 2
+
+  # D3a: with no healer around, leave Shadowform so Flash Heal can be cast
+  - do: shadow leave shadowform
+    when: solo_heal and aura(self, 15473, own)
+    relevance: emergency + 1.1
+
+  # D3b: Flash Heal on itself once out of the form (solo_heal already needs a standing bot)
+  - do: shadow flash heal self
+    when: solo_heal and not aura(self, 15473)
+    relevance: emergency + 1
+
+  # D4: Psychic Scream when ungrouped, 2+ enemies on top of the bot and under half health
+  - do: shadow psychic scream
+    when: >-
+      not value("group") and enemies_within(8) >= 2 and health_pct(self) < 50 and cooldown(8122) == 0
+    relevance: emergency
+
+  # D5: Fade on threat, kept from the stock strategy (the action only fires in a group)
+  - do: priest fade
+    trigger: medium threat
+    relevance: dispel + 5
+
+  # PR9: flee from an enemy too close for a spell, kept from the stock GenericPriestStrategy
+  - do: flee
+    trigger: enemy too close for spell
+    relevance: move + 9
+
+  # D6: interrupts, the stock silence triggers and actions
+  - do: silence
+    trigger: silence
+    relevance: interrupt + 1
+  - do: silence on enemy healer
+    trigger: silence on enemy healer
+    relevance: interrupt
+
+  # D7: Shadowform back on, except while the solo heal wants the bot out of it
+  - do: shadow shadowform
+    when: is_shadow and not aura(self, 15473) and not solo_heal
+    relevance: high
+
+  # C1: Surrender to Madness on an elite or boss after Void Eruption, with the main or the fallback trigger. Main and
+  # fallback share this one row
+  - do: shadow surrender
+    when: >-
+      known(200269) and cooldown(200269) == 0 and elite(target) and ve_used and not sundered
+      and (surrender_main or surrender_fallback)
+    relevance: normal + 9.8
+
+  # C2: Call of the Void at 75+ Madness when a tentacle is out or Mind Blast comes back within 3 s; not during
+  # Surrender, after Void Eruption, and not when Surrender is about to be cast on this elite instead. The hold only
+  # lasts while Surrender can come soon: with a healer in the group, or a target dying within 38 s (Surrender's 18 s
+  # window plus the 20 s hold); otherwise a bot with no healer would wait for it almost the whole fight
+  - do: shadow call of the void
+    when: >-
+      known(200248) and cooldown(200248) == 0 and stacks(self, 200271) >= 75
+      and (tentacles >= 1 or cooldown(8092) <= 3000) and not focus and ve_used
+      and not (
+        elite(target) and known(200269) and cooldown(200269) <= 20000
+        and (value("party has healer") or lifetime(target) < 38)
+      )
+    relevance: normal + 9.7
+
+  # S1: Shadow Word: Pain when the target lacks it. In pack mode the pack rows own the DoT, unless Surrender is up
+  # (then P2 is off and nothing else would keep it on the current target, risk R5)
+  - do: shadow pain
+    when: alive(target) and (not pack or focus) and not aura(target, 589, own)
+    relevance: normal + 9.3
+
+  # S2: Vampiric Touch within 3 s of expiring (a cast-time spell: never while moving)
+  - do: shadow vampiric touch
+    when: >-
+      known(34914) and alive(target) and not focus and remaining(target, 34914, own) < 3000 and not moving(self)
+    relevance: normal + 9.2
+
+  # S3: Devouring Plague within 3 s of expiring (single target)
+  - do: shadow devouring plague
+    when: >-
+      known(2944) and alive(target) and not pack and not focus and remaining(target, 2944, own) < 3000
+    relevance: normal + 9.1
+
+  # S4: Void Eruption once all three DoTs are up, holding it while Mind Blast is ready with no tentacle out (the
+  # eruption spends the Madness the tentacle roll needs). Single target
+  - do: shadow void eruption
+    when: >-
+      alive(target) and not pack and not focus and known(200139) and cooldown(200139) == 0
+      and aura(target, 589, own) and aura(target, 34914, own) and aura(target, 2944, own)
+      and not (cooldown(8092) == 0 and tentacles == 0)
+    relevance: normal + 9.0
+
+  # S5: break a Mind Flay channel for a ready Mind Blast
+  - do: shadow clip mind flay
+    when: channeling(15407) and cooldown(8092) == 0 and not moving(self)
+    relevance: normal + 8.9
+
+  # S6: stop Mind Sear once fewer than 3 enemies are near the target
+  - do: shadow stop mind sear
+    when: channeling(48045) and enemies_near_target(10) < 3
+    relevance: normal + 8.9
+
+  # S7: Mind Blast on cooldown
+  - do: shadow mind blast
+    when: alive(target) and cooldown(8092) == 0 and not moving(self)
+    relevance: normal + 8.8
+
+  # S8: Shadow Word: Death above 60% health, or above 40% when the target is under 20% (the kill). Single target
+  - do: shadow death
+    when: >-
+      known(32379) and alive(target) and not pack and not focus and cooldown(32379) == 0 and health_pct(self) > 35
+      and (health_pct(self) > 60 or (health_pct(target) < 20 and health_pct(self) > 40))
+    relevance: normal + 8.7
+---
+# The Shadow pack rows, appended to the "shadow aoe" / "aoe" strategy. Every row needs `pack and not focus`: 4+
+# attackers, the target not a boss, and Surrender to Madness not up. The named conditions repeat priest/shadow's.
+strategy: priest/shadow-aoe
+class: priest
+conditions:
+  is_shadow: known(15473)
+  focus: aura(self, 200269, own)
+  pack: >-
+    is_shadow and value("shadow aoe enabled") and alive(target) and value("attacker count") >= 4 and not boss(target)
+rows:
+  # P1: Void Eruption on a pack of 3+ around the target, with nothing unsafe in the blast
+  - do: shadow pack void eruption
+    when: >-
+      pack and not focus and known(200139) and cooldown(200139) == 0 and enemies_near_target(10) >= 3
+      and value("unsafe aoe units::10") == 0
+    relevance: normal + 9.5
+
+  # P2: Shadow Word: Pain on the attacker without it (highest health first) within 30 yd, up to 5 at once
+  - do: shadow pack pain::589;1;0;0;30
+    when: >-
+      pack and not focus and value("attackers with aura id::589;1;30") < 5
+      and exists("attacker without aura id::589;1;0;0;30")
+    relevance: normal + 9.4
+
+  # P3: Shadow Word: Death on the lowest attacker under 15% (or the 30% line the value takes), bot above 40% health
+  - do: shadow pack death::15,30
+    when: >-
+      pack and not focus and known(32379) and cooldown(32379) == 0 and health_pct(self) > 40
+      and exists("lowest health attacker below::15,30")
+    relevance: normal + 8.7
+
+  # P4: Mind Sear on 4+ enemies around the target (a channel: never while moving)
+  - do: shadow mind sear
+    when: >-
+      pack and not focus and known(48045) and enemies_near_target(10) >= 4 and value("unsafe aoe units::10") == 0
+      and not moving(self)
+    relevance: normal + 8.0
+---
+# Out of combat: Shadowform, and Vampiric Embrace when the build has it (a no-op for the guide build). No Fear Ward row
+# for Shadow (PLAN section 7) and no Shadowfiend row (PR3).
+strategy: priest/nc-shadow
+class: priest
+conditions:
+  is_shadow: known(15473)
+rows:
+  - do: shadow shadowform
+    when: is_shadow and not aura(self, 15473)
+    relevance: normal + 1
+
+  - do: shadow vampiric embrace
+    when: known(15286) and not aura(self, 15286, own)
+    relevance: normal
