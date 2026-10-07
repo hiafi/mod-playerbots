@@ -444,7 +444,11 @@ double BoundCondition::EvalCall(Node const& node) const
             }
         }
         case ExprFn::Known:
-            return (call.spellName.empty() ? _bot->HasSpell(call.spellId) : node.spellId->Get() != 0) ? 1.0 : 0.0;
+            // A passive talent is never in the spellbook, so HasSpell misses it: also read the active spec's talents
+            if (call.spellName.empty())
+                return (_bot->HasSpell(call.spellId) || _bot->HasTalent(call.spellId, _bot->GetActiveSpec())) ? 1.0
+                                                                                                              : 0.0;
+            return node.spellId->Get() != 0 ? 1.0 : 0.0;
         case ExprFn::Boss:
             return ai::target::IsBoss(Live(unitValue)) ? 1.0 : 0.0;
         case ExprFn::Elite:

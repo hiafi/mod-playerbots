@@ -101,7 +101,7 @@ arguments, not here.
 | `stacks(u, ids[, own])` | number | 0 | `ai::aura::AuraStacks` |
 | `remaining(u, ids[, own])` | ms | 0; infinity for a permanent aura | `ai::aura::AuraRemainingMs` |
 | `charges(u, ids[, own])` | number | 0 | `ai::aura::AuraCharges` |
-| `known(spell)` | bool | | id: `Player::HasSpell`; name: `spell id::<name>` is not 0 |
+| `known(spell)` | bool | | id: `Player::HasSpell`, or a talent in the active spec (`Player::HasTalent`), so passive talents count; name: `spell id::<name>` is not 0 |
 | `boss(u)` / `elite(u)` / `controlled(u)` | bool | false | `ai::target::IsBoss` / `IsElite` / `IsControlled` |
 | `is_self(u)` | bool | false | the unit is the bot |
 | `in_arc(u, deg)` | bool | false | `Player::HasInArc`; `deg` above 0 and below 360 |
@@ -123,6 +123,8 @@ for interval-1 triggers without per-tick state. A `data` trigger can't be nested
 - A missing aura reads 0 (and `aura()` false). `remaining()` of a permanent aura compares as infinite.
 - `cooldown()` ignores the global cooldown and returns 0 for an unknown spell. Gate on `known()` for a spell a level
   may lack: `known(642) and cooldown(642) == 0`.
+- A passive talent is never in the spellbook, so C++ must test it with `HasTalent(id, GetActiveSpec())`, not
+  `HasSpell`.
 - Compare ms functions in ms. `ms_since_cast(x) <= 2000` is false for a spell never cast. `lifetime()` is the exception:
   it is seconds.
 - `combat_time()` replaces `trigger("combat time::90")` in a `when:`: that trigger keeps its clock per instance and only
