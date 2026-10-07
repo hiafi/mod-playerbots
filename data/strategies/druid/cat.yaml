@@ -23,6 +23,9 @@ conditions:
   behind: value("behind::current target")
   # Mangle (Cat) and (Bear) or the Trauma debuffs, from any caster
   mangled: aura(target, "33876,33878,46856,46857")
+  # the Mangle debuff is wanted / Rake is wanted; known() keeps a low-level bot from waiting on a spell it lacks
+  mangle_due: known(33876) and not mangled
+  rake_due: known(1822) and remaining(target, 1822, own) < 3000
   berserking: aura(self, 50334)
 rows:
   # F: Cat Form (also back into it after leaving form, e.g. the out-of-combat heals)
@@ -84,7 +87,7 @@ rows:
 
   # 1: the Mangle debuff, while no combo-point cap is in the way
   - do: cat mangle debuff
-    when: alive(target) and not mangled and cp < 5
+    when: alive(target) and mangle_due and cp < 5
     relevance: normal + 9.0
 
   # 2, 3: five combo points go into Rip, or into Ferocious Bite while Rip has 2 s or more left
@@ -96,15 +99,18 @@ rows:
     relevance: normal + 8.0
 
   # 4, 5, 6: the builders. `cp < 5` stops a builder from wasting a point while a finisher waits for energy: an
-  # energy-starved finisher fails to cast, and the engine would otherwise run the next basket, a builder
+  # energy-starved finisher fails to cast, and the engine would otherwise run the next basket, a builder. For the
+  # same reason a lower builder waits while a higher one is due but not yet affordable (Shred is the cheapest, so
+  # it would otherwise starve Rake and the Mangle debuff of energy): a due Mangle debuff is row 1, and row 6 is the
+  # same spell
   - do: cat rake
-    when: known(1822) and alive(target) and cp < 5 and remaining(target, 1822, own) < 3000
+    when: alive(target) and cp < 5 and rake_due and not mangle_due
     relevance: normal + 7.5
   - do: cat shred
-    when: alive(target) and cp < 5 and behind
+    when: alive(target) and cp < 5 and behind and not mangle_due and not rake_due
     relevance: normal + 7.0
   - do: cat mangle
-    when: alive(target) and cp < 5 and not behind
+    when: alive(target) and cp < 5 and not behind and not rake_due
     relevance: normal + 6.5
 ---
 # `co +offheal`: heals from Cat Form (DR13, DQ2)
