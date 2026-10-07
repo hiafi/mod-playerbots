@@ -172,7 +172,9 @@ rows:
 
   # 21: Hymn of Hope under 20% mana while nobody is under 70% (trained at 80: no-op at 60, PR3)
   - do: disc hymn of hope
-    when: known(64901) and cooldown(64901) == 0 and mana(self) < 20 and value("party members below::70") == 0
+    when: >-
+      known(64901) and cooldown(64901) == 0 and mana(self) < 20 and value("party members below::70") == 0
+      and not moving(self)
     relevance: normal + 1.2
 ---
 # The Discipline priest's out-of-combat rows: the heal lines it may need after a pull or a fall, with the combat
@@ -185,13 +187,14 @@ conditions:
   is_disc: known(47540)
   tank_ok: alive("effective tank") and in_range("effective tank", 40)
 rows:
-  # Flash Heal under 55% and Greater Heal under 65%, the tank-first target (same qualifiers as lines 14 and 13)
+  # Greater Heal under 65% (first: the mana-efficient heal) and Flash Heal under 55%, the tank-first target (same
+  # qualifiers as lines 13 and 14)
   - do: priest flash heal::55,55
     when: is_disc and health_pct("tank first heal target::55,55") < 55
-    relevance: normal + 9
+    relevance: normal + 8
   - do: priest greater heal::65,65
     when: is_disc and health_pct("tank first heal target::65,65") < 65
-    relevance: normal + 8
+    relevance: normal + 9
 
   # Power Word: Shield and Renew on a hurt tank
   - do: disc shield tank

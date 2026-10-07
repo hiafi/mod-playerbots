@@ -11,6 +11,7 @@
 #include "Playerbots.h"
 #include "PriestActions.h"
 #include "PriestDiscContext.h"
+#include "PriestHolyContext.h"
 #include "PriestNonCombatStrategy.h"
 #include "PriestReworkContext.h"
 #include "PriestTriggers.h"
@@ -64,8 +65,8 @@ public:
 private:
     static Strategy* heal(PlayerbotAI* botAI) { return new PriestReworkDiscStrategy(botAI); }
     static Strategy* dps(PlayerbotAI* botAI) { return new ShadowPriestStrategy(botAI); }
-    static Strategy* holy_dps(PlayerbotAI* botAI) { return new HolyPriestStrategy(botAI); }
-    static Strategy* holy_heal(PlayerbotAI* botAI) { return new HolyHealPriestStrategy(botAI); }
+    static Strategy* holy_dps(PlayerbotAI* botAI) { return new PriestReworkSoloStrategy(botAI); }
+    static Strategy* holy_heal(PlayerbotAI* botAI) { return new PriestReworkHolyStrategy(botAI); }
 };
 
 class PriestTriggerFactoryInternal : public NamedObjectContext<Trigger>
@@ -370,6 +371,7 @@ void PriestAiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextLi
     actionContexts.Add(new PriestAiObjectContextInternal());
     actionContexts.Add(new PriestReworkActionFactory());
     actionContexts.Add(new PriestDiscActionFactory());
+    actionContexts.Add(new PriestHolyActionFactory());
 }
 
 void PriestAiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextList<Trigger>& triggerContexts)

@@ -27,6 +27,10 @@ rows:
 ---
 strategy: priest/nc
 class: priest
+conditions:
+  # A priest that has learned none of the spec talents yet (Penance, Holy Word: Serenity, Shadowform)
+  no_spec: not known(47540) and not known(200197) and not known(15473)
+  tank_ok: alive("effective tank") and in_range("effective tank", 40)
 rows:
   # Inner Fire, by id: the old ranks share the name
   - do: priest inner fire
@@ -43,3 +47,16 @@ rows:
   - do: set pet stance
     trigger: new pet
     relevance: normal
+
+  # Out-of-combat heals for a priest below its spec talent: "priest/nc-disc" and "priest/nc-holy" are gated on
+  # Penance and Serenity, and a Shadow bot has none by design, so a leveling healer would otherwise never heal between
+  # pulls. The qualifiers differ from the spec rows' and the gates are exclusive, so no basket merges (R1)
+  - do: priest greater heal::65,65
+    when: no_spec and health_pct("tank first heal target::65,65") < 65
+    relevance: normal + 9
+  - do: priest flash heal::50,50
+    when: no_spec and health_pct("tank first heal target::50,50") < 50
+    relevance: normal + 8
+  - do: priest renew tank
+    when: no_spec and tank_ok and health_pct("effective tank") < 100 and not aura("effective tank", 139, own)
+    relevance: normal + 2
