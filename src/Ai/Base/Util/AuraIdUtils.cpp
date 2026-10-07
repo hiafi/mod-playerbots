@@ -5,6 +5,7 @@
  */
 
 #include "AuraIdUtils.h"
+#include "SpellAuraEffects.h"
 #include "SpellAuras.h"
 #include "Unit.h"
 
@@ -38,6 +39,16 @@ uint8 AuraCharges(Unit* unit, std::vector<uint32> const& ids, ObjectGuid caster)
 {
     Aura* aura = FindAura(unit, ids, caster);
     return aura ? aura->GetCharges() : 0;
+}
+
+int32 AuraEffectAmount(Unit* unit, std::vector<uint32> const& ids, uint8 effIndex, ObjectGuid caster)
+{
+    Aura* aura = FindAura(unit, ids, caster);
+    if (!aura || effIndex >= MAX_SPELL_EFFECTS)
+        return 0;
+
+    AuraEffect const* effect = aura->GetEffect(effIndex);
+    return effect ? effect->GetAmount() : 0;
 }
 
 int32 AuraRemainingMs(Unit* unit, std::vector<uint32> const& ids, ObjectGuid caster)

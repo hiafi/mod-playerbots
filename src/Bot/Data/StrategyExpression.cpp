@@ -77,6 +77,9 @@ struct FunctionSpec
 // moving(u)                   value "moving::<u>" (Unit::isMoving). Missing: false.
 // in_range(u, yd)             Player::GetDistance(unit) <= yd (3D, reach-adjusted, unlike the 2D "distance" value).
 // trigger(name)               Trigger::IsActive of an existing C++ trigger of the bot.
+// channeling(ids)             the bot's current channeled spell (CURRENT_CHANNELED_SPELL) has one of the ids. False
+//                             when it channels nothing.
+// combat_time()               ms (getMSTime clock) since the bot's combat engine became active, 0 outside combat.
 constexpr FunctionSpec FUNCTIONS[] = {
     {"value", ExprFn::Value, ExprType::Dynamic, 1, 1, {ArgKind::Text}},
     {"health", ExprFn::Health, ExprType::Number, 1, 1, {ArgKind::Unit}},
@@ -106,6 +109,8 @@ constexpr FunctionSpec FUNCTIONS[] = {
     {"moving", ExprFn::Moving, ExprType::Bool, 1, 1, {ArgKind::Unit}},
     {"in_range", ExprFn::InRange, ExprType::Bool, 2, 2, {ArgKind::Unit, ArgKind::Number}},
     {"trigger", ExprFn::Trigger, ExprType::Bool, 1, 1, {ArgKind::Text}},
+    {"channeling", ExprFn::Channeling, ExprType::Bool, 1, 1, {ArgKind::Ids}},
+    {"combat_time", ExprFn::CombatTime, ExprType::Number, 0, 0, {}},
 };
 
 constexpr char const* KEYWORDS[] = {"and", "or", "not", "self", "target", "own"};

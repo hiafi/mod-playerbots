@@ -69,7 +69,12 @@ bool IsBelowManaPct(Player* member, float pct)
     return maxMana > 0 && static_cast<float>(member->GetPower(POWER_MANA)) * 100.0f / static_cast<float>(maxMana) < pct;
 }
 
-constexpr size_t WITHOUT_OWN_AURA_FIELDS = 2;
+constexpr size_t WITHOUT_OWN_AURA_MIN_FIELDS = 2;
+constexpr size_t WITHOUT_OWN_AURA_MAX_FIELDS = 3;
+constexpr char const* ANY_CASTER_FLAG = "any";
+constexpr size_t ABSORB_BELOW_MIN_FIELDS = 4;
+constexpr size_t ABSORB_BELOW_MAX_FIELDS = 5;
+constexpr size_t CONE_NUMBERS = 3;
 constexpr size_t WITH_AURA_FIELDS = 4;
 }  // namespace
 
@@ -282,18 +287,24 @@ ObjectGuid PartyMemberWithoutOwnAuraValue::CalculateGuid()
 {
     std::vector<std::string> const fields = ai::qualifier::Split(qualifier, ';');
     float pct = 0.0f;
-    if (fields.size() != WITHOUT_OWN_AURA_FIELDS || !ai::qualifier::ParseNumber(fields[0], pct))
+    if (fields.size() < WITHOUT_OWN_AURA_MIN_FIELDS || fields.size() > WITHOUT_OWN_AURA_MAX_FIELDS ||
+        !ai::qualifier::ParseNumber(fields[0], pct))
+        return ObjectGuid::Empty;
+
+    bool const anyCaster = fields.size() == WITHOUT_OWN_AURA_MAX_FIELDS;
+    if (anyCaster && fields[2] != ANY_CASTER_FLAG)
         return ObjectGuid::Empty;
 
     std::vector<uint32> const ids = ai::qualifier::ParseIds(fields[1]);
     if (ids.empty())
         return ObjectGuid::Empty;
 
+    ObjectGuid const caster = anyCaster ? ObjectGuid::Empty : bot->GetGUID();
     Player* lowest = nullptr;
     for (Player* member : GetGroupPlayers(bot))
     {
         if (member->GetHealthPct() >= pct || !IsInHealRangeAndSight(bot, member) ||
-            ai::aura::HasAnyAura(member, ids, bot->GetGUID()))
+            ai::aura::HasAnyAura(member, ids, caster))
             continue;
 
         if (!lowest || member->GetHealthPct() < lowest->GetHealthPct())
@@ -301,6 +312,80 @@ ObjectGuid PartyMemberWithoutOwnAuraValue::CalculateGuid()
     }
 
     return lowest ? lowest->GetGUID() : ObjectGuid::Empty;
+}
+
+ObjectGuid PartyMemberAbsorbBelowValue::CalculateGuid()
+{
+    std::vector<std::string> const fields = ai::qualifier::Split(qualifier, ';');
+    float healthPct = 0.0f;
+    float absorbPct = 0.0f;
+    float owned = 0.0f;
+    float effIndex = 0.0f;
+    if (fields.size() < ABSORB_BELOW_MIN_FIELDS || fields.size() > ABSORB_BELOW_MAX_FIELDS ||
+        !ai::qualifier::ParseNumber(fields[0], healthPct) || !ai::qualifier::ParseNumber(fields[1], absorbPct) ||
+        !ai::qualifier::ParseNumber(fields[3], owned) ||
+        (fields.size() == ABSORB_BELOW_MAX_FIELDS && !ai::qualifier::ParseNumber(fields[4], effIndex)) ||
+        effIndex < 0.0f || effIndex >= static_cast<float>(MAX_SPELL_EFFECTS))
+        return ObjectGuid::Empty;
+
+    std::vector<uint32> const ids = ai::qualifier::ParseIds(fields[2]);
+    if (ids.empty())
+        return ObjectGuid::Empty;
+
+    ObjectGuid const caster = owned != 0.0f ? bot->GetGUID() : ObjectGuid::Empty;
+    Player* lowest = nullptr;
+    for (Player* member : GetGroupPlayers(bot))
+    {
+        if (member->GetHealthPct() >= healthPct || !IsInHealRangeAndSight(bot, member))
+            continue;
+
+        float const absorbed = static_cast<float>(
+            ai::aura::AuraEffectAmount(member, ids, static_cast<uint8>(effIndex), caster));
+        if (absorbed * 100.0f >= absorbPct * static_cast<float>(member->GetMaxHealth()))
+            continue;
+
+        if (!lowest || member->GetHealthPct() < lowest->GetHealthPct())
+            lowest = member;
+    }
+
+    return lowest ? lowest->GetGUID() : ObjectGuid::Empty;
+}
+
+uint8 InjuredAlliesInConeValue::Calculate()
+{
+    // The unit value's own qualifier holds "::", so the split is on the first ';' only
+    size_t const separator = qualifier.find(';');
+    if (separator == std::string::npos)
+        return 0;
+
+    std::vector<float> const numbers = ai::qualifier::ParseNumbers(qualifier.substr(0, separator), CONE_NUMBERS);
+    std::string const unitName = qualifier.substr(separator + 1);
+    if (numbers.empty() || unitName.empty() || numbers[0] <= 0.0f || numbers[1] <= 0.0f || numbers[1] > 360.0f)
+        return 0;
+
+    Value<Unit*>* unitValue = context->GetValue<Unit*>(unitName);
+    Unit* centre = unitValue ? unitValue->Get() : nullptr;
+    if (!centre || !centre->IsInWorld() || centre->GetMapId() != bot->GetMapId())
+        return 0;
+
+    float const axis = centre == bot ? bot->GetOrientation() : bot->GetAngle(centre);
+    float const halfArc = numbers[1] * static_cast<float>(M_PI) / 360.0f;
+    uint32 count = 0;
+    for (Player* member : GetGroupPlayers(bot))
+    {
+        if (member == bot || member->GetHealthPct() >= numbers[2] || !IsInHealRange(bot, member) ||
+            bot->GetExactDist(member) > numbers[0])
+            continue;
+
+        float offset = std::fabs(bot->GetAngle(member) - axis);
+        if (offset > static_cast<float>(M_PI))
+            offset = 2.0f * static_cast<float>(M_PI) - offset;
+
+        if (offset <= halfArc)
+            ++count;
+    }
+
+    return ai::qualifier::ClampCount(count);
 }
 
 uint8 PartyMembersWithAuraValue::Calculate()

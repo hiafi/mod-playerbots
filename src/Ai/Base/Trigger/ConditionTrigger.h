@@ -13,7 +13,18 @@
 #include <memory>
 #include <string>
 
+class Event;
 class PlayerbotAI;
+
+namespace ai::data
+{
+// Whether the YAML row that queued an action still holds. `event` is the one the action was queued with: its source is
+// the row's trigger name ("data::<key>#<row>"), and the row's own ConditionTrigger (the instance the engine checks) is
+// evaluated again. True for any other source (a C++ trigger, a default action, a chat command) and when the bot has no
+// such trigger; false for a row a reload removed or moved. Reads the bound condition only; the string copies are the
+// source GetSource returns and the name GetTrigger takes by value, with two hash lookups per Execute.
+bool RowStillHolds(PlayerbotAI* botAI, Event& event);
+}  // namespace ai::data
 
 // The trigger behind an inline "when:" condition of a YAML strategy row (src/Bot/Data). Registered once as "data";
 // the row's TriggerNode is named "data::<strategy key>#<row index>" and that qualifier picks the condition out of the

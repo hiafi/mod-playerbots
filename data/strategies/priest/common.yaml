@@ -1,0 +1,45 @@
+# Rows every reworked priest shares, in two documents. "priest/healer" is appended to the Discipline and Holy combat
+# strategies and the solo strategy by PriestReworkHealerStrategy::InitTriggers; "priest/nc" is appended to the "nc"
+# strategy by PriestReworkNonCombatStrategy::InitTriggers, with the per-spec out-of-combat documents after it.
+# Each row queues its actions at the relevance when its condition holds (`when`, the expression language of
+# StrategyExpression.h) or when an existing C++ trigger fires (`trigger`). Execution order is by relevance, not by
+# position in this file. Actions named "priest ..." are RowCheckedAction (they re-check their own row before casting).
+# Spell ids: PriestReworkIds.h and the priest rework plan, section 2.
+strategy: priest/healer
+class: priest
+rows:
+  # Kept from the stock HealPriestStrategy: walk into range of a party member who needs healing
+  - do: reach party member to heal
+    trigger: party member to heal out of spell range
+    relevance: emergency + 3
+
+  # Fade on threat, kept from the stock GenericPriestStrategy (PR14); the action only fires in a group
+  - do: priest fade
+    trigger: medium threat
+    relevance: dispel + 5
+
+  # Fear Ward on the tank while nobody is hurt (PR13)
+  - do: priest fear ward
+    when: >-
+      value("party members below::90") == 0 and known(6346) and cooldown(6346) == 0 and alive("effective tank")
+      and in_range("effective tank", 30) and not aura("effective tank", 6346)
+    relevance: normal + 1
+---
+strategy: priest/nc
+class: priest
+rows:
+  # Inner Fire, by id: the old ranks share the name
+  - do: priest inner fire
+    when: known(588) and not aura(self, 588, own)
+    relevance: normal
+
+  # Kept from the stock PriestNonCombatStrategy: raise the dead (leaving Shadowform first), weapon oil, pet stance
+  - do: [remove shadowform, resurrection]
+    trigger: party member dead
+    relevance: critical heal + 10
+  - do: apply oil
+    trigger: often
+    relevance: bg
+  - do: set pet stance
+    trigger: new pet
+    relevance: normal

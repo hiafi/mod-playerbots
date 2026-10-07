@@ -401,6 +401,8 @@ public:
     void HandleBotOutgoingPacket(WorldPacket const& packet);
     ai::spell::OwnSpellResultLog& GetOwnSpellResults() { return ownSpellResults; }
     ai::spell::SpellCastStamps& GetSpellCastStamps() { return spellCastStamps; }
+    // Ms (getMSTime clock) since the combat engine became active; 0 while another engine is.
+    uint32 GetCombatTimeMs() const;
     void HandleMasterIncomingPacket(WorldPacket const& packet);
     void HandleMasterOutgoingPacket(WorldPacket const& packet);
     void HandleTeleportAck();
@@ -661,6 +663,7 @@ protected:
     bool spellInterruptRequested = false;
     ai::spell::OwnSpellResultLog ownSpellResults;
     ai::spell::SpellCastStamps spellCastStamps;
+    uint32 combatEngineStartMs = 0;
 };
 
 #endif

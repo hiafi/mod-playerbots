@@ -1480,8 +1480,15 @@ void PlayerbotAI::ChangeEngine(BotState type)
     }
 }
 
+uint32 PlayerbotAI::GetCombatTimeMs() const
+{
+    return currentState == BOT_STATE_COMBAT ? getMSTimeDiff(combatEngineStartMs, getMSTime()) : 0;
+}
+
 void PlayerbotAI::ChangeEngineOnCombat()
 {
+    combatEngineStartMs = getMSTime();
+
     if (HasStrategy("wait for attack", BOT_STATE_COMBAT))
         aiObjectContext->GetValue<time_t>("combat start time")->Set(time(nullptr));
 

@@ -5,10 +5,14 @@
  */
 
 #include "ConditionTrigger.h"
+#include "AiObjectContext.h"
+#include "Event.h"
 #include "Log.h"
+#include "PlayerbotAI.h"
 #include "StrategyData.h"
 #include <cstdlib>
 #include <mutex>
+#include <string_view>
 #include <unordered_set>
 
 namespace
@@ -37,6 +41,27 @@ void LogBindError(std::string const& error)
     LOG_ERROR("playerbots", "Strategy data: {}", error);
 }
 }  // namespace
+
+namespace ai::data
+{
+bool RowStillHolds(PlayerbotAI* botAI, Event& event)
+{
+    try
+    {
+        std::string const source = event.GetSource();
+        if (!std::string_view(source).starts_with("data::"))
+            return true;
+
+        // The context caches triggers by name, so this is the instance the engine evaluated this row with
+        Trigger* row = botAI->GetAiObjectContext()->GetTrigger(source);
+        return !row || row->IsActive();
+    }
+    catch (std::exception const&)
+    {
+        return false;
+    }
+}
+}  // namespace ai::data
 
 bool ConditionTrigger::IsActive()
 {

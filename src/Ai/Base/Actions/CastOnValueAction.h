@@ -8,13 +8,18 @@
 #define PLAYERBOTS_CASTONVALUEACTION_H
 
 #include "GenericSpellActions.h"
+#include "NamedObjectContext.h"
 
 class PlayerbotAI;
 
 // A spell cast on the unit a value picks instead of the current target. Queued baskets outlive the tick that queued
 // them (5 s), and the value may have moved on, so a subclass whose trigger had a threshold re-checks that threshold
 // in isUseful.
-class CastOnValueAction : public CastSpellAction
+//
+// The value's qualifier is the constructor's, or, when that is empty, the one the action was created with
+// ("priest flash heal::35,35"): a YAML row then picks its threshold in the `do:` name. Distinct qualifiers are
+// distinct queue baskets.
+class CastOnValueAction : public CastSpellAction, public Qualified
 {
 public:
     CastOnValueAction(PlayerbotAI* botAI, std::string const spell, std::string const targetValue,

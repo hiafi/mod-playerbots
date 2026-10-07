@@ -10,12 +10,15 @@
 #include "ObjectGuid.h"
 #include "Player.h"
 #include "PlayerbotAI.h"
+#include "Spell.h"
+#include "SpellInfo.h"
 #include "SpellReadyUtils.h"
 #include "TargetTypeUtils.h"
 #include "Timer.h"
 #include "Trigger.h"
 #include "UnitPredicateUtils.h"
 #include "Value.h"
+#include <algorithm>
 #include <limits>
 
 namespace ai::data
@@ -463,6 +466,17 @@ double BoundCondition::EvalCall(Node const& node) const
             return Live(unitValue) && node.boolValue->Get() ? 1.0 : 0.0;
         case ExprFn::Trigger:
             return node.trigger->IsActive() ? 1.0 : 0.0;
+        case ExprFn::Channeling:
+        {
+            Spell const* channeled = _bot->GetCurrentSpell(CURRENT_CHANNELED_SPELL);
+            if (!channeled || !channeled->GetSpellInfo())
+                return 0.0;
+
+            uint32 const channeledId = channeled->GetSpellInfo()->Id;
+            return std::find(call.ids.begin(), call.ids.end(), channeledId) != call.ids.end() ? 1.0 : 0.0;
+        }
+        case ExprFn::CombatTime:
+            return _botAI->GetCombatTimeMs();
     }
 
     return 0.0;

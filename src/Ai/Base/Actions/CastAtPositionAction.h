@@ -8,6 +8,7 @@
 #define PLAYERBOTS_CASTATPOSITIONACTION_H
 
 #include "GenericSpellActions.h"
+#include "NamedObjectContext.h"
 
 class PlayerbotAI;
 class WorldLocation;
@@ -19,7 +20,10 @@ class WorldLocation;
 // re-check their thresholds in isUseful. A spell with a cast time or a channel is not possible while the bot moves.
 //
 // The action's name is the spell name, like CastSpellAction, so the queue and the multipliers see it as the spell.
-class CastAtPositionAction : public CastSpellAction
+//
+// The position value's qualifier is the constructor's, or, when that is empty, the one the action was created with
+// ("holy sanctify::8,80"), so a YAML row can pick its radius and threshold in the `do:` name.
+class CastAtPositionAction : public CastSpellAction, public Qualified
 {
 public:
     // positionValue: name of a WorldLocation value, read with `qualifier` when it is not empty. maxRange: yards from

@@ -1,7 +1,8 @@
 # Strategy data (YAML rows)
 
 Class strategies are a small C++ shell plus YAML rows. Read this before touching `data/strategies/`, `src/Bot/Data/`,
-or a YAML-backed class strategy (Ret, Fire, Arcane, Frost today). The engine itself is in `ai-engine.md`.
+or a YAML-backed class strategy (Ret, Fire, Arcane, Frost, and the Priest shared layer today). The engine itself is in
+`ai-engine.md`.
 
 ## Contents
 
@@ -43,7 +44,7 @@ YAML documents (`---`), one strategy key each.
 
 | Field | Meaning |
 |---|---|
-| `do:` | An action name, or a list of them (several `NextAction`s on one row). Must exist in a creator table. |
+| `do:` | An action name, or a list of them (several `NextAction`s on one row). Must exist in a creator table. A qualified name (`priest flash heal::35,35`) is checked by its part before the first `::`. Quote a name that contains `: ` (`"shadow word: pain"`), since YAML reads it as a mapping. |
 | `when:` | A condition string. The row becomes a `ConditionTrigger`. |
 | `trigger:` | An existing C++ trigger by name, optionally `name::qualifier`. |
 | `relevance:` | A number, or a band plus an offset: `normal + 8`, `emergency - 1`. |
@@ -92,7 +93,7 @@ arguments, not here.
 | `last_crit(ids)` | number | UINT32_MAX when the last result was not a crit | value `last own spell crit::<ids>` |
 | `cooldown(spell)` | ms | 0 when ready, unknown or unresolved | `ai::spell::CooldownRemainingMs` |
 | `ms_since_cast(spell)` | ms | infinity when never cast, evicted, or the name is unresolved | `ai::spell::SpellCastStamps` |
-| `lifetime(u)` | ms | 0 | value `target lifetime` / `estimated lifetime::<u>` |
+| `lifetime(u)` | seconds | 0 | value `target lifetime` / `estimated lifetime::<u>` (a float of seconds: `lifetime(target) < 18`) |
 | `time_since_target_change()` | ms | | value `time since target change` |
 | `exists(u)` | bool | false | the unit value yields a unit (dead or alive) |
 | `alive(u)` | bool | false | exists and alive |
@@ -108,6 +109,8 @@ arguments, not here.
 | `dynobj(spellId)` | bool | | the bot owns a dynamic object of that spell |
 | `moving(u)` | bool | false | value `moving::<u>` |
 | `trigger(name)` | bool | | `Trigger::IsActive` of a C++ trigger |
+| `channeling(ids)` | bool | false | the bot's `CURRENT_CHANNELED_SPELL` has one of the ids; read from the unit at evaluation, no value |
+| `combat_time()` | ms | 0 outside combat | `PlayerbotAI::GetCombatTimeMs`: ms since the combat engine became active (stamped in `ChangeEngineOnCombat`, cleared on leaving it or on death) |
 
 Argument forms: `ids` is a spell id or a quoted comma list (any-of); `spell` is an id or a quoted name resolved per bot
 through the value `spell id::<name>`; `own` means cast by the bot (default: any caster).
@@ -120,7 +123,10 @@ for interval-1 triggers without per-tick state. A `data` trigger can't be nested
 - A missing aura reads 0 (and `aura()` false). `remaining()` of a permanent aura compares as infinite.
 - `cooldown()` ignores the global cooldown and returns 0 for an unknown spell. Gate on `known()` for a spell a level
   may lack: `known(642) and cooldown(642) == 0`.
-- Compare ms functions in ms. `ms_since_cast(x) <= 2000` is false for a spell never cast.
+- Compare ms functions in ms. `ms_since_cast(x) <= 2000` is false for a spell never cast. `lifetime()` is the exception:
+  it is seconds.
+- `combat_time()` replaces `trigger("combat time::90")` in a `when:`: that trigger keeps its clock per instance and only
+  advances when evaluated, so a short-circuited `and` can skip it for more than its window and restart it.
 - `.botstrat dump <key>` prints each condition re-printed from its tree; use it to check what the compiler read.
 
 ## 3. When to write C++ instead
@@ -134,9 +140,36 @@ YAML covers a condition made of the functions above. Write C++ for:
 - **Actions.** All of them. YAML only names them.
 
 **Actions that re-check their row.** A queued action can run well after the tick that queued it (section 4), so a row
-whose condition can go stale gets its own action class. `isUseful()` re-checks the same condition. YAML and C++ must
-agree, so the check lives in a shared helper in the spec's namespace (`ai::mage_fire`, `ai::mage_frost`,
-`ai::mage_arcane`), and the action calls it:
+whose condition can go stale wraps its action in `RowCheckedAction<Base>` (`src/Ai/Base/Actions/RowCheckedAction.h`),
+the default for a new spec. Register the wrapped action under the name the row's `do:` uses:
+
+```cpp
+creators["priest flash heal"] = [](PlayerbotAI* botAI) -> Action*
+{ return new RowCheckedAction<CastOnValueAction>(botAI, "flash heal", "tank first heal target"); };
+```
+
+`Execute(event)` calls `ai::data::RowStillHolds(botAI, event)` first. The event of a basket a YAML row queued carries
+the row's trigger name (`data::<key>#<row>`); the helper evaluates that row's own `ConditionTrigger` again (the cached
+instance the engine checked: one bound-tree walk, but two string copies, the one `GetSource` returns and the one
+`GetTrigger` takes by value, and two hash lookups per `Execute`)
+and the action returns false when the row no longer holds. The engine logs it FAILED and moves to the next basket. The
+condition lives in the YAML only, so it can't drift from a C++ copy. Everything that is not a YAML row passes: a C++
+`trigger:` row, a default action, a chat command.
+
+Limits of the re-check:
+
+- **Merged baskets.** Rows that queue the same action name (qualifier included) merge into one basket, which keeps the
+  *first* pusher's event, so only that row is re-checked. Give rows that can fire together their own action name or
+  `::` qualifier.
+- **Reloads.** A basket queued before `.botstrat reload` names a row by index; after the reload that index may be a
+  different row, or none (then the row reads inactive and the action drops). One tick, harmless.
+- **Cached reads.** The re-check reads what the row reads, including values with a check interval (party values cache
+  1 s). Use `cooldown()`, `aura()` and `health_pct()` for what must be current.
+
+Keep a C++ re-check (`isUseful()` over a shared helper in the spec's namespace, `ai::mage_fire`, `ai::mage_frost`,
+`ai::mage_arcane`) for a guard the row can't express, or an action that must also work outside a YAML row. When a helper
+mirrors a YAML clause, put a comment on both sides. If the YAML clause can be written with a function
+(`ms_since_cast(200004) <= 2000`), the C++ helper reads the same source (`SpellCastStamps`), so they can't drift:
 
 ```cpp
 bool MageFrostGlacialSpikeAction::isUseful()
@@ -145,8 +178,24 @@ bool MageFrostGlacialSpikeAction::isUseful()
 }
 ```
 
-When a helper mirrors a YAML clause, put a comment on both sides. If the YAML clause can be written with a function
-(`ms_since_cast(200004) <= 2000`), the C++ helper reads the same source (`SpellCastStamps`), so they can't drift.
+**Value-target actions take their qualifier from the row.** `CastOnValueAction` (cast on a `Unit*` value),
+`CastAtPositionAction` (a ground spell on a `WorldLocation` value) and `CastFacingUnitAction` (turn to a unit, then
+cast) are `Qualified`. Registered with an empty qualifier, they read their value with the one in the `do:` name, so the
+row holds the threshold: `do: priest flash heal::35,35` with `health_pct("tank first heal target::35,35") < 35`. Use
+the same literal in both places. A qualifier passed to the constructor wins (the Paladin and Mage registrations). Each
+distinct qualifier is a distinct action name, hence a distinct queue basket, and a distinct value instance with its own
+1 s scan.
+
+The shared party values a healer row reads, besides `value()` counts:
+
+| Value | Qualifier | Yields |
+|---|---|---|
+| `party member without own aura` | `pct;ids[;any]` | lowest member below pct lacking the bot's auras; `any` counts an aura from any caster (Weakened Soul) |
+| `party member absorb below` | `healthPct;absorbPct;ids;owned[;effIndex]` | lowest member below healthPct whose listed absorb auras hold under absorbPct of max health (`ai::aura::AuraEffectAmount`) |
+| `injured allies in cone` | `yards,degrees,pct;unitValue` | members below pct inside a cone from the bot centred on the unit value, the bot excluded (`uint8`) |
+
+The `unitValue` inside the `injured allies in cone` qualifier (`...;heal cluster unit::27,85`) is not checked when the
+YAML loads: a mistyped name resolves to no value and the count reads 0, so check it by hand.
 
 ## 4. Lessons
 
@@ -155,8 +204,8 @@ Each lesson names the case that taught it.
 - **Queued baskets outlive their tick.** An action stays queued up to 5 s, and the engine doesn't tick while the bot
   casts, so a basket can survive a whole cast. Fire's Flashpoint and Evocation, and Frost's Ice Lance after Glacial
   Spike. Re-check in `isUseful()`.
-- **Rows with the same `do:` name merge into one basket** at the highest relevance. Rows that need different re-checks
-  need different action names: Frost's three Ice Lance actions.
+- **Rows with the same `do:` name merge into one basket** at the highest relevance, keeping the first pusher's event.
+  Rows that need different re-checks need different action names or qualifiers: Frost's three Ice Lance actions.
 - **Cached values lag a cast.** Arcane's `arcane burn` caches 1 s. A re-check calls the uncached helper, not the value.
 - **Server spell data can forbid what a guide asks for.** Shared cooldown categories, excluded caster auras, and
   cooldown-on-event spells that read an endless cooldown: Arcane Power and Presence of Mind (shared category 1151,

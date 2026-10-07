@@ -83,7 +83,9 @@ enum class ExprFn : uint8
     Dynobj,
     Moving,
     InRange,
-    Trigger
+    Trigger,
+    Channeling,
+    CombatTime
 };
 
 struct Expr;

@@ -9,8 +9,9 @@
 
 Value<Unit*>* CastOnValueAction::GetTargetValue()
 {
-    if (_qualifier.empty())
+    std::string const& valueQualifier = _qualifier.empty() ? qualifier : _qualifier;
+    if (valueQualifier.empty())
         return context->GetValue<Unit*>(_targetValue);
 
-    return context->GetValue<Unit*>(_targetValue, _qualifier);
+    return context->GetValue<Unit*>(_targetValue, valueQualifier);
 }

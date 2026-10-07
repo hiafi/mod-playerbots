@@ -11,8 +11,9 @@ bool CastAtPositionAction::FindPosition(WorldLocation& position)
 {
     if (IsPositionWanted())
     {
-        position = _qualifier.empty() ? AI_VALUE(WorldLocation, _positionValue)
-                                      : AI_VALUE2(WorldLocation, _positionValue, _qualifier);
+        std::string const& valueQualifier = _qualifier.empty() ? qualifier : _qualifier;
+        position = valueQualifier.empty() ? AI_VALUE(WorldLocation, _positionValue)
+                                          : AI_VALUE2(WorldLocation, _positionValue, valueQualifier);
         if (position.GetMapId() == bot->GetMapId() && bot->GetExactDist(position) <= _maxRange)
             return true;
     }

@@ -210,6 +210,8 @@ public:
         creators["party members below"] = &ValueContext::party_members_below;
         creators["party members below mana"] = &ValueContext::party_members_below_mana;
         creators["party member without own aura"] = &ValueContext::party_member_without_own_aura;
+        creators["party member absorb below"] = &ValueContext::party_member_absorb_below;
+        creators["injured allies in cone"] = &ValueContext::injured_allies_in_cone;
         creators["party members with aura"] = &ValueContext::party_members_with_aura;
         creators["attacked party member below"] = &ValueContext::attacked_party_member_below;
         creators["effective tank"] = &ValueContext::effective_tank;
@@ -451,6 +453,11 @@ private:
     {
         return new PartyMemberWithoutOwnAuraValue(botAI);
     }
+    static UntypedValue* party_member_absorb_below(PlayerbotAI* botAI)
+    {
+        return new PartyMemberAbsorbBelowValue(botAI);
+    }
+    static UntypedValue* injured_allies_in_cone(PlayerbotAI* botAI) { return new InjuredAlliesInConeValue(botAI); }
     static UntypedValue* party_members_with_aura(PlayerbotAI* botAI) { return new PartyMembersWithAuraValue(botAI); }
     static UntypedValue* attacked_party_member_below(PlayerbotAI* botAI)
     {

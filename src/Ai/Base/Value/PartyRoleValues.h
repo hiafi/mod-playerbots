@@ -137,8 +137,9 @@ protected:
 };
 
 // The lowest-health member below a health percent that carries none of the listed auras applied by the bot, the
-// bot included. Qualifier: "pct;ids", ids comma-separated spell ids, e.g. "100;139,6074". A pct of 101 means
-// anyone, since health percent never exceeds 100.
+// bot included. Qualifier: "pct;ids[;any]", ids comma-separated spell ids, e.g. "100;139,6074". A pct of 101 means
+// anyone, since health percent never exceeds 100. With the third field "any" an aura from any caster counts as
+// carried (a debuff such as Weakened Soul blocks the spell whoever applied it).
 class PartyMemberWithoutOwnAuraValue : public GuidCachedUnitValue, public Qualified
 {
 public:
@@ -149,6 +150,37 @@ public:
 
 protected:
     ObjectGuid CalculateGuid() override;
+};
+
+// The lowest-health member below healthPct whose absorb is short: the listed auras (applied by the bot when owned is 1,
+// any caster when 0) hold less than absorbPct percent of the member's max health in effect effIndex, or are absent.
+// Qualifier: "healthPct;absorbPct;ids;owned[;effIndex]", effIndex 0 by default, e.g. "101;50;200167;1". A healthPct of
+// 101 means anyone. Members within 40 yd and in line of sight, the bot included.
+class PartyMemberAbsorbBelowValue : public GuidCachedUnitValue, public Qualified
+{
+public:
+    PartyMemberAbsorbBelowValue(PlayerbotAI* botAI, std::string const name = "party member absorb below")
+        : GuidCachedUnitValue(botAI, name, IN_MILLISECONDS)
+    {
+    }
+
+protected:
+    ObjectGuid CalculateGuid() override;
+};
+
+// Injured group members (below pct, within 40 yd of the bot) inside a cone with its apex on the bot, centred on the
+// direction to a unit value, the bot excluded. The cone's depth is `yards`. When the unit is the bot, the cone points
+// where the bot faces. Qualifier: "yards,degrees,pct;unitValue", unitValue a Unit* value name that may carry its own
+// qualifier, e.g. "27,60,85;heal cluster unit::27,85". 0 when the unit is missing.
+class InjuredAlliesInConeValue : public CalculatedValue<uint8>, public Qualified
+{
+public:
+    InjuredAlliesInConeValue(PlayerbotAI* botAI, std::string const name = "injured allies in cone")
+        : CalculatedValue<uint8>(botAI, name, IN_MILLISECONDS)
+    {
+    }
+
+    uint8 Calculate() override;
 };
 
 // Members below a health percent that carry at least minAuras distinct auras from the list, the bot included.
