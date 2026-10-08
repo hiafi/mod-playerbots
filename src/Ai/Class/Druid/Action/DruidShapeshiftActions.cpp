@@ -4,6 +4,7 @@
  * or (at your option) any later version.
  */
 
+#include "DruidReworkIds.h"
 #include "DruidShapeshiftActions.h"
 #include "Playerbots.h"
 
@@ -39,8 +40,10 @@ bool CastCasterFormAction::Execute(Event /*event*/)
 
 bool CastCasterFormAction::isUseful()
 {
-    return botAI->HasAnyAuraOf(GetTarget(), "dire bear form", "bear form", "cat form", "travel form", "aquatic form",
-                               "flight form", "swift flight form", "moonkin form", nullptr) &&
+    // Rework: Bestial Fury is a form too (it replaces Bear Form)
+    return (botAI->HasAnyAuraOf(GetTarget(), "dire bear form", "bear form", "cat form", "travel form", "aquatic form",
+                                "flight form", "swift flight form", "moonkin form", nullptr) ||
+            GetTarget()->HasAura(ai::druid_rework::SPELL_BESTIAL_FURY)) &&
            AI_VALUE2(uint8, "mana", "self target") > sPlayerbotAIConfig.mediumHealth;
 }
 

@@ -20,6 +20,10 @@ constexpr uint32 SPELL_ELDER_HIDE_RANK_1 = 200440;
 constexpr uint32 SPELL_ELDER_HIDE_RANK_2 = 200441;
 constexpr uint32 SPELL_ELDER_HIDE_RANK_3 = 200442;
 
+// Bestial Fury: the Feral talent that turns Bear Form into a damage form (a separate shapeshift, not a buff). A bot
+// with it runs the bear DPS rotation
+constexpr uint32 SPELL_BESTIAL_FURY = 200425;
+
 // Eclipse: the Solar and Lunar buffs the Balance rotation reads
 constexpr uint32 SPELL_ECLIPSE_SOLAR = 48517;
 constexpr uint32 SPELL_ECLIPSE_LUNAR = 48518;

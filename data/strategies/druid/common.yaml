@@ -50,13 +50,16 @@ rows:
 strategy: druid/nc-heal
 class: druid
 rows:
-  # Neither heal is castable in Cat or Bear Form; a Bear leaves combat still in form
+  # Neither heal is castable in Cat or Bear Form (Bestial Fury, 200425, is a form of its own); a Bear leaves combat
+  # still in form
   - do: druid nc rejuv::80;774
-    when: not aura(self, 768) and not aura(self, "5487,9634") and exists("party member without own aura::80;774")
+    when: >-
+      not aura(self, 768) and not aura(self, "5487,9634,200425")
+      and exists("party member without own aura::80;774")
     relevance: normal + 9
   - do: druid nc regrowth::50,50
     when: >-
-      not aura(self, "5487,9634") and alive("tank first heal target::50,50")
+      not aura(self, "5487,9634,200425") and alive("tank first heal target::50,50")
       and health_pct("tank first heal target::50,50") < 50 and not moving(self)
     relevance: normal + 8
 ---

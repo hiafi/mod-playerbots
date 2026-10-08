@@ -46,7 +46,7 @@ public:
     std::string const getName() override { return "aoe"; }
 };
 
-// Registered as "cc": the stock crowd-control rows of "druid/cc", none for a Cat (DR11).
+// Registered as "cc": the stock crowd-control rows of "druid/cc", none for a Cat (DR11) or a Bestial Fury bear.
 class DruidReworkCcStrategy : public Strategy
 {
 public:

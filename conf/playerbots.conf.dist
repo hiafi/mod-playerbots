@@ -2155,6 +2155,7 @@ AiPlayerbot.PremadeSpecLink.9.5.80 = --3333200210220133030113023310231
 # and the PvP slots 4-6 (balance, cat, resto) reuse the PvE builds; there is no PvP bear slot.
 # PremadeSpecName and PremadeSpecGlyph are unchanged: bot glyphs are off on this server (AiPlayerbot.BotGlyphs = 0),
 # so the glyph lists are never applied.
+# Slot 7 is the bear DPS build: Bestial Fury (IsBearDpsBuild) marks it, and it wins over Elder Hide.
 
 AiPlayerbot.PremadeSpecName.11.0 = balance pve
 AiPlayerbot.PremadeSpecGlyph.11.0 = 40916,43331,40921,43335,44922,40919
@@ -2184,6 +2185,10 @@ AiPlayerbot.PremadeSpecName.11.6 = resto pvp
 AiPlayerbot.PremadeSpecGlyph.11.6 = 40913,43331,40906,43335,43674,45623
 AiPlayerbot.PremadeSpecLink.11.6.60 = --2003303330103031223331030113031
 AiPlayerbot.PremadeSpecLink.11.6.80 = --2003303330103031223331030113031
+AiPlayerbot.PremadeSpecName.11.7 = bear dps pve
+AiPlayerbot.PremadeSpecGlyph.11.7 = 40897,43331,46372,43335,43332,40899
+AiPlayerbot.PremadeSpecLink.11.7.60 = -150120300030322320003330100033232001
+AiPlayerbot.PremadeSpecLink.11.7.80 = -150120300030322320003330100033232001
 
 #
 #
@@ -2492,7 +2497,7 @@ AiPlayerbot.RandomClassSpecIndex.11.1 = 1
 AiPlayerbot.RandomClassSpecProb.11.2 = 35
 AiPlayerbot.RandomClassSpecIndex.11.2 = 2
 # cat pve
-AiPlayerbot.RandomClassSpecProb.11.3 = 20
+AiPlayerbot.RandomClassSpecProb.11.3 = 16
 AiPlayerbot.RandomClassSpecIndex.11.3 = 3
 # balance pvp
 AiPlayerbot.RandomClassSpecProb.11.4 = 0
@@ -2503,6 +2508,9 @@ AiPlayerbot.RandomClassSpecIndex.11.5 = 5
 # resto pvp
 AiPlayerbot.RandomClassSpecProb.11.6 = 0
 AiPlayerbot.RandomClassSpecIndex.11.6 = 6
+# bear dps pve
+AiPlayerbot.RandomClassSpecProb.11.7 = 4
+AiPlayerbot.RandomClassSpecIndex.11.7 = 7
 
 #
 #

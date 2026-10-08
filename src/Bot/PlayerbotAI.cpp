@@ -14,6 +14,7 @@
 #include "Common.h"
 #include "CreatureData.h"
 #include "DBCStores.h"
+#include "DruidReworkIds.h"
 #include "DruidReworkUtils.h"
 #include "EmoteAction.h"
 #include "Engine.h"
@@ -2338,8 +2339,8 @@ bool PlayerbotAI::IsTank(Player* player, bool bySpec)
             }
             break;
         case CLASS_DRUID:
-            // Rework: a bear is the build with Elder Hide, not Thick Hide
-            if (tab == DRUID_TAB_FERAL &&
+            // Rework: a bear is the build with Elder Hide, not Thick Hide; Bestial Fury (form 5) is a DPS, not a tank
+            if (tab == DRUID_TAB_FERAL && !ai::druid_rework::IsBearDpsBuild(player) &&
                 (player->GetShapeshiftForm() == FORM_BEAR || player->GetShapeshiftForm() == FORM_DIREBEAR ||
                  ai::druid_rework::IsBearBuild(player)))
             {
@@ -4866,6 +4867,8 @@ bool PlayerbotAI::IsOpposing(uint8 race1, uint8 race2)
 
 void PlayerbotAI::RemoveShapeshift()
 {
+    // Rework: Bestial Fury replaces Bear Form; by id, as the hidden aura 200437 and a Hunter spell share its name
+    bot->RemoveAura(ai::druid_rework::SPELL_BESTIAL_FURY);
     RemoveAura("bear form");
     RemoveAura("dire bear form");
     RemoveAura("moonkin form");

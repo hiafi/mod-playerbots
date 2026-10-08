@@ -38,7 +38,9 @@ void DruidReworkBoostStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 
 void DruidReworkCcStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
-    if (GetDruidSpec(botAI->GetBot()) != DruidSpec::Cat)
+    // Cyclone, Hibernate and Entangling Roots would take a Cat or a Bestial Fury bot out of its form
+    DruidSpec const spec = GetDruidSpec(botAI->GetBot());
+    if (spec != DruidSpec::Cat && spec != DruidSpec::BearDps)
         ai::data::AppendRows("druid/cc", triggers);
 }
 
