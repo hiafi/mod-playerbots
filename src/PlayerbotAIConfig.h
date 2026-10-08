@@ -239,6 +239,7 @@ public:
 
     uint32 broadcastChanceSuggestToxicLinks;
     std::string toxicLinksPrefix;
+    std::string strategyDataPath;
     uint32 toxicLinksRepliesChance;
 
     uint32 broadcastChanceSuggestThunderfury;
@@ -445,6 +446,7 @@ public:
             altMaintenanceSpecialSpells,
             altMaintenanceMounts,
             altMaintenanceGlyphs,
+            botGlyphs,
             altMaintenanceKeyring,
             altMaintenanceGemsEnchants;
     int32 autoGearCommand, autoGearCommandAltBots, autoGearQualityLimit, autoGearScoreLimit;

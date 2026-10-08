@@ -1,0 +1,226 @@
+# The reworked Destruction warlock's rotation: "warlock/destruction", appended (after "warlock/combat") to the "destro"
+# combat strategy by WarlockReworkDestroStrategy::InitTriggers. Each row queues its action at the relevance when its
+# condition holds (`when`, the expression language of StrategyExpression.h). Execution order is by relevance, not by
+# position in this file. Every action is a RowCheckedAction (it re-checks its own row before casting).
+# Rows that can fire together never share an action name and qualifier (they would merge into one basket and only the
+# first row would be re-checked): Soulburn X4/X5/XP4, Chaos Bolt X7/XP5, Shadowburn X9/XP6, Shadowfury X10/XP2, Chaos
+# Rift X3/XP8, Conflagrate X8/XP9 and Life Tap X11/X12 differ by name or qualifier. Merged on purpose: Immolate X2/XP7
+# (the single-target and pack modes exclude each other).
+# The `do:` qualifier and the unit qualifier in `when:` are the same literal ("destro havoc::200974;1;0;0;40;
+# notarget,free" and "attacker without aura id::200974;1;0;0;40;notarget,free"; "destro pack shadowburn::35,20" and
+# "lowest health attacker below::35,20"): otherwise the action targets another unit than the one checked.
+# Soulburn pairing (WL6): Soulburn makes Soul Fire instant only while Chaos Bolt is known (`cb`, the core's Soulburn
+# instant-cast source requires the spell). X6 Soul Fire fires only while primed and is never hard-cast; X7 Chaos Bolt
+# holds while primed; the pack's XP5 Chaos Bolt consumes the marker. Soulburn has a 5 s cooldown, so X4, X5 and XP4 also
+# read it.
+# Pooling: Soul Shards are spent only by Soulburn (X4, X5, XP4); the consumers wait on `primed`. X5 spends an expiring
+# shard (WL5, read from the Soul Shard aura's own remaining time). Mana comes from Life Tap (X11, X12) above the
+# Incinerate filler (X13). Life Tap carries only its guide health floor (WQ1); a tap costs about 1,467 health at level
+# 60 (accepted risk).
+# Travel time: Seed of Corruption (speed 28, aura on hit) needs a ms_since_cast guard on its own aura (XP10), and
+# Chaos Bolt (speed 20, Chaotic Burn on impact) one on its cooldown for Conflagrate (X8); Immolate (speed 0) lands
+# with the cast.
+# Shadowburn's range is 20 yd, shorter than the bots' casting distance, so its rows check it (R5).
+# Nothing here names Burning Rush or Dark Apotheosis (WL7); "warlock/combat" cancels them. No Fear or Howl (WL18).
+# Spell ids: WARLOCK.PLAN section 2 and the Destruction table of WARLOCK.YAML-PASS section 2: Soul Shards 200709,
+# Soulburn 200710 (its marker aura 200711), Havoc 200974 (the mark), Chaos Rift 200978, Chaotic Burn 200983, Chaotic
+# Inferno 200987, Chaos Bolt 50796, Immolate 348, Conflagrate 17962, Shadowburn 17877, Shadowfury 30283, Rain of Fire
+# 5740, Seed of Corruption 27243, Shadowflame 47897 (47960 is its DoT), Hellfire 1949, Death Coil 6789, Soul Fire 6353,
+# Incinerate 29722, Life Tap 1454.
+strategy: warlock/destruction
+class: warlock
+conditions:
+  # Soulburn's marker: the next Soul Fire is instant, the next Chaos Bolt is empowered. (Soul Shards, aura 200709, are
+  # counted inline: stacks() is a number, and a named condition must be a bool or a value().)
+  primed: aura(self, 200711, own)
+  # WL32/WQ4: three enemies around the target and the "aoe" strategy on
+  pack: value("warlock aoe enabled") and alive(target) and enemies_near_target(8) >= 3
+  # Elites (bosses included) are worth the long-fight spells
+  long: elite(target)
+  # Havoc is on the current target while another attacker lives (it must not take Immolate or Chaos Bolt; after the
+  # marked one is the last left, the mark is stale)
+  havoc_target: aura(target, 200974, own) and value("attacker count") >= 2
+  mine_imm: aura(target, 348, own)
+  # WL58: Conflagrate needs one of my Immolates (348, or the Shadowflame DoT 47960)
+  conflag_src: aura(target, "348,47960", own)
+  # Chaos Bolt is a talent; Soulburn also needs it to make Soul Fire instant
+  cb: known(50796)
+  # Chaos Bolt is castable now: standing still, or instant through Chaotic Inferno
+  cb_go: not moving(self) or aura(self, 200987)
+  # WL5: a shard is about to expire (every shard goes at the latest one's expiry)
+  expiring: stacks(self, 200709, own) >= 1 and remaining(self, 200709, own) < 10000
+rows:
+  # D1 (WL24): stop Hellfire, it hurts the bot
+  - do: destro stop hellfire
+    when: channeling(1949) and health_pct(self) < 40
+    relevance: emergency + 5
+
+  # D2 (WL68, WQ5): Death Coil only while ungrouped (in a group the target is the tank's mob)
+  - do: destro death coil
+    when: >-
+      known(6789) and cooldown(6789) == 0 and health_pct(self) < 35 and value("my attacker count") >= 1
+      and not value("group") and alive(target)
+    relevance: emergency + 3
+
+  # D3: healthstone under 35%
+  - do: warlock healthstone
+    when: health_pct(self) < 35 and value("item count::healthstone") > 0
+    relevance: emergency + 2
+
+  # X1 (WL55): Havoc on the highest-health uncontrolled attacker that isn't the target, when none is marked
+  - do: destro havoc::200974;1;0;0;40;notarget,free
+    when: >-
+      known(200974) and cooldown(200974) == 0 and value("attackers with aura id::200974;1;40") == 0
+      and alive("attacker without aura id::200974;1;0;0;40;notarget,free")
+    relevance: normal + 9.9
+
+  # X2 (WL56/WL67): Immolate, solo; on a nearly dead non-elite it isn't worth the cast
+  - do: destro immolate
+    when: >-
+      not pack and known(348) and alive(target) and not mine_imm and not havoc_target and not moving(self)
+      and (long or health_pct(target) >= 25)
+    relevance: normal + 9.8
+
+  # XP2: Shadowfury on a pack, no unsafe units around the target
+  - do: destro pack shadowfury
+    when: >-
+      pack and known(30283) and cooldown(30283) == 0 and enemies_near_target(8) >= 2
+      and value("unsafe aoe units::8") == 0
+    relevance: normal + 9.8
+
+  # X3 (WL57): Chaos Rift once my Immolate (or Conflagrate) is on the target
+  - do: destro chaos rift
+    when: >-
+      not pack and known(200978) and cooldown(200978) == 0 and alive(target) and aura(target, "348,17962", own)
+      and (long or value("attacker count") >= 2) and (long or health_pct(target) >= 20)
+    relevance: normal + 9.7
+
+  # XP3 (WL61): Rain of Fire on the densest cluster, not recast while it is active
+  - do: destro rain of fire
+    when: >-
+      pack and known(5740) and not aura(self, 5740, own) and value("most clustered enemy count::8") >= 3
+      and value("unsafe aoe units::8;cluster") == 0 and not moving(self)
+    relevance: normal + 9.7
+
+  # X4 (WL66): Soulburn for Soul Fire on a long fight
+  - do: destro soulburn
+    when: >-
+      not pack and cb and known(200710) and cooldown(200710) == 0 and long and stacks(self, 200709, own) >= 1
+      and not primed and cooldown(50796) > 3000 and alive(target)
+    relevance: normal + 9.6
+
+  # XP4: Soulburn for the pack's Chaos Bolt, on every Chaos Bolt cooldown
+  - do: destro pack soulburn
+    when: >-
+      pack and cb and known(200710) and cooldown(200710) == 0 and stacks(self, 200709, own) >= 1 and not primed
+      and cooldown(50796) <= 1000 and alive(target) and cb_go and not havoc_target
+    relevance: normal + 9.6
+
+  # X5 (WL5): spend an expiring shard on a target that isn't long
+  - do: destro soulburn expiring
+    when: >-
+      not pack and cb and known(200710) and cooldown(200710) == 0 and expiring and not primed
+      and cooldown(50796) > 3000 and alive(target)
+    relevance: normal + 9.59
+
+  # X6: the primed Soul Fire (instant through Soulburn, never hard-cast)
+  - do: destro soul fire
+    when: not pack and cb and known(6353) and primed and alive(target)
+    relevance: normal + 9.5
+
+  # XP5 (WL65): Chaos Bolt on the current target in a pack (it consumes a primed marker)
+  - do: destro pack chaos bolt
+    when: >-
+      pack and cb and cooldown(50796) == 0 and alive(target) and not havoc_target and cb_go
+    relevance: normal + 9.5
+
+  # X7: Chaos Bolt, held while primed (WL6b: the primed Soul Fire goes first)
+  - do: destro chaos bolt
+    when: >-
+      not pack and cb and cooldown(50796) == 0 and alive(target) and not havoc_target and not primed and cb_go
+    relevance: normal + 9.4
+
+  # XP6 (WL59): Shadowburn on the lowest-health attacker under 35%, within its 20 yd range
+  - do: destro pack shadowburn::35,20
+    when: pack and known(17877) and cooldown(17877) == 0 and alive("lowest health attacker below::35,20")
+    relevance: normal + 9.4
+
+  # X8: Conflagrate inside Chaotic Burn, or when Chaos Bolt is more than 4 s away and has landed (Chaos Bolt travels,
+  # its cooldown starts at cast)
+  - do: destro conflagrate
+    when: >-
+      not pack and known(17962) and cooldown(17962) == 0 and alive(target) and conflag_src
+      and (not cb or aura(target, 200983, own) or (cooldown(50796) > 4000 and ms_since_cast(50796) > 4500))
+    relevance: normal + 9.3
+
+  # XP7: Immolate in a pack, on elites or a big pack
+  - do: destro immolate
+    when: >-
+      pack and known(348) and alive(target) and not mine_imm and not havoc_target
+      and (value("elite enemies near target::8") >= 1 or enemies_near_target(8) >= 4) and not moving(self)
+    relevance: normal + 9.3
+
+  # X9 (R5): Shadowburn under 35%, within its 20 yd range
+  - do: destro shadowburn
+    when: >-
+      not pack and known(17877) and cooldown(17877) == 0 and alive(target) and health_pct(target) < 35
+      and in_range(target, 20)
+    relevance: normal + 9.2
+
+  # XP8: Chaos Rift in a pack, once an Immolate or Conflagrate of mine is on an attacker
+  - do: destro pack chaos rift
+    when: >-
+      pack and known(200978) and cooldown(200978) == 0 and value("attackers with aura id::348,17962;1;35") >= 1
+    relevance: normal + 9.2
+
+  # X10 (WL60): Shadowfury on the target
+  - do: destro shadowfury
+    when: >-
+      not pack and known(30283) and cooldown(30283) == 0 and alive(target) and value("unsafe aoe units::8") == 0
+    relevance: normal + 9.1
+
+  # XP9: Conflagrate in a pack
+  - do: destro pack conflagrate
+    when: pack and known(17962) and cooldown(17962) == 0 and alive(target) and conflag_src
+    relevance: normal + 9.1
+
+  # XP10 (WL62): Seed of Corruption on a pack. The aura appears only when the seed lands (2 s cast, about 1 s of
+  # flight), so a second one is held back for 3.5 s after the cast starts
+  - do: destro seed
+    when: >-
+      pack and known(27243) and alive(target) and not aura(target, 27243, own) and ms_since_cast(27243) > 3500
+      and enemies_near_target(15) >= 3 and value("unsafe aoe units::15") == 0 and not moving(self) and not primed
+    relevance: normal + 9.0
+
+  # XP11 (WL63): Shadowflame on two or more enemies in the cone
+  - do: destro shadowflame
+    when: >-
+      pack and known(47897) and cooldown(47897) == 0 and enemies_in_cone(10, 104) >= 2
+      and value("unsafe aoe units::10;self") == 0
+    relevance: normal + 8.9
+
+  # XP12 (WL64): Hellfire while healthy (D1 stops it under 40%)
+  - do: destro hellfire
+    when: pack and known(1949) and enemies_within(10) >= 3 and health_pct(self) > 60 and not moving(self)
+      and value("unsafe aoe units::10;self") == 0
+    relevance: normal + 8.8
+
+  # X11: Life Tap, guide floors only (WQ1)
+  - do: destro life tap
+    when: known(1454) and mana(self) < 25 and health_pct(self) > 40
+    relevance: normal + 1.5
+
+  # X12: Life Tap on the move
+  - do: destro life tap moving
+    when: known(1454) and moving(self) and mana(self) < 80 and health_pct(self) > 60
+    relevance: normal + 1.4
+
+  # X13: the filler
+  - do: destro incinerate
+    when: known(29722) and alive(target) and not moving(self)
+    relevance: normal + 1
+
+  # X14: the filler below level 24
+  - do: destro shadow bolt
+    when: not known(29722) and alive(target) and not moving(self)
+    relevance: normal + 0.9

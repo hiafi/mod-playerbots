@@ -60,6 +60,12 @@ by racing existing actions, and nothing at or above the pull sequence.
   trigger fires and every rotation spell is on cooldown executes nothing, and a bot that has
   not yet started auto-attack or wanding contributes nothing until a trigger fires.
 
+## YAML strategy rows
+
+YAML-backed class strategies keep a C++ shell and take their trigger rows from
+`data/strategies/<class>/<spec>.yaml` through `ai::data::AppendRows`. See `strategy-data.md` for the row format,
+the condition language and when to write C++.
+
 ## Wiring checklist
 
 Unregistered names compile but never run. Before finishing any strategy, action, or trigger

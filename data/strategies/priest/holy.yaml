@@ -1,0 +1,188 @@
+# The reworked Holy priest's heal rotation, "priest/holy", appended to the healer base rows (priest/healer in
+# common.yaml) by PriestReworkHolyStrategy::InitTriggers (and by the solo strategy for a Holy bot), and its
+# out-of-combat rows, "priest/nc-holy", appended to the "nc" strategy by PriestReworkNonCombatStrategy::InitTriggers.
+# Each row queues its action at the relevance when its condition holds (`when`, the expression language of
+# StrategyExpression.h) or when an existing C++ trigger fires (`trigger`). Execution order is by relevance, not by
+# position in this file. Every action is a RowCheckedAction (it re-checks its own row before casting), and a
+# value-target action takes its value's qualifier from its `do:` name, so the `do:` qualifier and the unit qualifier in
+# `when:` are always the same literal ("priest greater heal::70,70" with health_pct("tank first heal target::70,70")
+# < 70): otherwise the action heals another unit than the one checked. Rows that can fire together never share an
+# action name and qualifier (they would merge into one basket, and only the first row's condition would be
+# re-checked): Serenity 2 / PR32 and Greater Heal 3 / 15 differ by qualifier, Renew 12 / 14b / 16 by qualifier and
+# Renew 14a by name.
+# Spell ids: PRIEST.PLAN section 2 (2.3 Holy) and the Holy table of PRIEST.YAML-PASS section 2. The numbers in the
+# comments are the guide's line numbers. Cast-time spells need no "not moving" gate (CanCastSpell reads the cast time
+# the bot would have, so the Divine Touch instant Greater Heal is castable on the move); the one channel, Divine
+# Hymn, carries it.
+strategy: priest/holy
+class: priest
+conditions:
+  # PR40: Greater Heal's routine line needs 60% mana, or the Spirit of Redemption form (the bot is dying anyway)
+  mana_ok: mana(self) >= 60 or aura(self, 200194)
+  # The effective tank (the main tank within 100 yd, else the most attacked member) is in reach of a 40 yd heal
+  tank_ok: alive("effective tank") and in_range("effective tank", 40)
+  # Renews the bot has out on members within 40 yd in line of sight (its own, capped at 8 by rows 14a, 14b and 16)
+  renews: value("party members with aura::101;1;1;139")
+rows:
+  # 1: Guardian Spirit on the tank-first target under 25%
+  - do: holy guardian spirit::25,25
+    when: >-
+      known(47788) and cooldown(47788) == 0 and health_pct("tank first heal target::25,25") < 25
+    relevance: emergency + 7
+
+  # 2: Holy Word: Serenity under 45%
+  - do: holy serenity::45,45
+    when: >-
+      known(200197) and cooldown(200197) == 0 and health_pct("tank first heal target::45,45") < 45
+    relevance: emergency + 6
+
+  # 3: with the Divine Touch proc (an instant, free Greater Heal), Greater Heal under 70%
+  - do: priest greater heal::70,70
+    when: aura(self, 200176, own) and health_pct("tank first heal target::70,70") < 70
+    relevance: emergency + 5
+
+  # 4: Flash Heal under 40% while Serenity is on cooldown (while it is ready, row 2 comes first) or not learned yet
+  # (a leveling bot without the mid-tree talent would otherwise never cast it)
+  - do: priest flash heal::40,40
+    when: >-
+      (not known(200197) or cooldown(200197) > 0) and health_pct("tank first heal target::40,40") < 40
+    relevance: emergency + 4
+
+  # PR16: Power Word: Shield on itself under 35% when something is hitting it and no Weakened Soul is up
+  - do: priest self shield
+    when: health_pct(self) < 35 and value("my attacker count") > 0 and not aura(self, 6788)
+    relevance: emergency + 3.5
+
+  # 5: Halo when 3+ allies are under 85% and a Holy Word is ready to follow it (it speeds up their cooldowns)
+  - do: holy halo
+    when: >-
+      known(200135) and cooldown(200135) == 0 and value("party members below::85") >= 3
+      and (cooldown(200197) == 0 or (known(200198) and cooldown(200198) == 0))
+    relevance: normal + 9.5
+
+  # 6: Apotheosis when 3+ allies are under 65%
+  - do: holy apotheosis
+    when: known(200225) and cooldown(200225) == 0 and value("party members below::65") >= 3
+    relevance: normal + 9.4
+
+  # 7: Divine Hymn when 4+ allies are under 55%; a channel, so only standing still
+  - do: holy divine hymn
+    when: >-
+      known(64843) and cooldown(64843) == 0 and value("party members below::55") >= 4 and not moving(self)
+    relevance: normal + 9.3
+
+  # 8: Holy Word: Sanctify on the densest group of 3+ allies under 80% (a ground spell: the action checks the 40 yd
+  # range and the line of sight itself)
+  - do: holy sanctify::8,80
+    when: known(200198) and cooldown(200198) == 0 and value("heal cluster count::8,80") >= 3
+    relevance: normal + 9.0
+
+  # 9: Prayer of Healing when 3+ members are under 75% (PR37: the whole group, not one party)
+  - do: priest prayer of healing::75,75
+    when: value("party members below::75") >= 3
+    relevance: normal + 8.5
+
+  # 10: Circle of Healing on the heal cluster centre when 3+ allies within 15 yd are under 85%
+  - do: holy circle of healing::15,85
+    when: known(34861) and cooldown(34861) == 0 and value("heal cluster count::15,85") >= 3
+    relevance: normal + 8.0
+
+  # 11: Lightwell when 2+ allies are under 80% and none stands yet: at the injured cluster when 2 or more are within
+  # 20 yd of each other, else at the tank (PR36); a cast time, so only standing still
+  - do: holy lightwell::20,80
+    when: >-
+      known(724) and cooldown(724) == 0 and value("controlled units by entry::31897") == 0
+      and value("party members below::80") >= 2 and not moving(self)
+    relevance: normal + 7.5
+
+  # PR12: cures, as copies the healer cure multiplier gates (only while the cure strategy is on and nobody is under 50%)
+  - do: priest dispel magic
+    trigger: dispel magic
+    relevance: normal + 7.3
+  - do: priest abolish disease
+    trigger: cure disease
+    relevance: normal + 7.3
+  - do: priest dispel magic on party
+    trigger: dispel magic on party
+    relevance: normal + 7.2
+  - do: priest abolish disease on party
+    trigger: party member cure disease
+    relevance: normal + 7.2
+
+  # 12: with the Answered Prayers proc, Renew on the lowest member without it, whatever their health
+  - do: priest renew lacking::101;139
+    when: aura(self, 200182, own) and exists("party member without own aura::101;139")
+    relevance: normal + 7.0
+
+  # 13: Prayer of Mending on the tank when none of the bot's is bouncing (the aura is 41635)
+  - do: priest prayer of mending tank
+    when: >-
+      known(33076) and cooldown(33076) == 0 and value("party members with aura::101;1;1;41635") == 0 and tank_ok
+    relevance: normal + 6.5
+
+  # 14a: Renew on the tank, up to 8 Renews out
+  - do: priest renew tank
+    when: renews < 8 and tank_ok and not aura("effective tank", 139, own)
+    relevance: normal + 6.0
+
+  # 14b: Renew on the lowest member under 90% without it, up to 8 Renews out
+  - do: priest renew lacking::90;139
+    when: renews < 8 and exists("party member without own aura::90;139")
+    relevance: normal + 5.9
+
+  # PR32: Holy Word: Serenity as a routine heal under 80%
+  - do: holy serenity::80,80
+    when: >-
+      known(200197) and cooldown(200197) == 0 and health_pct("tank first heal target::80,80") < 80
+    relevance: normal + 5.6
+
+  # 15: Greater Heal under 80%, with the mana for it (PR40)
+  - do: priest greater heal::80,80
+    when: mana_ok and health_pct("tank first heal target::80,80") < 80
+    relevance: normal + 5.5
+
+  # 16: Renew on the lowest member under 95% without it, up to 8 Renews out
+  - do: priest renew lacking::95;139
+    when: renews < 8 and exists("party member without own aura::95;139")
+    relevance: normal + 4.0
+
+  # 17: Smite when nobody is under 90% and mana is at least 60%
+  - do: priest smite filler
+    when: alive(target) and value("party members below::90") == 0 and mana(self) >= 60
+    relevance: normal + 2.0
+---
+# The Holy priest's out-of-combat rows: the heal lines it may need after a pull or a fall, with the combat rotation's
+# own actions. Every row is gated on Holy Word: Serenity (known(200197)), the Holy talent, since the "nc" strategy
+# appends the spec documents for every priest. Greater Heal comes before Flash Heal out of combat (the mana-efficient
+# heal), and the Renews only go on a member who is hurt, so a full-health party doesn't drain the bot's mana
+# re-casting Renew every time it runs out.
+strategy: priest/nc-holy
+class: priest
+conditions:
+  is_holy: known(200197)
+  tank_ok: alive("effective tank") and in_range("effective tank", 40)
+rows:
+  # Greater Heal under 80% and, if it can't be cast, Flash Heal under 55%: the tank-first target (the same qualifier as
+  # line 15 for the first)
+  - do: priest greater heal::80,80
+    when: is_holy and health_pct("tank first heal target::80,80") < 80
+    relevance: normal + 9
+  - do: priest flash heal::55,55
+    when: is_holy and health_pct("tank first heal target::55,55") < 55
+    relevance: normal + 8
+
+  # Renew on a hurt tank, then on the lowest hurt member without one (under 99%: the value takes a threshold, and a
+  # member at full health has no use for it)
+  - do: priest renew tank
+    when: is_holy and tank_ok and health_pct("effective tank") < 100 and not aura("effective tank", 139, own)
+    relevance: normal + 3
+  - do: priest renew lacking::99;139
+    when: is_holy and exists("party member without own aura::99;139")
+    relevance: normal + 2
+
+  # Fear Ward on the tank before the pull (PR13); the combat row is in priest/healer
+  - do: priest fear ward
+    when: >-
+      is_holy and known(6346) and cooldown(6346) == 0 and alive("effective tank")
+      and in_range("effective tank", 30) and not aura("effective tank", 6346)
+    relevance: normal + 1

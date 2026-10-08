@@ -1,0 +1,238 @@
+# The reworked Demonology warlock's rotation: "warlock/demonology", appended (after "warlock/combat") to the "demo"
+# combat strategy by WarlockReworkDemoStrategy::InitTriggers. Each row queues its action at the relevance when its
+# condition holds (`when`, the expression language of StrategyExpression.h). Execution order is by relevance, not by
+# position in this file. Every action is a RowCheckedAction (it re-checks its own row before casting).
+# Rows that can fire together never share an action name and qualifier (they would merge into one basket and only the
+# first row would be re-checked): Metamorphosis S1/P1, Doomguard M1/S2, Infernal P2/P10, Soul Fire S3/P6/S11, Hand of
+# Gul'dan S6/P4, Implosion S5/P3, Immolation Aura S10/P5, Demonic Empowerment S9/P9, Dreadstalkers S7/P7, Life Tap
+# D5/S13/S14 and healthstone D2/M2 differ by name; Bane of Doom P8b differs by qualifier. Merged on purpose: "demo bane
+# of doom" S4/S8/P8a (mutually exclusive by `in_meta` and `pack`, so only one is ever true).
+# The `do:` qualifier and the unit qualifier in `when:` are the same literal ("demo pack bane of
+# doom::200825;1;0;12;30" and "attacker without aura id::200825;1;0;12;30"): otherwise the action targets another unit
+# than the one checked.
+# Pooling: Molten Core is spent by Soul Fire at 3 or more (S3/P6, above Hand of Gul'dan) and at 1 (S11, the bottom of
+# the band), Demonic Empowerment refills it at 2 or fewer; nothing waits on Cores. Wild Imps: Implosion at 6 or more
+# (P3) sits above Hand of Gul'dan's builder (P4); the 12-imp cap and the Decimation hold are gates, not waits. Mana
+# comes from Life Tap (D5 above the rotation, S13 above the Shadow Bolt filler S15); with the floor blocking it the bot
+# falls to the wand. Life Tap carries only its guide health floor (WQ1); a tap costs about 1,467 health at level 60
+# (accepted risk). Never Life Tap in Metamorphosis.
+# The guide's "Never" list: no Soulburn, no Demonic Leap, no Dark Apotheosis. Nothing here names Burning Rush or Dark
+# Apotheosis (WL7); "warlock/combat" cancels them.
+# Spell ids: WARLOCK.PLAN section 2 and the Demonology table of WARLOCK.YAML-PASS section 2: Molten Core 71165,
+# Decimation 63165, Metamorphosis 47241, Demonic Empowerment 47193, Immolation Aura 50589, Corruption 172, Life Tap
+# 1454, Soul Fire 6353, Summon Felguard 30146, Fel Domination 18708, Hand of Gul'dan 200820, Bane of Doom 200825,
+# Unending Resolve 200826, Implosion 200827, Call Dreadstalkers 200829, Summon Doomguard 200831, Summon Infernal
+# 200833, Wild Imps 300150 / 300151.
+strategy: warlock/demonology
+class: warlock
+conditions:
+  # Wild Imps up (WL40); the pet is never one of them, so the Felguard is read through `pet_up`
+  imps: value("controlled units by entry::300150,300151")
+  in_meta: aura(self, 47241, own)
+  decim: aura(self, 63165)
+  # R4: lingering Wild Imps can't mask a dead Felguard, `pet target` is the real pet only
+  pet_up: alive("pet target")
+  # WL42: worth a cooldown / a Bane of Doom
+  long: boss(target) or (elite(target) and health_pct(target) > 50) or lifetime(target) >= 15
+  durable: boss(target) or (elite(target) and health_pct(target) > 30) or lifetime(target) >= 12
+  # WL32/WQ4: three enemies near the target and the "aoe" strategy on
+  pack: value("warlock aoe enabled") and alive(target) and enemies_near_target(8) >= 3
+  big_pack: pack and (enemies_near_target(8) >= 4 or value("elite enemies near target::8") >= 3)
+  # WL43: the pack is nearly dead, so a cooldown would be wasted
+  dying: value("max health pct near target::8") < 20
+  hog_ok: known(200820) and cooldown(200820) == 0 and alive(target) and not moving(self) and imps <= 12
+  # WL49: Demonic Empowerment on a pet with imps to empower, refilling Cores at 2 or fewer
+  de_ok: known(47193) and cooldown(47193) == 0 and pet_up and imps >= 2 and stacks(self, 71165) <= 2
+rows:
+  # D1: Unending Resolve under 35% while something attacks the bot
+  - do: demo unending resolve
+    when: >-
+      known(200826) and cooldown(200826) == 0 and health_pct(self) < 35 and value("my attacker count") >= 1
+    relevance: emergency + 3
+
+  # D2: healthstone under 30%
+  - do: warlock healthstone
+    when: health_pct(self) < 30 and value("item count::healthstone") > 0
+    relevance: emergency + 2
+
+  # D3 (WL2): Fel Domination when the Felguard is dead, so the re-summon in combat is quick
+  - do: demo fel domination
+    when: >-
+      not pet_up and known(30146) and known(18708) and cooldown(18708) == 0 and not aura(self, 18708, own)
+    relevance: emergency + 1.5
+
+  # D4: the 4.5 s Felguard summon under Fel Domination
+  - do: demo summon felguard
+    when: not pet_up and known(30146) and aura(self, 18708, own) and not moving(self)
+    relevance: emergency + 1.4
+
+  # D5: Life Tap under 15% mana, above the rotation (never in Metamorphosis)
+  - do: demo life tap low
+    when: known(1454) and not in_meta and mana(self) < 15 and health_pct(self) > 40
+    relevance: high + 5
+
+  # M1 (WL46): Doomguard while in Metamorphosis, solo
+  - do: demo meta doomguard
+    when: in_meta and not pack and known(200831) and cooldown(200831) == 0 and long
+    relevance: normal + 9.95
+
+  # M2 (WL47): healthstone burst on a boss with the Metamorphosis window left
+  - do: demo healthstone burst
+    when: >-
+      in_meta and remaining(self, 47241, own) > 15000 and boss(target) and health_pct(self) > 50
+      and value("item count::healthstone") > 0
+    relevance: normal + 9.94
+
+  # S1 (WL41): Metamorphosis on a long target with 6 imps or after 15 s of combat
+  - do: demo metamorphosis
+    when: >-
+      not pack and not in_meta and known(47241) and cooldown(47241) == 0 and alive(target) and long
+      and (imps >= 6 or combat_time() >= 15000)
+    relevance: normal + 9.9
+
+  # P1: Metamorphosis on a big pack
+  - do: demo pack metamorphosis
+    when: big_pack and not dying and not in_meta and known(47241) and cooldown(47241) == 0
+    relevance: normal + 9.9
+
+  # P2 (WL45): Infernal in Metamorphosis, on the densest cluster
+  - do: demo infernal meta
+    when: >-
+      big_pack and not dying and in_meta and known(200833) and cooldown(200833) == 0
+      and alive("most clustered enemy::8") and value("unsafe aoe units::8;cluster") == 0
+    relevance: normal + 9.85
+
+  # S2: Doomguard outside Metamorphosis, held while Metamorphosis is about to be ready
+  - do: demo doomguard
+    when: >-
+      not pack and not in_meta and known(200831) and cooldown(200831) == 0 and alive(target) and long
+      and (not known(47241) or cooldown(47241) > 25000)
+    relevance: normal + 9.8
+
+  # S3 (WL51): Soul Fire at 3 or more Molten Cores, castable on the move
+  - do: demo soul fire
+    when: not pack and known(6353) and stacks(self, 71165) >= 3 and alive(target)
+    relevance: normal + 9.7
+
+  # P3 (WL54): Implosion at 6 or more imps, or at 3 or more when the pack is nearly dead
+  - do: demo implosion
+    when: >-
+      pack and known(200827) and cooldown(200827) == 0 and (imps >= 6 or (imps >= 3 and dying))
+      and value("unsafe aoe units::8") == 0
+    relevance: normal + 9.7
+
+  # S4 (WL52): Bane of Doom refreshed under 3 s on a durable target
+  - do: demo bane of doom
+    when: >-
+      not pack and not in_meta and known(200825) and alive(target) and durable
+      and remaining(target, 200825, own) < 3000
+    relevance: normal + 9.6
+
+  # P4: Hand of Gul'dan in a pack
+  - do: demo pack hand of guldan
+    when: pack and hog_ok
+    relevance: normal + 9.6
+
+  # S5: Implosion on two targets with 10 or more imps
+  - do: demo implosion duo
+    when: >-
+      not pack and known(200827) and cooldown(200827) == 0 and enemies_near_target(8) == 2 and imps >= 10
+      and value("unsafe aoe units::8") == 0
+    relevance: normal + 9.55
+
+  # S6 (WL53): Hand of Gul'dan, held at the imp cap and while Decimation is up with imps to spare
+  - do: demo hand of guldan
+    when: not pack and hog_ok and (not decim or imps <= 9 or remaining(self, 63165) < 3000)
+    relevance: normal + 9.5
+
+  # P5 (WL48): Immolation Aura in Metamorphosis, in a pack
+  - do: demo pack immolation aura
+    when: >-
+      pack and in_meta and known(50589) and cooldown(50589) == 0 and enemies_within(8) >= 2
+      and value("unsafe aoe units::8;self") == 0
+    relevance: normal + 9.5
+
+  # S7: Call Dreadstalkers
+  - do: demo call dreadstalkers
+    when: >-
+      not pack and known(200829) and cooldown(200829) == 0 and alive(target) and not moving(self)
+    relevance: normal + 9.4
+
+  # P6: Soul Fire at 3 or more Molten Cores in a pack
+  - do: demo pack soul fire
+    when: pack and known(6353) and stacks(self, 71165) >= 3 and alive(target)
+    relevance: normal + 9.4
+
+  # S8: Bane of Doom in Metamorphosis, on a target that lives long enough
+  - do: demo bane of doom
+    when: >-
+      not pack and in_meta and known(200825) and alive(target) and lifetime(target) >= 6
+      and not aura(target, 200825, own)
+    relevance: normal + 9.35
+
+  # S9: Demonic Empowerment
+  - do: demo demonic empowerment
+    when: not pack and de_ok
+    relevance: normal + 9.3
+
+  # P7: Call Dreadstalkers in a pack
+  - do: demo pack dreadstalkers
+    when: >-
+      pack and known(200829) and cooldown(200829) == 0 and alive(target) and not moving(self)
+    relevance: normal + 9.3
+
+  # S10: Immolation Aura in Metamorphosis, solo
+  - do: demo immolation aura
+    when: >-
+      not pack and in_meta and known(50589) and cooldown(50589) == 0 and enemies_within(8) >= 1
+      and value("unsafe aoe units::8;self") == 0
+    relevance: normal + 9.25
+
+  # P8a: Bane of Doom on the current target first
+  - do: demo bane of doom
+    when: pack and known(200825) and alive(target) and durable and not aura(target, 200825, own)
+    relevance: normal + 9.25
+
+  # P8b: Bane of Doom on another attacker, up to three at once
+  - do: demo pack bane of doom::200825;1;0;12;30
+    when: >-
+      pack and known(200825) and value("attackers with aura id::200825;1;30") < 3
+      and alive("attacker without aura id::200825;1;0;12;30")
+    relevance: normal + 9.2
+
+  # P9: Demonic Empowerment in a pack
+  - do: demo pack demonic empowerment
+    when: pack and de_ok
+    relevance: normal + 9.1
+
+  # P10: Infernal outside Metamorphosis, on the densest cluster
+  - do: demo infernal
+    when: >-
+      big_pack and not dying and not in_meta and known(200833) and cooldown(200833) == 0
+      and alive("most clustered enemy::8") and value("unsafe aoe units::8;cluster") == 0
+    relevance: normal + 9.05
+
+  # S11: Soul Fire on any Molten Core, the bottom of the Cores band
+  - do: demo soul fire core
+    when: known(6353) and stacks(self, 71165) >= 1 and alive(target)
+    relevance: normal + 9.0
+
+  # S12: Corruption until Bane of Doom is learned (level 20)
+  - do: demo corruption
+    when: known(172) and not known(200825) and alive(target) and not aura(target, 172, own)
+    relevance: normal + 8
+
+  # S13: Life Tap, guide floors only (WQ1)
+  - do: demo life tap
+    when: known(1454) and not in_meta and mana(self) < 35 and health_pct(self) > 70
+    relevance: normal + 1.5
+
+  # S14: Life Tap on the move, while no cast is possible
+  - do: demo life tap moving
+    when: known(1454) and not in_meta and moving(self) and mana(self) < 50 and health_pct(self) > 50
+    relevance: normal + 1.4
+
+  # S15: the filler; instant in Metamorphosis
+  - do: demo shadow bolt
+    when: alive(target) and (not moving(self) or in_meta)
+    relevance: normal + 1

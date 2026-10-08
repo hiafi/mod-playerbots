@@ -16,11 +16,13 @@
 #include "Item.h"
 #include "NewRpgInfo.h"
 #include "NewRpgStrategy.h"
+#include "OwnSpellResultLog.h"
 #include "PlayerbotAIBase.h"
 #include "PlayerbotAIConfig.h"
 #include "PlayerbotSecurity.h"
 #include "PlayerbotTextMgr.h"
 #include "SpellAuras.h"
+#include "SpellCastStamps.h"
 #include "Util.h"
 #include "WorldPacket.h"
 #include <stack>
@@ -397,6 +399,10 @@ public:
     void HandleCommand(uint32 type, std::string const text, Player* fromPlayer);
     void QueueChatResponse(const ChatQueuedReply reply);
     void HandleBotOutgoingPacket(WorldPacket const& packet);
+    ai::spell::OwnSpellResultLog& GetOwnSpellResults() { return ownSpellResults; }
+    ai::spell::SpellCastStamps& GetSpellCastStamps() { return spellCastStamps; }
+    // Ms (getMSTime clock) since the combat engine became active; 0 while another engine is.
+    uint32 GetCombatTimeMs() const;
     void HandleMasterIncomingPacket(WorldPacket const& packet);
     void HandleMasterOutgoingPacket(WorldPacket const& packet);
     void HandleTeleportAck();
@@ -511,8 +517,10 @@ public:
 
     virtual bool IsInterruptableSpellCasting(Unit* player, std::string const spell);
     virtual bool HasAuraToDispel(Unit* player, uint32 dispelType);
+    // ignoreMovingCastTime skips only the "has a cast time and the bot is moving" refusal, for a spell an aura makes
+    // instant; a channel or an autorepeat spell is still refused while moving.
     bool CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell = true, Item* itemTarget = nullptr,
-                      Item* castItem = nullptr);
+                      Item* castItem = nullptr, bool ignoreMovingCastTime = false);
     bool CanCastSpell(uint32 spellid, GameObject* goTarget, bool checkHasSpell = true);
     bool CanCastSpell(uint32 spellid, float x, float y, float z, bool checkHasSpell = true,
                       Item* itemTarget = nullptr);
@@ -636,6 +644,7 @@ protected:
     Engine* currentEngine;
     Engine* engines[BOT_STATE_MAX];
     BotState currentState;
+    uint32 strategyDataGeneration = 0;
     ChatHelper chatHelper;
     std::list<ChatCommandHolder> chatCommands;
     std::list<ChatQueuedReply> chatReplies;
@@ -654,6 +663,9 @@ protected:
     Position jumpDestination = Position();
     uint32 nextTransportCheck = 0;
     bool spellInterruptRequested = false;
+    ai::spell::OwnSpellResultLog ownSpellResults;
+    ai::spell::SpellCastStamps spellCastStamps;
+    uint32 combatEngineStartMs = 0;
 };
 
 #endif

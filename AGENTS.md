@@ -42,6 +42,8 @@ Read the matching doc(s) BEFORE starting the task:
   `.agents/docs/cpp-playerbots.md`
 - Touching a strategy, action, trigger, value, multiplier, or `AiFactory.cpp` →
   also `.agents/docs/ai-engine.md`
+- Touching `data/strategies/`, `src/Bot/Data/`, or a YAML-backed class strategy →
+  `.agents/docs/strategy-data.md`
 - Creating or modifying SQL, or adding bot chat text → `.agents/docs/sql-guidelines.md`
 - Reviewing a changeset or PR → `.agents/docs/code-review.md`
 - Self-reviewing, or opening or updating a PR → also `.agents/docs/self-review-rules.md`

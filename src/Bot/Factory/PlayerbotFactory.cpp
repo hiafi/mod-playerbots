@@ -13,6 +13,7 @@
 #include "ArenaTeamMgr.h"
 #include "DBCStores.h"
 #include "DBCStructure.h"
+#include "DruidReworkUtils.h"
 #include "GuildMgr.h"
 #include "InventoryAction.h"
 #include "Item.h"
@@ -107,7 +108,6 @@ std::vector<uint32> PlayerbotFactory::ccBreakTrinketCache;
 
 namespace
 {
-constexpr uint32 SPELL_DRUID_THICK_HIDE = 16931;
 constexpr uint32 SPELL_OWLKIN_FRENZY = 48393;
 constexpr uint32 SPELL_PRIMAL_TENACITY = 33957;
 constexpr uint32 SPELL_IMPROVED_BARKSKIN = 63411;
@@ -1717,7 +1717,8 @@ uint32 PlayerbotFactory::InitTalentsTree(bool increment /*false*/, bool use_temp
         /// @todo: fix cat druid hardcode
         if (bot->getClass() == CLASS_DRUID && specTab == DRUID_TAB_FERAL && bot->GetLevel() >= 20)
         {
-            bool isCat = !bot->HasAura(SPELL_DRUID_THICK_HIDE);
+            // Rework: a bear is the build with Elder Hide, not Thick Hide
+            bool isCat = !ai::druid_rework::IsBearBuild(bot);
             if (!isCat && bot->GetLevel() == 20)
             {
                 uint32 bearP = sPlayerbotAIConfig.randomClassSpecProb[cls][1];
@@ -3584,7 +3585,8 @@ void PlayerbotFactory::InitClassSpells()
             break;
         case CLASS_PRIEST:
             bot->learnSpell(585, true);
-            bot->learnSpell(2050, true);
+            // Rework: Lesser Heal (2050) is retired on this server; Greater Heal is the starter heal
+            bot->learnSpell(2060, true);
             break;
         case CLASS_MAGE:
             bot->learnSpell(133, true);
@@ -4373,7 +4375,7 @@ void PlayerbotFactory::InitReagents()
             break;
         }
         case CLASS_WARLOCK:
-            items.push_back({6265, 5});  // Soul Shard
+            // Rework: no Soul Shard refill, shards are aura 200709 on this server, not items.
             break;
         default:
             break;
@@ -4449,41 +4451,63 @@ void PlayerbotFactory::CleanupConsumables() // remove old consumables as part of
         bot->DestroyItem(item->GetBagSlot(), item->GetSlot(), true);
 }
 
+bool PlayerbotFactory::StripGlyphs(Player* bot)
+{
+    bool stripped = false;
+    for (uint32 slotIndex = 0; slotIndex < MAX_GLYPH_SLOT_INDEX; ++slotIndex)
+    {
+        uint32 glyph = bot->GetGlyph(slotIndex);
+        if (!glyph)
+            continue;
+
+        if (GlyphPropertiesEntry const* glyphEntry = sGlyphPropertiesStore.LookupEntry(glyph))
+        {
+            bot->RemoveAurasDueToSpell(glyphEntry->SpellId);
+
+            // Removed any triggered auras
+            Unit::AuraMap& ownedAuras = bot->GetOwnedAuras();
+            for (Unit::AuraMap::iterator iter = ownedAuras.begin(); iter != ownedAuras.end();)
+            {
+                Aura* aura = iter->second;
+                if (SpellInfo const* triggeredByAuraSpellInfo = aura->GetTriggeredByAuraSpellInfo())
+                {
+                    if (triggeredByAuraSpellInfo->Id == glyphEntry->SpellId)
+                    {
+                        bot->RemoveOwnedAura(iter);
+                        continue;
+                    }
+                }
+                ++iter;
+            }
+
+            // an unresolvable glyph entry is left alone, exactly as the pre-BotGlyphs loop did
+            bot->SetGlyph(slotIndex, 0, true);
+            stripped = true;
+        }
+    }
+    return stripped;
+}
+
 void PlayerbotFactory::InitGlyphs(bool increment)
 {
     bot->InitGlyphsForLevel();
+
+    // AiPlayerbot.BotGlyphs = 0: bots carry no glyphs. Strip whatever is there and never pick any, ahead of the
+    // custom_glyphs early-out below so a hand-set glyph is removed too.
+    if (!sPlayerbotAIConfig.botGlyphs)
+    {
+        StripGlyphs(bot);
+        bot->SendTalentsInfoData(false);
+        return;
+    }
+
     if (!increment && botAI &&
         botAI->GetAiObjectContext()->GetValue<bool>("custom_glyphs")->Get())
         return;   // // Added for custom Glyphs - custom glyphs flag test
 
     if (!increment)
     {
-        for (uint32 slotIndex = 0; slotIndex < MAX_GLYPH_SLOT_INDEX; ++slotIndex)
-        {
-            uint32 glyph = bot->GetGlyph(slotIndex);
-            if (GlyphPropertiesEntry const* glyphEntry = sGlyphPropertiesStore.LookupEntry(glyph))
-            {
-                bot->RemoveAurasDueToSpell(glyphEntry->SpellId);
-
-                // Removed any triggered auras
-                Unit::AuraMap& ownedAuras = bot->GetOwnedAuras();
-                for (Unit::AuraMap::iterator iter = ownedAuras.begin(); iter != ownedAuras.end();)
-                {
-                    Aura* aura = iter->second;
-                    if (SpellInfo const* triggeredByAuraSpellInfo = aura->GetTriggeredByAuraSpellInfo())
-                    {
-                        if (triggeredByAuraSpellInfo->Id == glyphEntry->SpellId)
-                        {
-                            bot->RemoveOwnedAura(iter);
-                            continue;
-                        }
-                    }
-                    ++iter;
-                }
-
-                bot->SetGlyph(slotIndex, 0, true);
-            }
-        }
+        StripGlyphs(bot);
     }
 
     if (sPlayerbotAIConfig.limitTalentsExpansion && bot->GetLevel() <= 70)
@@ -4650,8 +4674,9 @@ void PlayerbotFactory::InitGlyphs(bool increment)
     // Druid PvE/PvP exceptions
     if (bot->getClass() == CLASS_DRUID)
     {
-        // Cat PvE (spec index 3): If the bot is Feral spec, level 20 or higher, and does NOT have the Thick Hide talent
-        if (tab == DRUID_TAB_FERAL && bot->GetLevel() >= 20 && !bot->HasAura(SPELL_DRUID_THICK_HIDE))
+        // Cat PvE (spec index 3): If the bot is Feral spec, level 20 or higher, and does NOT have the Elder Hide talent
+        // Rework: Elder Hide marks a bear build, Thick Hide is gone from the reworked Feral tree
+        if (tab == DRUID_TAB_FERAL && bot->GetLevel() >= 20 && !ai::druid_rework::IsBearBuild(bot))
             tab = 3;
         // Balance PvP (spec index 4): If the bot has the Owlkin Frenzy talent
         else if (bot->HasAura(SPELL_OWLKIN_FRENZY))
@@ -4663,6 +4688,12 @@ void PlayerbotFactory::InitGlyphs(bool increment)
         else if (bot->HasAura(SPELL_IMPROVED_BARKSKIN))
             tab = 6;
     }
+
+    // This server has no PvP, so never hand out a PvP glyph set. The talent ids the checks above key on also
+    // name different talents in this server's reworked trees (e.g. a Ret build with Divine Purpose would read
+    // as Ret PvP). The PvE variants above (DK double aura, Frostfire, Cat) are kept.
+    if (tab < MAX_SPECNO && sPlayerbotAIConfig.premadeSpecName[cls][tab].find("pvp") != std::string::npos)
+        tab = AiFactory::GetPlayerSpecTab(bot);
 
     std::list<uint32> glyphs;
     ItemTemplateContainer const* itemTemplates = sObjectMgr->GetItemTemplateStore();

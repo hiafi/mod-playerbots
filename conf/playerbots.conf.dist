@@ -1775,6 +1775,16 @@ AiPlayerbot.PermanentlyInWorldTime = 31104000
 # INFORMATION
 #
 
+# AiPlayerbot.BotGlyphs
+#     Description: Whether bots (random bots and alts) get glyphs.
+#                  0 = bots carry no glyphs: every glyph slot is cleared whenever glyphs would be assigned
+#                      (randomize, trainer, talent change, alt maintenance, "glyph equip", using a glyph item)
+#                      and any glyph a bot already has is stripped when it logs in and again on every dual-spec
+#                      switch. The AiPlayerbot.PremadeSpecGlyph lines below are ignored. A spec the bot has not
+#                      been switched into yet keeps its glyphs in the database until the switch strips them.
+#     Default:     1 (bots get the premade glyphs)
+AiPlayerbot.BotGlyphs = 1
+
 # AiPlayerbot.PremadeSpecName.<class>.<specno> = <name>         #Name of the talent specialisation
 # AiPlayerbot.PremadeSpecLink.<class>.<specno>.<level> = <link> #Wowhead style link the bot should work towards at given level.
 # AiPlayerbot.PremadeSpecGlyph.<class>.<specno> = <major 1>,<minor 1>,<major 2>,<minor 2>,<minor 3>,<major 3>   #ItemId of the glyphs
@@ -1822,31 +1832,33 @@ AiPlayerbot.PremadeSpecLink.1.5.80 = 0502300123-3-250031220223012521332113321
 # PALADIN
 #
 
+# Paladin rework (custom talent trees): slots 0-2 use the level-60 builds from docs/reworks/bot-strategy/.
+# .80 repeats .60 so a level-80 bot still gets the build (leftover points go to the other trees). The
+# PvP slots 3-5 reuse the PvE builds (no PvP on this server; stock positions point at the old trees).
 AiPlayerbot.PremadeSpecName.2.0 = holy pve
 AiPlayerbot.PremadeSpecGlyph.2.0 = 41106,43367,45741,43368,43365,41109
-AiPlayerbot.PremadeSpecLink.2.0.60 = 50350151020013053100515221
-AiPlayerbot.PremadeSpecLink.2.0.80 = 50350152100013053100515221-50320104203
+AiPlayerbot.PremadeSpecLink.2.0.60 = 0330333031001020013023031300330310201
+AiPlayerbot.PremadeSpecLink.2.0.80 = 0330333031001020013023031300330310201
 AiPlayerbot.PremadeSpecName.2.1 = prot pve
 AiPlayerbot.PremadeSpecGlyph.2.1 = 41100,43367,43869,43368,43369,45745
-AiPlayerbot.PremadeSpecLink.2.1.60 = -05005135203102311333112321
-AiPlayerbot.PremadeSpecLink.2.1.80 = -05005135203102311333312321-502302012003
+AiPlayerbot.PremadeSpecLink.2.1.60 = 0-030332001332231100330231002310020301
+AiPlayerbot.PremadeSpecLink.2.1.80 = 0-030332001332231100330231002310020301
 AiPlayerbot.PremadeSpecName.2.2 = ret pve
 AiPlayerbot.PremadeSpecGlyph.2.2 = 41092,43367,41099,43368,43340,43869
-AiPlayerbot.PremadeSpecLink.2.2.60 = --05230051203331302133231131
-AiPlayerbot.PremadeSpecLink.2.2.65 = -05-05230051203331302133231131
-AiPlayerbot.PremadeSpecLink.2.2.80 = 050501-05-05232051203331302133231331
+AiPlayerbot.PremadeSpecLink.2.2.60 = 0-0-33300202310030031033300213310130301
+AiPlayerbot.PremadeSpecLink.2.2.80 = 0-0-33300202310030031033300213310130301
 AiPlayerbot.PremadeSpecName.2.3 = holy pvp
 AiPlayerbot.PremadeSpecGlyph.2.3 = 41110,43367,45746,43369,43365,45747
-AiPlayerbot.PremadeSpecLink.2.3.60 = 50332150300013050133215221
-AiPlayerbot.PremadeSpecLink.2.3.80 = 50332150300013050133315221-5032013122
+AiPlayerbot.PremadeSpecLink.2.3.60 = 0330333031001020013023031300330310201
+AiPlayerbot.PremadeSpecLink.2.3.80 = 0330333031001020013023031300330310201
 AiPlayerbot.PremadeSpecName.2.4 = prot pvp
 AiPlayerbot.PremadeSpecGlyph.2.4 = 41092,43367,41101,43369,43365,45745
-AiPlayerbot.PremadeSpecLink.2.4.60 = -15320130223122311323311321
-AiPlayerbot.PremadeSpecLink.2.4.80 = -15320130223122321333312321-052300502
+AiPlayerbot.PremadeSpecLink.2.4.60 = 0-030332001332231100330231002310020301
+AiPlayerbot.PremadeSpecLink.2.4.80 = 0-030332001332231100330231002310020301
 AiPlayerbot.PremadeSpecName.2.5 = ret pvp
 AiPlayerbot.PremadeSpecGlyph.2.5 = 41095,43367,41102,43369,43365,45747
-AiPlayerbot.PremadeSpecLink.2.5.60 = --05230250203331222133201321
-AiPlayerbot.PremadeSpecLink.2.5.80 = -1532013022-05230250203331322133201321
+AiPlayerbot.PremadeSpecLink.2.5.60 = 0-0-33300202310030031033300213310130301
+AiPlayerbot.PremadeSpecLink.2.5.80 = 0-0-33300202310030031033300213310130301
 
 #
 #
@@ -1936,30 +1948,38 @@ AiPlayerbot.PremadeSpecLink.4.5.80 = 3023031-3-5120212030320121350135231251
 # PRIEST
 #
 
+# Priest rework (custom talent trees): the links are the level-60 guide builds for Discipline, Holy and Shadow
+# (docs/reworks/bot-strategy/ bot guides; rework-bot-strategies PRIEST plan D7). Each string is "<disc>-<holy>-<shadow>"
+# with one digit per talent in (tier, column) order, so a leading "-" or "--" is an empty Discipline / Holy tab and the
+# build sits in the tab its prefix points at. The stock links decoded as garbage on the reworked grid. .80 repeats .60
+# (at level 80 only the .80 entry is read) until there are level-80 builds, and the PvP slots 3-5 reuse the PvE builds.
+# PremadeSpecName and PremadeSpecGlyph are unchanged: bot glyphs are off on this server (AiPlayerbot.BotGlyphs = 0),
+# so the glyph lists are never applied.
+
 AiPlayerbot.PremadeSpecName.5.0 = disc pve
 AiPlayerbot.PremadeSpecGlyph.5.0 = 42408,43371,42400,43374,43342,45756
-AiPlayerbot.PremadeSpecLink.5.0.60 = 0503203130300512301323131051
-AiPlayerbot.PremadeSpecLink.5.0.80 = 0503203130300512331323231251-03520103
+AiPlayerbot.PremadeSpecLink.5.0.60 = 05302303303032013031323021131
+AiPlayerbot.PremadeSpecLink.5.0.80 = 05302303303032013031323021131
 AiPlayerbot.PremadeSpecName.5.1 = holy pve
 AiPlayerbot.PremadeSpecGlyph.5.1 = 42408,43371,42400,43374,43342,42396
-AiPlayerbot.PremadeSpecLink.5.1.60 = -035050031301152530000331331
-AiPlayerbot.PremadeSpecLink.5.1.80 = 05032031-235050032302152530000331351
+AiPlayerbot.PremadeSpecLink.5.1.60 = -233230030301000331013131000330010331001
+AiPlayerbot.PremadeSpecLink.5.1.80 = -233230030301000331013131000330010331001
 AiPlayerbot.PremadeSpecName.5.2 = shadow pve
 AiPlayerbot.PremadeSpecGlyph.5.2 = 45753,43371,42407,43374,43370,42415
-AiPlayerbot.PremadeSpecLink.5.2.60 = --325003041203010323150301351
-AiPlayerbot.PremadeSpecLink.5.2.80 = 0503203--325023051223010323152301351
+AiPlayerbot.PremadeSpecLink.5.2.60 = --303320310102313132313110330131
+AiPlayerbot.PremadeSpecLink.5.2.80 = --303320310102313132313110330131
 AiPlayerbot.PremadeSpecName.5.3 = disc pvp
 AiPlayerbot.PremadeSpecGlyph.5.3 = 42408,43371,45760,43370,43374,45756
-AiPlayerbot.PremadeSpecLink.5.3.60 = 5003203130320512201323031051
-AiPlayerbot.PremadeSpecLink.5.3.80 = 5003203130322512331013231151-23050113
+AiPlayerbot.PremadeSpecLink.5.3.60 = 05302303303032013031323021131
+AiPlayerbot.PremadeSpecLink.5.3.80 = 05302303303032013031323021131
 AiPlayerbot.PremadeSpecName.5.4 = holy pvp
 AiPlayerbot.PremadeSpecGlyph.5.4 = 42411,43371,42408,43370,43374,45755
-AiPlayerbot.PremadeSpecLink.5.4.60 = -235501031000152430320031151
-AiPlayerbot.PremadeSpecLink.5.4.80 = 500320313-235501031000152530320031351
+AiPlayerbot.PremadeSpecLink.5.4.60 = -233230030301000331013131000330010331001
+AiPlayerbot.PremadeSpecLink.5.4.80 = -233230030301000331013131000330010331001
 AiPlayerbot.PremadeSpecName.5.5 = shadow pvp
 AiPlayerbot.PremadeSpecGlyph.5.5 = 42407,43371,45753,43370,43374,42408
-AiPlayerbot.PremadeSpecLink.5.5.60 = --005323241223112003102311351
-AiPlayerbot.PremadeSpecLink.5.5.80 = 50332031003--005323241223112003102311351
+AiPlayerbot.PremadeSpecLink.5.5.60 = --303320310102313132313110330131
+AiPlayerbot.PremadeSpecLink.5.5.80 = --303320310102313132313110330131
 
 #
 #
@@ -2039,34 +2059,39 @@ AiPlayerbot.PremadeSpecLink.7.5.80 = -023222301004-05032331331013501120331251
 # MAGE
 #
 
+# Mage rework (custom talent trees): slots 0-2 use the level-60 builds from docs/reworks/bot-strategy/ (MG8).
+# .80 repeats .60 so a level-80 bot still gets the build (leftover points go to the other trees). Frostfire (3)
+# and the PvP slots 4-6 reuse the PvE builds and keep probability 0 (stock positions point at the old trees).
+# Frost takes Glyph of Water Elemental (42754), not Eternal Water (50045): the glyphed elemental is a different
+# creature (37994) without Freeze and with the stock Waterbolt.
 AiPlayerbot.PremadeSpecName.8.0 = arcane pve
 AiPlayerbot.PremadeSpecGlyph.8.0 = 42735,43339,44955,43364,43361,42751
-AiPlayerbot.PremadeSpecLink.8.0.60 = 230005231100330150323102500321
-AiPlayerbot.PremadeSpecLink.8.0.80 = 230005231100330150323102505321-03-203303001
+AiPlayerbot.PremadeSpecLink.8.0.60 = 3330303303000303103312310230131
+AiPlayerbot.PremadeSpecLink.8.0.80 = 3330303303000303103312310230131
 AiPlayerbot.PremadeSpecName.8.1 = fire pve
 AiPlayerbot.PremadeSpecGlyph.8.1 = 42739,43339,45737,43364,44920,42751
-AiPlayerbot.PremadeSpecLink.8.1.60 = -0055030011302231053120321341
-AiPlayerbot.PremadeSpecLink.8.1.80 = 23000503110003-0055032012303330053120300351
+AiPlayerbot.PremadeSpecLink.8.1.60 = -303330300133303001331103301331
+AiPlayerbot.PremadeSpecLink.8.1.80 = -303330300133303001331103301331
 AiPlayerbot.PremadeSpecName.8.2 = frost pve
-AiPlayerbot.PremadeSpecGlyph.8.2 = 42742,43339,50045,43364,43361,42751
-AiPlayerbot.PremadeSpecLink.8.2.60 = --0533030313203100030152231151
-AiPlayerbot.PremadeSpecLink.8.2.80 = 23002303110003--0533030313203100030152231351
+AiPlayerbot.PremadeSpecGlyph.8.2 = 42742,43339,42754,43364,43361,42751
+AiPlayerbot.PremadeSpecLink.8.2.60 = --3203013301202330310030131231331
+AiPlayerbot.PremadeSpecLink.8.2.80 = --3203013301202330310030131231331
 AiPlayerbot.PremadeSpecName.8.3 = frostfire pve
 AiPlayerbot.PremadeSpecGlyph.8.3 = 44684,44920,42751,43339,43364,45737
-AiPlayerbot.PremadeSpecLink.8.3.60 = -2305032012303331053120300051
-AiPlayerbot.PremadeSpecLink.8.3.80 = -2305032012303331053120321351-023302031
+AiPlayerbot.PremadeSpecLink.8.3.60 = -303330300133303001331103301331
+AiPlayerbot.PremadeSpecLink.8.3.80 = -303330300133303001331103301331
 AiPlayerbot.PremadeSpecName.8.4 = arcane pvp
 AiPlayerbot.PremadeSpecGlyph.8.4 = 42735,43364,42738,43360,43357,42752
-AiPlayerbot.PremadeSpecLink.8.4.60 = 205323200122032103303102015221
-AiPlayerbot.PremadeSpecLink.8.4.80 = 205323200122032103303102015321-23002-303020301
+AiPlayerbot.PremadeSpecLink.8.4.60 = 3330303303000303103312310230131
+AiPlayerbot.PremadeSpecLink.8.4.80 = 3330303303000303103312310230131
 AiPlayerbot.PremadeSpecName.8.5 = fire pvp
 AiPlayerbot.PremadeSpecGlyph.8.5 = 42738,43364,42752,43360,43357,45737
-AiPlayerbot.PremadeSpecLink.8.5.60 = -2305202312020031223122301351
-AiPlayerbot.PremadeSpecLink.8.5.80 = 230321030122-2305212312020031223122301351
+AiPlayerbot.PremadeSpecLink.8.5.60 = -303330300133303001331103301331
+AiPlayerbot.PremadeSpecLink.8.5.80 = -303330300133303001331103301331
 AiPlayerbot.PremadeSpecName.8.6 = frost pvp
 AiPlayerbot.PremadeSpecGlyph.8.6 = 42738,43364,45740,43357,43360,42752
-AiPlayerbot.PremadeSpecLink.8.6.60 = --3533203210203100232102231151
-AiPlayerbot.PremadeSpecLink.8.6.80 = 23032103010203--3533203210203100232102231151
+AiPlayerbot.PremadeSpecLink.8.6.60 = --3203013301202330310030131231331
+AiPlayerbot.PremadeSpecLink.8.6.80 = --3203013301202330310030131231331
 
 #
 #
@@ -2076,32 +2101,41 @@ AiPlayerbot.PremadeSpecLink.8.6.80 = 23032103010203--353320321020310023210223115
 # WARLOCK
 #
 
+# Warlock rework (custom talent trees): the links are the level-60 guide builds for Affliction, Demonology and
+# Destruction (docs/reworks/bot-strategy/warlock-aff-strat.md, warlock-demo-strat.md,
+# warlock-destr-strat.md; rework-bot-strategies WARLOCK YAML pass, Stage WC2). Each string is
+# "<affliction>-<demonology>-<destruction>" with one digit per talent in (tier, column) order, so a leading "-" or "--"
+# is an empty Affliction / Affliction+Demonology tab and the build sits in the tab its prefix points at (demonology is
+# "-", destruction is "--"). The stock links decoded as garbage on the reworked grid. .80 repeats .60 (at level 80 only
+# the .80 entry is read) until there are level-80 builds, the stock .70 lines are gone, and the PvP slots 3-5 reuse the
+# affliction, demonology and destruction PvE builds.
+# PremadeSpecName and PremadeSpecGlyph are unchanged: bot glyphs are off on this server (AiPlayerbot.BotGlyphs = 0),
+# so the glyph lists are never applied.
+
 AiPlayerbot.PremadeSpecName.9.0 = affli pve
 AiPlayerbot.PremadeSpecGlyph.9.0 = 45785,43390,50077,43394,43393,45779
-AiPlayerbot.PremadeSpecLink.9.0.60 = 2350022001113510053500131151
-AiPlayerbot.PremadeSpecLink.9.0.70 = 2350022001113510053500131151--55
-AiPlayerbot.PremadeSpecLink.9.0.80 = 2350022001123510253500331151--55000005
+AiPlayerbot.PremadeSpecLink.9.0.60 = 332002202232000103330010333112231
+AiPlayerbot.PremadeSpecLink.9.0.80 = 332002202232000103330010333112231
 AiPlayerbot.PremadeSpecName.9.1 = demo pve
 AiPlayerbot.PremadeSpecGlyph.9.1 = 45785,43390,50077,43394,43393,42459
-AiPlayerbot.PremadeSpecLink.9.1.60 = -003203301135112530135201051
-AiPlayerbot.PremadeSpecLink.9.1.70 = -003203301135112530135201051-55
-AiPlayerbot.PremadeSpecLink.9.1.80 = -003203301135112530135221351-55000005
+AiPlayerbot.PremadeSpecLink.9.1.60 = -302023202120330011003030013030300130231
+AiPlayerbot.PremadeSpecLink.9.1.80 = -302023202120330011003030013030300130231
 AiPlayerbot.PremadeSpecName.9.2 = destro pve
 AiPlayerbot.PremadeSpecGlyph.9.2 = 45785,43390,42454,43394,43393,42453
-AiPlayerbot.PremadeSpecLink.9.2.60 = --05203215200231051305031151
-AiPlayerbot.PremadeSpecLink.9.2.80 = 23-0302-05203215220331051335231351
+AiPlayerbot.PremadeSpecLink.9.2.60 = --3333200210220133030113023310231
+AiPlayerbot.PremadeSpecLink.9.2.80 = --3333200210220133030113023310231
 AiPlayerbot.PremadeSpecName.9.3 = affli pvp
 AiPlayerbot.PremadeSpecGlyph.9.3 = 50077,43392,42455,43390,43389,45783
-AiPlayerbot.PremadeSpecLink.9.3.60 = 0350002231223011053502301151
-AiPlayerbot.PremadeSpecLink.9.3.80 = 2350002231223111053502301151-2032003011302
+AiPlayerbot.PremadeSpecLink.9.3.60 = 332002202232000103330010333112231
+AiPlayerbot.PremadeSpecLink.9.3.80 = 332002202232000103330010333112231
 AiPlayerbot.PremadeSpecName.9.4 = demo pvp
 AiPlayerbot.PremadeSpecGlyph.9.4 = 42459,43392,45780,43390,43389,45783
-AiPlayerbot.PremadeSpecLink.9.4.60 = -003203301135202530135001251
-AiPlayerbot.PremadeSpecLink.9.4.80 = -003203301135202530135011351-052300152
+AiPlayerbot.PremadeSpecLink.9.4.60 = -302023202120330011003030013030300130231
+AiPlayerbot.PremadeSpecLink.9.4.80 = -302023202120330011003030013030300130231
 AiPlayerbot.PremadeSpecName.9.5 = destro pvp
 AiPlayerbot.PremadeSpecGlyph.9.5 = 42471,43392,42454,43390,43389,45783
-AiPlayerbot.PremadeSpecLink.9.5.60 = --05230015220331351005031051
-AiPlayerbot.PremadeSpecLink.9.5.80 = -2032003311302-05230015220331351005031051
+AiPlayerbot.PremadeSpecLink.9.5.60 = --3333200210220133030113023310231
+AiPlayerbot.PremadeSpecLink.9.5.80 = --3333200210220133030113023310231
 
 #
 #
@@ -2111,34 +2145,45 @@ AiPlayerbot.PremadeSpecLink.9.5.80 = -2032003311302-05230015220331351005031051
 # DRUID
 #
 
+# Druid rework (custom talent trees): the links are the level-60 guide builds for Balance, Bear, Restoration and Cat
+# (docs/reworks/bot-strategy/ bot guides: druid-balance-strat.md, druid-feral-tank-strat.md, druid-resto-strat.md,
+# druid-feral-dps-strat.md; rework-bot-strategies DRUID plan). Each string is "<balance>-<feral>-<resto>" with one digit
+# per talent in (tier, column) order, so a leading "-" or "--" is an empty Balance / Balance+Feral tab and the build
+# sits in the tab its prefix points at (bear and cat are Feral, one "-"; resto is "--"). The stock links decoded as garbage
+# on the reworked grid. Elder Hide in the bear link is what marks a bear: the factory and AI read it (IsBearBuild),
+# and the cat link has none. .80 repeats .60 (at level 80 only the .80 entry is read) until there are level-80 builds,
+# and the PvP slots 4-6 (balance, cat, resto) reuse the PvE builds; there is no PvP bear slot.
+# PremadeSpecName and PremadeSpecGlyph are unchanged: bot glyphs are off on this server (AiPlayerbot.BotGlyphs = 0),
+# so the glyph lists are never applied.
+
 AiPlayerbot.PremadeSpecName.11.0 = balance pve
 AiPlayerbot.PremadeSpecGlyph.11.0 = 40916,43331,40921,43335,44922,40919
-AiPlayerbot.PremadeSpecLink.11.0.60 = 5032003125031003213304301231
-AiPlayerbot.PremadeSpecLink.11.0.80 = 5032003125331303213305301231--205003012
+AiPlayerbot.PremadeSpecLink.11.0.60 = 303301313203031303301330131031
+AiPlayerbot.PremadeSpecLink.11.0.80 = 303301313203031303301330131031
 AiPlayerbot.PremadeSpecName.11.1 = bear pve
 AiPlayerbot.PremadeSpecGlyph.11.1 = 40897,43331,46372,43335,43332,40899
-AiPlayerbot.PremadeSpecLink.11.1.60 = -503232132322010303120300013501
-AiPlayerbot.PremadeSpecLink.11.1.80 = -503232132322010353120303013511-20350001
+AiPlayerbot.PremadeSpecLink.11.1.60 = -353020032130002003003300120333200031
+AiPlayerbot.PremadeSpecLink.11.1.80 = -353020032130002003003300120333200031
 AiPlayerbot.PremadeSpecName.11.2 = resto pve
 AiPlayerbot.PremadeSpecGlyph.11.2 = 40906,43331,45602,43335,43674,45603
-AiPlayerbot.PremadeSpecLink.11.2.60 = --230033312031502331050313031
-AiPlayerbot.PremadeSpecLink.11.2.80 = 05320031--230033312031502431053313051
+AiPlayerbot.PremadeSpecLink.11.2.60 = --2003303330103031223331030113031
+AiPlayerbot.PremadeSpecLink.11.2.80 = --2003303330103031223331030113031
 AiPlayerbot.PremadeSpecName.11.3 = cat pve
 AiPlayerbot.PremadeSpecGlyph.11.3 = 40902,43331,40901,43674,43335,45604
-AiPlayerbot.PremadeSpecLink.11.3.60 = -552202032322010053100030310501
-AiPlayerbot.PremadeSpecLink.11.3.80 = -553202032322010053120030310511-203503012
+AiPlayerbot.PremadeSpecLink.11.3.60 = -350023002032302300023003103303003101
+AiPlayerbot.PremadeSpecLink.11.3.80 = -350023002032302300023003103303003101
 AiPlayerbot.PremadeSpecName.11.4 = balance pvp
 AiPlayerbot.PremadeSpecGlyph.11.4 = 40921,43331,45622,43674,43335,45623
-AiPlayerbot.PremadeSpecLink.11.4.60 = 5012203115331002213032311231
-AiPlayerbot.PremadeSpecLink.11.4.80 = 5022203125331003213035311231--230033012
+AiPlayerbot.PremadeSpecLink.11.4.60 = 303301313203031303301330131031
+AiPlayerbot.PremadeSpecLink.11.4.80 = 303301313203031303301330131031
 AiPlayerbot.PremadeSpecName.11.5 = cat pvp
 AiPlayerbot.PremadeSpecGlyph.11.5 = 40902,43331,45601,43674,43335,40901
-AiPlayerbot.PremadeSpecLink.11.5.60 = -513202032322010053103030310501
-AiPlayerbot.PremadeSpecLink.11.5.80 = -523202032322010053103030310511-205503012
+AiPlayerbot.PremadeSpecLink.11.5.60 = -350023002032302300023003103303003101
+AiPlayerbot.PremadeSpecLink.11.5.80 = -350023002032302300023003103303003101
 AiPlayerbot.PremadeSpecName.11.6 = resto pvp
 AiPlayerbot.PremadeSpecGlyph.11.6 = 40913,43331,40906,43335,43674,45623
-AiPlayerbot.PremadeSpecLink.11.6.60 = --230033312031500511350013051
-AiPlayerbot.PremadeSpecLink.11.6.80 = 05320021--230033312031500531353013251
+AiPlayerbot.PremadeSpecLink.11.6.60 = --2003303330103031223331030113031
+AiPlayerbot.PremadeSpecLink.11.6.80 = --2003303330103031223331030113031
 
 #
 #
@@ -2536,12 +2581,30 @@ AiPlayerbot.CommandServerPort = 8888
 ####################################################################################################
 
 ####################################################################################################
+# STRATEGY DATA
+#
+#    AiPlayerbot.StrategyDataPath
+#        Description: Directory holding the YAML strategy rows (*.yaml, searched recursively). Each
+#                     file holds one or more YAML documents separated by "---", one strategy key
+#                     per document. Read at startup and by ".botstrat reload" (".botstrat check"
+#                     validates without applying). Empty uses the module's own data/strategies
+#                     directory, resolved at build time.
+#        Default:     "" - (module data/strategies)
+
+AiPlayerbot.StrategyDataPath = ""
+
+#
+#
+####################################################################################################
+
+####################################################################################################
 # DEBUG SWITCHES
 #
 
 AiPlayerbot.SpellDump = 0
 AiPlayerbot.LogInGroupOnly = 1
 AiPlayerbot.LogValuesPerTick = 0
+
 AiPlayerbot.RandomChangeMultiplier = 1
 
 # Tell which spell is avoiding (experimental)

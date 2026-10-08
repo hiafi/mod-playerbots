@@ -1,0 +1,62 @@
+# Rows every reworked priest shares, in two documents. "priest/healer" is appended to the Discipline and Holy combat
+# strategies and the solo strategy by PriestReworkHealerStrategy::InitTriggers; "priest/nc" is appended to the "nc"
+# strategy by PriestReworkNonCombatStrategy::InitTriggers, with the per-spec out-of-combat documents after it.
+# Each row queues its actions at the relevance when its condition holds (`when`, the expression language of
+# StrategyExpression.h) or when an existing C++ trigger fires (`trigger`). Execution order is by relevance, not by
+# position in this file. Actions named "priest ..." are RowCheckedAction (they re-check their own row before casting).
+# Spell ids: PriestReworkIds.h and the priest rework plan, section 2.
+strategy: priest/healer
+class: priest
+rows:
+  # Kept from the stock HealPriestStrategy: walk into range of a party member who needs healing
+  - do: reach party member to heal
+    trigger: party member to heal out of spell range
+    relevance: emergency + 3
+
+  # Fade on threat, kept from the stock GenericPriestStrategy (PR14); the action only fires in a group
+  - do: priest fade
+    trigger: medium threat
+    relevance: dispel + 5
+
+  # Fear Ward on the tank while nobody is hurt (PR13)
+  - do: priest fear ward
+    when: >-
+      value("party members below::90") == 0 and known(6346) and cooldown(6346) == 0 and alive("effective tank")
+      and in_range("effective tank", 30) and not aura("effective tank", 6346)
+    relevance: normal + 1
+---
+strategy: priest/nc
+class: priest
+conditions:
+  # A priest that has learned none of the spec talents yet (Penance, Holy Word: Serenity, Shadowform)
+  no_spec: not known(47540) and not known(200197) and not known(15473)
+  tank_ok: alive("effective tank") and in_range("effective tank", 40)
+rows:
+  # Inner Fire, by id: the old ranks share the name
+  - do: priest inner fire
+    when: known(588) and not aura(self, 588, own)
+    relevance: normal
+
+  # Kept from the stock PriestNonCombatStrategy: raise the dead (leaving Shadowform first), weapon oil, pet stance
+  - do: [remove shadowform, resurrection]
+    trigger: party member dead
+    relevance: critical heal + 10
+  - do: apply oil
+    trigger: often
+    relevance: bg
+  - do: set pet stance
+    trigger: new pet
+    relevance: normal
+
+  # Out-of-combat heals for a priest below its spec talent: "priest/nc-disc" and "priest/nc-holy" are gated on
+  # Penance and Serenity, and a Shadow bot has none by design, so a leveling healer would otherwise never heal between
+  # pulls. The qualifiers differ from the spec rows' and the gates are exclusive, so no basket merges (R1)
+  - do: priest greater heal::65,65
+    when: no_spec and health_pct("tank first heal target::65,65") < 65
+    relevance: normal + 9
+  - do: priest flash heal::50,50
+    when: no_spec and health_pct("tank first heal target::50,50") < 50
+    relevance: normal + 8
+  - do: priest renew tank
+    when: no_spec and tank_ok and health_pct("effective tank") < 100 and not aura("effective tank", 139, own)
+    relevance: normal + 2

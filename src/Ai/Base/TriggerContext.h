@@ -7,7 +7,9 @@
 #ifndef PLAYERBOTS_TRIGGERCONTEXT_H
 #define PLAYERBOTS_TRIGGERCONTEXT_H
 
+#include "ConditionTrigger.h"
 #include "CureTriggers.h"
+#include "FightDurationTriggers.h"
 #include "FishingTriggers.h"
 #include "GenericTriggers.h"
 #include "GuildTriggers.h"
@@ -23,6 +25,7 @@
 #include "RpgTriggers.h"
 #include "RtiTriggers.h"
 #include "StuckTriggers.h"
+#include "TargetTypeTriggers.h"
 #include "TravelTriggers.h"
 #include "WaitForAttackTriggers.h"
 
@@ -33,10 +36,18 @@ class TriggerContext : public NamedObjectContext<Trigger>
 public:
     TriggerContext()
     {
+        creators["data"] = &TriggerContext::data;
         creators["return"] = &TriggerContext::_return;
         creators["sit"] = &TriggerContext::sit;
         creators["return to stay position"] = &TriggerContext::return_to_stay_position;
         creators["collision"] = &TriggerContext::collision;
+        creators["target is boss"] = &TriggerContext::target_is_boss;
+        creators["target is elite"] = &TriggerContext::target_is_elite;
+        creators["target controlled"] = &TriggerContext::target_controlled;
+        creators["combat time"] = &TriggerContext::combat_time;
+        creators["target lifetime at least"] = &TriggerContext::target_lifetime_at_least;
+        creators["moving"] = &TriggerContext::moving;
+        creators["not moving"] = &TriggerContext::not_moving;
 
         creators["timer"] = &TriggerContext::Timer;
         creators["timer bg"] = &TriggerContext::TimerBG;
@@ -252,6 +263,14 @@ public:
     }
 
 private:
+    static Trigger* target_is_boss(PlayerbotAI* botAI) { return new TargetIsBossTrigger(botAI); }
+    static Trigger* target_is_elite(PlayerbotAI* botAI) { return new TargetIsEliteTrigger(botAI); }
+    static Trigger* target_controlled(PlayerbotAI* botAI) { return new TargetControlledTrigger(botAI); }
+    static Trigger* combat_time(PlayerbotAI* botAI) { return new CombatTimeTrigger(botAI); }
+    static Trigger* data(PlayerbotAI* botAI) { return new ConditionTrigger(botAI); }
+    static Trigger* target_lifetime_at_least(PlayerbotAI* botAI) { return new TargetLifetimeAtLeastTrigger(botAI); }
+    static Trigger* moving(PlayerbotAI* botAI) { return new MovingTrigger(botAI); }
+    static Trigger* not_moving(PlayerbotAI* botAI) { return new NoMovementTrigger(botAI, "not moving"); }
     static Trigger* give_food(PlayerbotAI* botAI) { return new GiveFoodTrigger(botAI); }
     static Trigger* give_water(PlayerbotAI* botAI) { return new GiveWaterTrigger(botAI); }
     static Trigger* no_rti(PlayerbotAI* botAI) { return new NoRtiTrigger(botAI); }

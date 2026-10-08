@@ -25,6 +25,18 @@ public:
     float Calculate() override;
 };
 
+// Seconds the group needs to kill the current target (ai::target::EstimatedLifetime), 0 without a target.
+class TargetLifetimeValue : public FloatCalculatedValue
+{
+public:
+    TargetLifetimeValue(PlayerbotAI* botAI, std::string const name = "target lifetime")
+        : FloatCalculatedValue(botAI, name, IN_MILLISECONDS)
+    {
+    }
+
+    float Calculate() override;
+};
+
 class EstimatedGroupDpsValue : public FloatCalculatedValue
 {
 public:

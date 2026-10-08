@@ -1,0 +1,24 @@
+# The damage rows of the reworked priest's "holy dps" strategy (PriestReworkSoloStrategy), appended after the healer
+# rows of the bot's own spec (priest/healer, then priest/disc or priest/holy): a Disc or Holy bot with no healing job
+# keeps healing itself and whoever is hurt, and fights otherwise. The actions have names of their own ("priest solo
+# ...") so they never merge into a spec row's queue basket, and every row holds back while 1+ member is under 50%
+# (the heal rows' business). The default action is the wand.
+strategy: priest/solo
+class: priest
+conditions:
+  fighting: alive(target) and value("party members below::50") == 0
+rows:
+  # Shadow Word: Pain on a target that has none of the bot's
+  - do: priest solo pain
+    when: fighting and not aura(target, 589, own)
+    relevance: normal + 2.8
+
+  # Holy Fire when the Holy talent is known and ready
+  - do: priest solo holy fire
+    when: fighting and known(14914) and cooldown(14914) == 0
+    relevance: normal + 2.6
+
+  # Smite as the filler
+  - do: priest solo smite
+    when: fighting
+    relevance: normal + 2.4

@@ -1,0 +1,123 @@
+# Frost mage rows, appended to the "frost" combat strategy by MageReworkFrostStrategy::InitTriggers.
+# Each row queues its actions at the relevance when its condition holds (`when`, the expression language of
+# StrategyExpression.h) or when an existing C++ trigger fires (`trigger`). Execution order is by relevance, not by
+# position in this file. The rows that stay C++ scan the bags or read the pet: Mana Gem, Evocation (the action
+# re-checks the same guards) and Freeze (pet cooldown).
+# Every Ice Lance row has its own action, which re-checks that row: a queued basket can survive a whole Glacial Spike
+# cast, and baskets with the same action name merge. Spell ids: MageReworkIds.h, plan MG38-MG50.
+# AoE rows are gated on `unsafe aoe units` (X11).
+strategy: mage/frost
+class: mage
+conditions:
+  # Mode gates. Single and Pack rows need a live current target; the pack is 3+ enemies within 10 yd of the target
+  # (the current target counts itself). Target rows apply in both modes.
+  target_alive: alive(target)
+  single: alive(target) and enemies_near_target(10) < 3
+  pack: alive(target) and enemies_near_target(10) >= 3
+  # X11 gates: Freeze (8 yd) and the Frozen Orb pulse (10 yd) land around the target, Cone of Cold (12 yd with Arctic
+  # Reach) is a cone from the bot, Blizzard (8 yd) goes on the most clustered enemy
+  safe_target_8: value("unsafe aoe units::8") == 0
+  safe_target_10: value("unsafe aoe units::10") == 0
+  safe_self_12: value("unsafe aoe units::12;self") == 0
+  safe_cluster_8: value("unsafe aoe units::8;cluster") == 0
+
+  # Icicles 200001, Fingers of Frost charges 74396 (the stack count, MG41; 44544 is only the aura state)
+  icicles_full: stacks(self, 200001) >= 5
+  # Own Shattering Cold 200003 on the target (caster-scoped)
+  shattered: aura(target, 200003, own)
+
+rows:
+  # Pet upkeep, copied from the stock Frost strategy (MG39): summon when there is none, enable the Waterbolt autocast,
+  # set the stance of a new pet
+  - do: summon water elemental
+    trigger: no pet
+    relevance: 30
+  - do: toggle pet spell
+    trigger: has pet
+    relevance: 60
+  - do: set pet stance
+    trigger: new pet
+    relevance: 60
+
+  # Mana, either mode: the gem first (below 30%), then Evocation (below 15%, no Icy Veins, MG6/MG50)
+  - do: use mana agate
+    trigger: frost mana gem
+    relevance: emergency - 1
+  - do: frost evocation
+    trigger: frost evocation
+    relevance: emergency - 2
+
+  # Upkeep and cooldowns, either mode. Ice Barrier whenever own 11426 is missing (MG49).
+  - do: ice barrier
+    when: known(11426) and cooldown(11426) == 0 and not aura(self, 11426, own)
+    relevance: normal + 9.9
+  - do: icy veins
+    when: target_alive and known(12472) and cooldown(12472) == 0 and lifetime(target) >= 20
+    relevance: normal + 9.5
+  # Water Elemental Freeze at the target's position (MG40): the trigger is pet-exists and Freeze off the pet's cooldown
+  - do: frost freeze
+    when: trigger("frost freeze ready") and safe_target_8
+    relevance: normal + 9.0
+  # Frozen Orb travels along the bot's facing: the action turns the bot to the target as it casts, so the row only
+  # needs the target in front (90 degrees) and within 30 yd (MG47)
+  - do: frost frozen orb
+    when: >-
+      target_alive and known(200007) and cooldown(200007) == 0 and in_arc(target, 90) and in_range(target, 30)
+      and safe_target_10
+    relevance: normal + 8.5
+
+  # The Flurry + Glacial Spike unit, either mode (MG42). Flurry needs 5 Icicles and standing; the Spike is own
+  # Shattering Cold on the target or a Flurry cast within 2 s (ms_since_cast; the aura lands 400 ms after Flurry).
+  # The Spike outranks every other GCD row (Ice Barrier, Frozen Orb): nothing may land between Flurry and the Spike,
+  # or the Spike lands after Shattering Cold is gone. It is only castable in that window, since the core refuses it
+  # below 5 Icicles.
+  - do: frost flurry
+    when: >-
+      target_alive and known(200004) and cooldown(200004) == 0 and icicles_full and not moving(self)
+    relevance: normal + 8.0
+  - do: frost shattered glacial spike
+    when: target_alive and known(200002) and (shattered or ms_since_cast(200004) <= 2000)
+    relevance: normal + 9.95
+
+  # Single target (MG43, MG44)
+  - do: frost shattered ice lance
+    when: single and remaining(target, 200003, own) > 1500
+    relevance: normal + 7.0
+  # Brain Freeze 57761 makes Fireball instant
+  - do: fireball
+    when: single and aura(self, 57761, own)
+    relevance: normal + 6.5
+  # At 2 Fingers of Frost charges: no overcap
+  - do: frost fingers cap ice lance
+    when: single and stacks(self, 74396) >= 2
+    relevance: normal + 6.0
+  # The gap filler while Icicles are capped and Flurry is not ready: Ice Lance stalls the bar without waste
+  - do: frost fingers ice lance
+    when: single and icicles_full and cooldown(200004) > 2000 and stacks(self, 74396) >= 1
+    relevance: normal + 5.5
+  # No Fingers of Frost to spend: release the Spike un-shattered rather than idle
+  - do: frost glacial spike
+    when: single and known(200002) and icicles_full and cooldown(200004) > 8000 and stacks(self, 74396) == 0
+    relevance: normal + 5.0
+
+  # Pack (MG48), ranked with the single rows by the guide's order
+  - do: frost glacial spike
+    when: pack and known(200002) and icicles_full and cooldown(200004) > 4000
+    relevance: normal + 7.0
+  - do: mage cone of cold
+    when: pack and known(120) and cooldown(120) == 0 and enemies_in_cone(12, 104) >= 3 and safe_self_12
+    relevance: normal + 6.5
+  # Blizzard builds Icicles: only below 5 and with the mana floor (no Improved Blizzard, no Frost Channeling)
+  - do: frost blizzard
+    when: >-
+      pack and known(10) and stacks(self, 200001) < 5 and mana(self) >= 30
+      and value("most clustered enemy count::8") >= 3 and safe_cluster_8
+    relevance: normal + 6.0
+  - do: frost fingers cap ice lance
+    when: pack and stacks(self, 74396) >= 2
+    relevance: normal + 5.5
+
+  # The last row
+  - do: frostbolt
+    when: target_alive
+    relevance: normal + 1.0

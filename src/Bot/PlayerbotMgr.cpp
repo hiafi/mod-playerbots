@@ -516,6 +516,10 @@ void PlayerbotHolder::OnBotLogin(Player* const bot)
 
     OnBotLoginInternal(bot);
 
+    // AiPlayerbot.BotGlyphs = 0: one-time strip of glyphs a bot already carries (slot check only, no DB access)
+    if (!sPlayerbotAIConfig.botGlyphs && PlayerbotFactory::StripGlyphs(bot))
+        bot->SendTalentsInfoData(false);
+
     PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
     if (!botAI)
     {

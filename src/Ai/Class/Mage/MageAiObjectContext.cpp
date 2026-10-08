@@ -11,6 +11,14 @@
 #include "FrostMageStrategy.h"
 #include "GenericMageNonCombatStrategy.h"
 #include "MageActions.h"
+#include "MageArcaneContext.h"
+#include "MageFireContext.h"
+#include "MageFrostContext.h"
+#include "MageReworkActions.h"
+#include "MageReworkGenericStrategy.h"
+#include "MageReworkStrategies.h"
+#include "MageReworkTriggers.h"
+#include "MageReworkValues.h"
 #include "MageTriggers.h"
 #include "NamedObjectContext.h"
 #include "Playerbots.h"
@@ -34,10 +42,10 @@ public:
 private:
     static Strategy* nc(PlayerbotAI* botAI) { return new GenericMageNonCombatStrategy(botAI); }
     static Strategy* pull(PlayerbotAI* botAI) { return new PullStrategy(botAI, "shoot"); }
-    static Strategy* aoe(PlayerbotAI* botAI) { return new MageAoeStrategy(botAI); }
+    static Strategy* aoe(PlayerbotAI* botAI) { return new MageReworkAoeStrategy(botAI); }
     static Strategy* cure(PlayerbotAI* botAI) { return new MageCureStrategy(botAI); }
     static Strategy* buff(PlayerbotAI* botAI) { return new MageBuffStrategy(botAI); }
-    static Strategy* boost(PlayerbotAI* botAI) { return new MageBoostStrategy(botAI); }
+    static Strategy* boost(PlayerbotAI* botAI) { return new MageReworkBoostStrategy(botAI); }
     static Strategy* cc(PlayerbotAI* botAI) { return new MageCcStrategy(botAI); }
     static Strategy* firestarter(PlayerbotAI* botAI) { return new FirestarterStrategy(botAI); }
 };
@@ -54,10 +62,10 @@ public:
     }
 
 private:
-    static Strategy* frost(PlayerbotAI* botAI) { return new FrostMageStrategy(botAI); }
-    static Strategy* fire(PlayerbotAI* botAI) { return new FireMageStrategy(botAI); }
-    static Strategy* frostfire(PlayerbotAI* botAI) { return new FrostFireMageStrategy(botAI); }
-    static Strategy* arcane(PlayerbotAI* botAI) { return new ArcaneMageStrategy(botAI); }
+    static Strategy* frost(PlayerbotAI* botAI) { return new MageReworkFrostStrategy(botAI); }
+    static Strategy* fire(PlayerbotAI* botAI) { return new MageReworkFireStrategy(botAI); }
+    static Strategy* frostfire(PlayerbotAI* botAI) { return new MageReworkFireStrategy(botAI, "frostfire"); }
+    static Strategy* arcane(PlayerbotAI* botAI) { return new MageReworkArcaneStrategy(botAI); }
 };
 
 class MageBuffStrategyFactoryInternal : public NamedObjectContext<Strategy>
@@ -70,7 +78,7 @@ public:
     }
 
 private:
-    static Strategy* bmana(PlayerbotAI* botAI) { return new MageBuffManaStrategy(botAI); }
+    static Strategy* bmana(PlayerbotAI* botAI) { return new MageReworkFrostArmorStrategy(botAI); }
     static Strategy* bdps(PlayerbotAI* botAI) { return new MageBuffDpsStrategy(botAI); }
 };
 
@@ -304,6 +312,106 @@ private:
     static Action* mana_shield(PlayerbotAI* botAI) { return new CastManaShieldAction(botAI); }
 };
 
+// The reworked mage's shared actions, triggers and values (Stage M0). Spec stages add their own factories.
+class MageReworkTriggerFactoryInternal : public NamedObjectContext<Trigger>
+{
+public:
+    MageReworkTriggerFactoryInternal()
+    {
+        creators["mage pack"] = &MageReworkTriggerFactoryInternal::mage_pack;
+        creators["mage mana above 30"] = &MageReworkTriggerFactoryInternal::mage_mana_above_30;
+        creators["mage mana above 50"] = &MageReworkTriggerFactoryInternal::mage_mana_above_50;
+        creators["mage mana above 80"] = &MageReworkTriggerFactoryInternal::mage_mana_above_80;
+        creators["mage mana below 15"] = &MageReworkTriggerFactoryInternal::mage_mana_below_15;
+        creators["mage mana below 30"] = &MageReworkTriggerFactoryInternal::mage_mana_below_30;
+        creators["mage mana below 50"] = &MageReworkTriggerFactoryInternal::mage_mana_below_50;
+        creators["mage mana below 70"] = &MageReworkTriggerFactoryInternal::mage_mana_below_70;
+        creators["mage mana below 80"] = &MageReworkTriggerFactoryInternal::mage_mana_below_80;
+        creators["mage no frost armor"] = &MageReworkTriggerFactoryInternal::mage_no_frost_armor;
+        creators["mage evocation ready"] = &MageReworkTriggerFactoryInternal::mage_evocation_ready;
+        creators["mage arcane power ready"] = &MageReworkTriggerFactoryInternal::mage_arcane_power_ready;
+    }
+
+private:
+    static Trigger* mage_pack(PlayerbotAI* botAI) { return new MageReworkPackTrigger(botAI); }
+    static Trigger* mage_mana_above_30(PlayerbotAI* botAI)
+    {
+        return new MageReworkManaTrigger(botAI, "mage mana above 30", 30, true);
+    }
+    static Trigger* mage_mana_above_50(PlayerbotAI* botAI)
+    {
+        return new MageReworkManaTrigger(botAI, "mage mana above 50", 50, true);
+    }
+    static Trigger* mage_mana_above_80(PlayerbotAI* botAI)
+    {
+        return new MageReworkManaTrigger(botAI, "mage mana above 80", 80, true);
+    }
+    static Trigger* mage_mana_below_15(PlayerbotAI* botAI)
+    {
+        return new MageReworkManaTrigger(botAI, "mage mana below 15", 15, false);
+    }
+    static Trigger* mage_mana_below_30(PlayerbotAI* botAI)
+    {
+        return new MageReworkManaTrigger(botAI, "mage mana below 30", 30, false);
+    }
+    static Trigger* mage_mana_below_50(PlayerbotAI* botAI)
+    {
+        return new MageReworkManaTrigger(botAI, "mage mana below 50", 50, false);
+    }
+    static Trigger* mage_mana_below_70(PlayerbotAI* botAI)
+    {
+        return new MageReworkManaTrigger(botAI, "mage mana below 70", 70, false);
+    }
+    static Trigger* mage_mana_below_80(PlayerbotAI* botAI)
+    {
+        return new MageReworkManaTrigger(botAI, "mage mana below 80", 80, false);
+    }
+    static Trigger* mage_no_frost_armor(PlayerbotAI* botAI) { return new MageReworkNoFrostArmorTrigger(botAI); }
+    static Trigger* mage_evocation_ready(PlayerbotAI* botAI) { return new MageReworkEvocationReadyTrigger(botAI); }
+    static Trigger* mage_arcane_power_ready(PlayerbotAI* botAI)
+    {
+        return new MageReworkArcanePowerReadyTrigger(botAI);
+    }
+};
+
+class MageReworkActionFactoryInternal : public NamedObjectContext<Action>
+{
+public:
+    MageReworkActionFactoryInternal()
+    {
+        creators["mage meteor"] = &MageReworkActionFactoryInternal::mage_meteor;
+        creators["mage flamestrike"] = &MageReworkActionFactoryInternal::mage_flamestrike;
+        creators["mage blizzard"] = &MageReworkActionFactoryInternal::mage_blizzard;
+        creators["mage fire blast"] = &MageReworkActionFactoryInternal::mage_fire_blast;
+        creators["mage arcane blast"] = &MageReworkActionFactoryInternal::mage_arcane_blast;
+        creators["mage cone of cold"] = &MageReworkActionFactoryInternal::mage_cone_of_cold;
+        creators["mage dragon's breath"] = &MageReworkActionFactoryInternal::mage_dragons_breath;
+        creators["mage ice armor"] = &MageReworkActionFactoryInternal::mage_ice_armor;
+    }
+
+private:
+    static Action* mage_meteor(PlayerbotAI* botAI) { return new MageReworkMeteorAction(botAI); }
+    static Action* mage_flamestrike(PlayerbotAI* botAI) { return new MageReworkFlamestrikeAction(botAI); }
+    static Action* mage_blizzard(PlayerbotAI* botAI) { return new MageReworkBlizzardAction(botAI); }
+    static Action* mage_fire_blast(PlayerbotAI* botAI) { return new MageReworkFireBlastAction(botAI); }
+    static Action* mage_arcane_blast(PlayerbotAI* botAI) { return new MageReworkArcaneBlastAction(botAI); }
+    static Action* mage_cone_of_cold(PlayerbotAI* botAI) { return new MageReworkConeOfColdAction(botAI); }
+    static Action* mage_dragons_breath(PlayerbotAI* botAI) { return new MageReworkDragonsBreathAction(botAI); }
+    static Action* mage_ice_armor(PlayerbotAI* botAI) { return new MageReworkIceArmorAction(botAI); }
+};
+
+class MageReworkValueFactoryInternal : public NamedObjectContext<UntypedValue>
+{
+public:
+    MageReworkValueFactoryInternal()
+    {
+        creators["mage meteor target"] = &MageReworkValueFactoryInternal::mage_meteor_target;
+    }
+
+private:
+    static UntypedValue* mage_meteor_target(PlayerbotAI* botAI) { return new MageMeteorTargetValue(botAI); }
+};
+
 SharedNamedObjectContextList<Strategy> MageAiObjectContext::sharedStrategyContexts;
 SharedNamedObjectContextList<Action> MageAiObjectContext::sharedActionContexts;
 SharedNamedObjectContextList<Trigger> MageAiObjectContext::sharedTriggerContexts;
@@ -334,15 +442,24 @@ void MageAiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextList
 {
     AiObjectContext::BuildSharedActionContexts(actionContexts);
     actionContexts.Add(new MageAiObjectContextInternal());
+    actionContexts.Add(new MageReworkActionFactoryInternal());
+    actionContexts.Add(new MageFireActionFactory());
+    actionContexts.Add(new MageArcaneActionFactory());
+    actionContexts.Add(new MageFrostActionFactory());
 }
 
 void MageAiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextList<Trigger>& triggerContexts)
 {
     AiObjectContext::BuildSharedTriggerContexts(triggerContexts);
     triggerContexts.Add(new MageTriggerFactoryInternal());
+    triggerContexts.Add(new MageReworkTriggerFactoryInternal());
+    triggerContexts.Add(new MageFireTriggerFactory());
+    triggerContexts.Add(new MageFrostTriggerFactory());
 }
 
 void MageAiObjectContext::BuildSharedValueContexts(SharedNamedObjectContextList<UntypedValue>& valueContexts)
 {
     AiObjectContext::BuildSharedValueContexts(valueContexts);
+    valueContexts.Add(new MageReworkValueFactoryInternal());
+    valueContexts.Add(new MageArcaneValueFactory());
 }

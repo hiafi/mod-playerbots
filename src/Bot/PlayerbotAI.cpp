@@ -14,6 +14,7 @@
 #include "Common.h"
 #include "CreatureData.h"
 #include "DBCStores.h"
+#include "DruidReworkUtils.h"
 #include "EmoteAction.h"
 #include "Engine.h"
 #include "EventProcessor.h"
@@ -49,6 +50,7 @@
 #include "SocialMgr.h"
 #include "SpellAuraEffects.h"
 #include "SpellInfo.h"
+#include "StrategyData.h"
 #include "Transport.h"
 #include "Unit.h"
 #include "UpdateTime.h"
@@ -153,6 +155,7 @@ PlayerbotAI::PlayerbotAI(Player* bot)
     }
 
     accountId = bot->GetSession()->GetAccountId();
+    strategyDataGeneration = ai::data::Generation();  // read before the engines build their trigger lists
     aiObjectContext = AiFactory::createAiObjectContext(bot, this);
 
     engines[BOT_STATE_COMBAT] = AiFactory::createCombatEngine(bot, this, aiObjectContext);
@@ -256,6 +259,17 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
     if (!bot || !bot->GetSession() || !bot->IsInWorld() || bot->IsBeingTeleported() ||
         bot->GetSession()->IsLoggingOut() || bot->IsDuringRemoveFromWorld())
         return;
+
+    // Strategy data was reloaded: rebuild every engine's trigger list from the new snapshot
+    if (uint32 const dataGeneration = ai::data::Generation(); dataGeneration != strategyDataGeneration)
+    {
+        strategyDataGeneration = dataGeneration;
+        for (Engine* engine : engines)
+        {
+            if (engine)
+                engine->Init();
+        }
+    }
 
     // Bots send no movement opcodes, so m_lastFallZ stays frozen and Player::IsFalling() (a Z test
     // against it) blocks LFG teleports. Unit::IsFalling() is the flag test, so real falls keep theirs.
@@ -1381,6 +1395,9 @@ void PlayerbotAI::HandleBotOutgoingPacket(WorldPacket const& packet)
             // */
             return;
         }
+        case SMSG_SPELLNONMELEEDAMAGELOG:  // read in place: no packet copy on this hot path
+            ownSpellResults.RecordDamageLog(packet, bot->GetGUID());
+            return;
         case SMSG_DISMOUNT:
         {
             WorldPacket p(packet);
@@ -1464,8 +1481,15 @@ void PlayerbotAI::ChangeEngine(BotState type)
     }
 }
 
+uint32 PlayerbotAI::GetCombatTimeMs() const
+{
+    return currentState == BOT_STATE_COMBAT ? getMSTimeDiff(combatEngineStartMs, getMSTime()) : 0;
+}
+
 void PlayerbotAI::ChangeEngineOnCombat()
 {
+    combatEngineStartMs = getMSTime();
+
     if (HasStrategy("wait for attack", BOT_STATE_COMBAT))
         aiObjectContext->GetValue<time_t>("combat start time")->Set(time(nullptr));
 
@@ -2314,8 +2338,10 @@ bool PlayerbotAI::IsTank(Player* player, bool bySpec)
             }
             break;
         case CLASS_DRUID:
-            if (tab == DRUID_TAB_FERAL && (player->GetShapeshiftForm() == FORM_BEAR ||
-                                           player->GetShapeshiftForm() == FORM_DIREBEAR || player->HasAura(16931)))
+            // Rework: a bear is the build with Elder Hide, not Thick Hide
+            if (tab == DRUID_TAB_FERAL &&
+                (player->GetShapeshiftForm() == FORM_BEAR || player->GetShapeshiftForm() == FORM_DIREBEAR ||
+                 ai::druid_rework::IsBearBuild(player)))
             {
                 return true;
             }
@@ -3307,7 +3333,8 @@ bool PlayerbotAI::CanCastSpell(std::string const name, Unit* target, Item* itemT
     return CanCastSpell(aiObjectContext->GetValue<uint32>("spell id", name)->Get(), target, true, itemTarget);
 }
 
-bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell, Item* itemTarget, Item* castItem)
+bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell, Item* itemTarget, Item* castItem,
+                               bool ignoreMovingCastTime)
 {
     if (!spellid)
     {
@@ -3383,7 +3410,8 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
 
     uint32 CastingTime = !spellInfo->IsChanneled() ? spellInfo->CalcCastTime(bot) : spellInfo->GetDuration();
     // bool interruptOnMove = spellInfo->InterruptFlags & SPELL_INTERRUPT_FLAG_MOVEMENT;
-    if ((CastingTime || spellInfo->IsAutoRepeatRangedSpell()) && bot->isMoving())
+    bool const castTimeBlocks = CastingTime && (!ignoreMovingCastTime || spellInfo->IsChanneled());
+    if ((castTimeBlocks || spellInfo->IsAutoRepeatRangedSpell()) && bot->isMoving())
     {
         if (!sPlayerbotAIConfig.logInGroupOnly || (bot->GetGroup() && HasGameClientMaster()))
             LOG_DEBUG("playerbots", "Casting time and bot is moving - target name: {}, spellid: {}, bot name: {}",
@@ -3848,6 +3876,7 @@ bool PlayerbotAI::CastSpell(uint32 spellId, Unit* target, Item* itemTarget)
     // WaitForSpellCast(spell);
 
     aiObjectContext->GetValue<LastSpellCast&>("last spell cast")->Get().Set(spellId, target->GetGUID(), time(nullptr));
+    spellCastStamps.Stamp(spellId, getMSTime());
 
     aiObjectContext->GetValue<PositionMap&>("position")->Get()["random"].Reset();
 
@@ -3983,6 +4012,7 @@ bool PlayerbotAI::CastSpell(uint32 spellId, float x, float y, float z, Item* ite
 
     // WaitForSpellCast(spell);
     aiObjectContext->GetValue<LastSpellCast&>("last spell cast")->Get().Set(spellId, bot->GetGUID(), time(nullptr));
+    spellCastStamps.Stamp(spellId, getMSTime());
     aiObjectContext->GetValue<PositionMap&>("position")->Get()["random"].Reset();
 
     if (oldSel)
@@ -5922,6 +5952,10 @@ void PlayerbotAI::ImbueItem(Item* item, uint8 targetInventorySlot)
 void PlayerbotAI::ImbueItem(Item* item, uint32 targetFlag, ObjectGuid targetGUID)
 {
     if (!item)
+        return;
+
+    // AiPlayerbot.BotGlyphs = 0: a glyph item would apply into slot 0 through the use packet
+    if (!sPlayerbotAIConfig.botGlyphs && item->GetTemplate()->Class == ITEM_CLASS_GLYPH)
         return;
 
     uint32 glyphIndex = 0;

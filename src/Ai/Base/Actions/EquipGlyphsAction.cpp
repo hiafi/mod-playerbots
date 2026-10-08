@@ -97,6 +97,13 @@ bool EquipGlyphsAction::CollectGlyphs(std::vector<uint32> const& itemIds,
 /// -----------------------------------------------------------------
 bool EquipGlyphsAction::Execute(Event event)
 {
+    // AiPlayerbot.BotGlyphs = 0: bots carry no glyphs
+    if (!sPlayerbotAIConfig.botGlyphs)
+    {
+        botAI->TellMaster("Bot glyphs are disabled (AiPlayerbot.BotGlyphs = 0).");
+        return false;
+    }
+
     // 1) parse IDs
     std::vector<uint32> itemIds;
     std::istringstream iss(event.getParam());

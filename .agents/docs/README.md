@@ -12,6 +12,8 @@ compact and agent-agnostic.
   C++ conventions on top of `cpp-guidelines.md`.
 - `ai-engine.md` — the Strategy-Trigger-Action engine: architecture and wiring, routed from any
   strategy, action, trigger, value, or multiplier work.
+- `strategy-data.md` — the YAML strategy rows and condition language: format, function table, lessons, how to add a
+  function. Routed from `data/strategies/` and `src/Bot/Data/` work.
 - `systems/` — subsystem docs when a subsystem outgrows a section (RPG, travel, guild, LFG, ...),
   plain kebab-case names.
 
@@ -21,6 +23,7 @@ compact and agent-agnostic.
 - Generic C++ lesson that also holds for the core → propose it upstream in the core's
   `cpp-guidelines.md`, then refresh the copy; module-only C++ lesson → `cpp-playerbots.md`.
 - Engine or wiring lesson → `ai-engine.md`.
+- YAML strategy rows or condition-language lesson → `strategy-data.md`.
 - Subsystem-specific lesson → `systems/<subsystem>.md`; create it if missing.
 - Extend an existing doc before creating a new one.
 - A new doc REQUIRES adding its routing bullet to AGENTS.md's "Mandatory reading per task" in the
