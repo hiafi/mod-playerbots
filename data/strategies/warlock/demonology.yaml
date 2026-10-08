@@ -222,9 +222,9 @@ rows:
     when: known(172) and not known(200825) and alive(target) and not aura(target, 172, own)
     relevance: normal + 8
 
-  # S13: Life Tap, guide floors only (WQ1)
+  # S13: Life Tap, guide floors only (WQ1); the health floor is 40%, as Affliction's (was 70%)
   - do: demo life tap
-    when: known(1454) and not in_meta and mana(self) < 35 and health_pct(self) > 70
+    when: known(1454) and not in_meta and mana(self) < 35 and health_pct(self) > 40
     relevance: normal + 1.5
 
   # S14: Life Tap on the move, while no cast is possible

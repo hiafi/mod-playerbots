@@ -40,6 +40,13 @@ rows:
     trigger: fire evocation
     relevance: emergency - 2
 
+  # Brilliance Aura: a party member under 40% mana, or the bot under 50%. Same row as Arcane's without BURN.
+  - do: arcane brilliance aura
+    when: >-
+      target_alive and known(200067) and cooldown(200067) == 0 and not aura(self, 200067)
+      and (value("party members below mana::40") >= 1 or mana(self) < 50)
+    relevance: normal + 9.5
+
   # Single target
   - do: pyroblast
     when: single and hot_streak
@@ -96,6 +103,13 @@ rows:
     when: >-
       target_alive and (known(11095) or known(12872) or known(12873)) and remaining(target, 22959) < 3000
     relevance: normal + 4.0
+  # Amplify Magic lines up with Combustion (both 10 s on a 2 min cooldown): just above it so it goes out first, and
+  # still fires if Combustion went first.
+  - do: arcane amplify magic
+    when: >-
+      target_alive and known(1008) and cooldown(1008) == 0 and not aura(target, 1008) and lifetime(target) >= 10
+      and known(11129) and (cooldown(11129) == 0 or aura(self, 11129))
+    relevance: normal + 3.6
   - do: combustion
     when: target_alive and known(11129) and cooldown(11129) == 0 and lifetime(target) >= 10
     relevance: normal + 3.5
