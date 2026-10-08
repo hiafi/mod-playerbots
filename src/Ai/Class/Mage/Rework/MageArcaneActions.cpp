@@ -28,7 +28,7 @@ uint8 BlastStacks(Player* bot) { return ai::aura::AuraStacks(bot, ARCANE_BLAST_S
 bool MageArcaneManaGemAction::isUseful()
 {
     return ManaPercent(botAI) < ai::mage_arcane::GEM_BELOW_MANA_PCT && ai::mage_arcane::BurnActive(botAI) &&
-           ai::mage_rework::ManaGemUsable(bot) && UseManaAgateAction::isUseful();
+           ai::mage_rework::ManaGemUsable(botAI) && UseManaAgateAction::isUseful();
 }
 
 bool MageArcaneEvocationAction::isUseful()

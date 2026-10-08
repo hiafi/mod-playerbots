@@ -30,15 +30,18 @@ MageSpec GetMageSpec(Player* bot)
 namespace ai::mage_rework
 {
 
-bool ManaGemUsable(Player* bot)
+bool ManaGemUsable(PlayerbotAI* botAI)
 {
+    Player* bot = botAI->GetBot();
     Item* gem = bot->GetItemByEntry(ITEM_MANA_AGATE);
     if (!gem)
         return false;
 
     for (_Spell const& spell : gem->GetTemplate()->Spells)
     {
-        if (spell.SpellId && bot->HasSpellCooldown(static_cast<uint32>(spell.SpellId)))
+        if (spell.SpellId > 0 &&
+            (bot->HasSpellCooldown(static_cast<uint32>(spell.SpellId)) ||
+             !botAI->CanCastSpell(static_cast<uint32>(spell.SpellId), bot, false, nullptr, gem)))
             return false;
     }
 

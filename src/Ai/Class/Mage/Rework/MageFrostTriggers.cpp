@@ -51,7 +51,7 @@ bool FlurryAllowed(PlayerbotAI* botAI)
 bool ManaGemWanted(PlayerbotAI* botAI)
 {
     AiObjectContext* context = botAI->GetAiObjectContext();
-    return AI_VALUE2(uint8, "mana", "self target") < LOW_MANA_PCT && ai::mage_rework::ManaGemUsable(botAI->GetBot());
+    return AI_VALUE2(uint8, "mana", "self target") < LOW_MANA_PCT && ai::mage_rework::ManaGemUsable(botAI);
 }
 
 bool EvocationAllowed(PlayerbotAI* botAI)
@@ -60,7 +60,7 @@ bool EvocationAllowed(PlayerbotAI* botAI)
     AiObjectContext* context = botAI->GetAiObjectContext();
     return AI_VALUE2(uint8, "mana", "self target") < EVOCATION_MANA_PCT && bot->HasSpell(SPELL_EVOCATION) &&
            AI_VALUE2(uint32, "spell cooldown remaining", static_cast<int32>(SPELL_EVOCATION)) == 0 &&
-           !ai::aura::HasAnyAura(bot, ICY_VEINS, bot->GetGUID()) && !ai::mage_rework::ManaGemUsable(bot);
+           !ai::aura::HasAnyAura(bot, ICY_VEINS, bot->GetGUID()) && !ai::mage_rework::ManaGemUsable(botAI);
 }
 
 Creature* FindWaterElemental(Player* bot)

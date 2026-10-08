@@ -31,4 +31,4 @@ bool BurnActive(PlayerbotAI* botAI)
 
 bool MageArcaneBurnValue::Calculate() { return ai::mage_arcane::BurnActive(botAI); }
 
-bool MageArcaneManaGemUsableValue::Calculate() { return ai::mage_rework::ManaGemUsable(bot); }
+bool MageArcaneManaGemUsableValue::Calculate() { return ai::mage_rework::ManaGemUsable(botAI); }
