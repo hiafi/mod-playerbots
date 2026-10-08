@@ -4375,7 +4375,7 @@ void PlayerbotFactory::InitReagents()
             break;
         }
         case CLASS_WARLOCK:
-            items.push_back({6265, 5});  // Soul Shard
+            // Rework: no Soul Shard refill, shards are aura 200709 on this server, not items.
             break;
         default:
             break;
