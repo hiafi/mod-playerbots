@@ -18,6 +18,7 @@
 #include "UseItemAction.h"
 #include "WarlockActions.h"
 #include "WarlockAffContext.h"
+#include "WarlockDemoContext.h"
 #include "WarlockReworkContext.h"
 #include "WarlockTriggers.h"
 
@@ -42,7 +43,7 @@ private:
     static Strategy* boost(PlayerbotAI* botAI) { return new WarlockBoostStrategy(botAI); }
     static Strategy* cc(PlayerbotAI* botAI) { return new WarlockCcStrategy(botAI); }
     static Strategy* pet(PlayerbotAI* botAI) { return new WarlockPetStrategy(botAI); }
-    static Strategy* meta_melee_aoe(PlayerbotAI* botAI) { return new MetaMeleeAoeStrategy(botAI); }
+    static Strategy* meta_melee_aoe(PlayerbotAI* botAI) { return new WarlockReworkEmptyStrategy(botAI, "meta melee"); }
     static Strategy* tank(PlayerbotAI* botAI) { return new TankWarlockStrategy(botAI); }
     static Strategy* aoe(PlayerbotAI* botAI) { return new WarlockReworkAoeStrategy(botAI); }
 };
@@ -59,7 +60,7 @@ public:
 
 private:
     static Strategy* affliction(PlayerbotAI* botAI) { return new WarlockReworkAffStrategy(botAI); }
-    static Strategy* demonology(PlayerbotAI* botAI) { return new DemonologyWarlockStrategy(botAI); }
+    static Strategy* demonology(PlayerbotAI* botAI) { return new WarlockReworkDemoStrategy(botAI); }
     static Strategy* destruction(PlayerbotAI* botAI) { return new DestructionWarlockStrategy(botAI); }
 };
 
@@ -429,6 +430,7 @@ void WarlockAiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextL
     actionContexts.Add(new WarlockAiObjectContextInternal());
     actionContexts.Add(new WarlockReworkActionFactory());
     actionContexts.Add(new WarlockAffActionFactory());
+    actionContexts.Add(new WarlockDemoActionFactory());
 }
 
 void WarlockAiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextList<Trigger>& triggerContexts)
