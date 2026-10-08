@@ -5,6 +5,8 @@
 # 44425 Arcane Barrage, 36032 Arcane Blast stacks (on the bot), 44401 Missile Barrage proc, 200067 Brilliance Aura,
 # 200078 Temporal Convergence, 200079 Arcane Overload. Overload and Temporal Convergence are level-80 spells that a
 # level-60 bot may not have, so their rows are gated on known().
+# AoE rows are gated on `unsafe aoe units` (X11): Barrage (chain, 10 yd) and Overload (10 yd) around the target,
+# Explosion (10 yd) around the bot.
 # The mana thresholds are starting points (MG54); retune them after a sim run. The ones the actions re-check
 # (gem 70, Evocation 30, Overload 30) are repeated in MageArcaneActions.h.
 strategy: mage/arcane
@@ -15,6 +17,10 @@ conditions:
   target_alive: alive(target)
   single: alive(target) and enemies_near_target(10) < 3
   pack: alive(target) and enemies_near_target(10) >= 3
+  # X11: nothing idle or crowd-controlled within 10 yd of the target (Barrage chains, Overload bursts) or of the bot
+  # (Explosion)
+  safe_target_10: value("unsafe aoe units::10") == 0
+  safe_self_10: value("unsafe aoe units::10;self") == 0
 
   # BURN: Arcane Power up, or ready with mana at 80%+ (C++ value, MG9)
   burn: value("arcane burn")
@@ -62,6 +68,7 @@ rows:
   - do: arcane overload
     when: >-
       target_alive and burn and blast_4 and mana(self) >= 30 and known(200079) and cooldown(200079) == 0
+      and safe_target_10
     relevance: normal + 8.0
   # Temporal Convergence at a full stack, only when Evocation and Arcane Power both have 20+ s left (MG17)
   - do: arcane temporal convergence
@@ -89,38 +96,44 @@ rows:
   # above 80% (tuned 2026-10-06: dumping at 4 stacks there held mana near 95% and cost ~15% DPS in the sim).
   # The action re-checks BURN (a basket queued in the tick Arcane Power went out would dump it).
   - do: arcane barrage stacks
-    when: single and not burn and stacks(self, 36032) >= 3 and mana(self) >= 50 and mana(self) <= 80
+    when: >-
+      single and not burn and stacks(self, 36032) >= 3 and mana(self) >= 50 and mana(self) <= 80
+      and safe_target_10
     relevance: normal + 6.0
   - do: arcane barrage stacks
-    when: single and not burn and stacks(self, 36032) >= 2 and mana(self) >= 30 and mana(self) < 50
+    when: >-
+      single and not burn and stacks(self, 36032) >= 2 and mana(self) >= 30 and mana(self) < 50
+      and safe_target_10
     relevance: normal + 6.0
   - do: arcane barrage stacks
-    when: single and not burn and stacks(self, 36032) >= 1 and mana(self) < 30
+    when: single and not burn and stacks(self, 36032) >= 1 and mana(self) < 30 and safe_target_10
     relevance: normal + 6.0
   # The one BURN exception: under 30% with Evocation not available
   - do: arcane barrage stacks
-    when: single and burn and stacks(self, 36032) >= 1 and mana(self) < 30 and not evocation_ready
+    when: >-
+      single and burn and stacks(self, 36032) >= 1 and mana(self) < 30 and not evocation_ready
+      and safe_target_10
     relevance: normal + 6.0
   # Walking with the stacks about to fall off: spend them on an instant Barrage (5.3). Not with Presence of Mind up
   # or ready, since the moving Presence of Mind row above keeps the stacks with an instant Blast instead.
   - do: arcane barrage stacks
     when: >-
       target_alive and moving(self) and not aura(self, 12043) and not pom_ready
-      and stacks(self, 36032) >= 1 and remaining(self, 36032) < 1500
+      and stacks(self, 36032) >= 1 and remaining(self, 36032) < 1500 and safe_target_10
     relevance: normal + 6.5
 
   # Pack block, ranked among the cooldown rows above (the guide: everything in the cooldown list still applies)
   # Overload on cooldown with 30%+ mana (MG21)
   - do: arcane overload
-    when: pack and mana(self) >= 30 and known(200079) and cooldown(200079) == 0
+    when: pack and mana(self) >= 30 and known(200079) and cooldown(200079) == 0 and safe_target_10
     relevance: normal + 7.8
   # Barrage at a full stack whatever the state
   - do: arcane barrage stacks
-    when: pack and blast_4
+    when: pack and blast_4 and safe_target_10
     relevance: normal + 6.8
   # Explosion as filler with 4+ enemies already inside 10 yd; never walks to them
   - do: arcane explosion cast
-    when: pack and enemies_within(10) >= 4 and known("arcane explosion")
+    when: pack and enemies_within(10) >= 4 and known("arcane explosion") and safe_self_10
     relevance: normal + 5.0
 
   # The last row, both modes: Blast builds the stacks the Barrage rows spend

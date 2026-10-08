@@ -2,6 +2,7 @@
 # Each row queues its actions at the relevance when its condition holds (`when`, the expression language of
 # StrategyExpression.h) or when an existing C++ trigger fires (`trigger`). Execution order is by relevance, not by
 # position in this file.
+# AoE rows are gated on `unsafe aoe units` (X11).
 strategy: paladin/ret
 class: paladin
 conditions:
@@ -24,6 +25,15 @@ conditions:
 
   art_of_war: aura(self, 59578, own)
   forbearance: aura(self, "25771,61988")
+
+  # X11 gates. Around the bot: Wake of Ashes (12 yd cone), Holy Wrath (10), Divine Storm and Consecration (8). Around
+  # the target: Deliverance (8), the Execution Sentence burst (5). Execution Sentence on cluster: 5 at the cluster.
+  safe_self_12: value("unsafe aoe units::12;self") == 0
+  safe_self_10: value("unsafe aoe units::10;self") == 0
+  safe_self_8: value("unsafe aoe units::8;self") == 0
+  safe_target_8: value("unsafe aoe units::8") == 0
+  safe_target_5: value("unsafe aoe units::5") == 0
+  safe_cluster_5: value("unsafe aoe units::5;cluster") == 0
 
 rows:
   # Kept from the stock DpsPaladinStrategy / GenericPaladinStrategy. CombatStrategy only closes to spell
@@ -74,7 +84,7 @@ rows:
     when: single and primed and (not primed_pack or not deliverance_known)
     relevance: normal + 6.5
   - do: deliverance
-    when: single and primed and primed_pack and deliverance_known
+    when: single and primed and primed_pack and deliverance_known and safe_target_8
     relevance: normal + 6.5
   - do: avenging wrath
     when: >-
@@ -84,10 +94,10 @@ rows:
   - do: execution sentence
     when: >-
       single and seal_burst_ok and ((boss(target) and health_pct(target) > 25) or (not boss(target) and
-      health_pct(target) > 50))
+      health_pct(target) > 50)) and safe_target_5
     relevance: normal + 5.5
   - do: wake of ashes
-    when: single and in_range(target, 12) and in_arc(target, 104) and seal_wake_ok
+    when: single and in_range(target, 12) and in_arc(target, 104) and seal_wake_ok and safe_self_12
     relevance: normal + 5.0
   - do: hammer of wrath
     when: single and health_pct(target) <= 20
@@ -107,21 +117,21 @@ rows:
       own) < 2000)
     relevance: normal + 3.0
   - do: divine storm
-    when: single and in_range(target, 8)
+    when: single and in_range(target, 8) and safe_self_8
     relevance: normal + 2.5
   - do: holy wrath
-    when: single and in_range(target, 10)
+    when: single and in_range(target, 10) and safe_self_10
     relevance: normal + 2.0
   - do: crusader strike
     when: single
     relevance: normal + 1.5
   - do: consecration
-    when: single and mana(self) > 60
+    when: single and mana(self) > 60 and safe_self_8
     relevance: normal + 1.0
 
   # Pack
   - do: deliverance
-    when: pack and primed and deliverance_known
+    when: pack and primed and deliverance_known and safe_target_8
     relevance: normal + 6.5
   - do: judgement
     when: pack and primed and not deliverance_known
@@ -130,19 +140,19 @@ rows:
     when: pack and value("elite enemies within::8") >= 4
     relevance: normal + 6.25
   - do: wake of ashes
-    when: pack and enemies_in_cone(12, 104) >= 2 and seal_wake_ok
+    when: pack and enemies_in_cone(12, 104) >= 2 and seal_wake_ok and safe_self_12
     relevance: normal + 6.0
   - do: holy wrath
-    when: pack and enemies_within(10) >= 2
+    when: pack and enemies_within(10) >= 2 and safe_self_10
     relevance: normal + 5.5
   - do: divine storm
-    when: pack and enemies_within(8) >= 2
+    when: pack and enemies_within(8) >= 2 and safe_self_8
     relevance: normal + 5.0
   - do: consecration
-    when: pack and enemies_within(8) >= 3 and mana(self) > 30
+    when: pack and enemies_within(8) >= 3 and mana(self) > 30 and safe_self_8
     relevance: normal + 4.5
   - do: execution sentence on cluster
-    when: pack and health_pct("most clustered enemy::5") > 50
+    when: pack and health_pct("most clustered enemy::5") > 50 and safe_cluster_5
     relevance: normal + 4.0
   - do: blade of justice
     when: pack and aura(self, 20375, own) and enemies_near_target(8) >= 3

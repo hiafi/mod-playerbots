@@ -5,6 +5,7 @@
 # re-checks the same guards) and Freeze (pet cooldown).
 # Every Ice Lance row has its own action, which re-checks that row: a queued basket can survive a whole Glacial Spike
 # cast, and baskets with the same action name merge. Spell ids: MageReworkIds.h, plan MG38-MG50.
+# AoE rows are gated on `unsafe aoe units` (X11).
 strategy: mage/frost
 class: mage
 conditions:
@@ -13,6 +14,12 @@ conditions:
   target_alive: alive(target)
   single: alive(target) and enemies_near_target(10) < 3
   pack: alive(target) and enemies_near_target(10) >= 3
+  # X11 gates: Freeze (8 yd) and the Frozen Orb pulse (10 yd) land around the target, Cone of Cold (12 yd with Arctic
+  # Reach) is a cone from the bot, Blizzard (8 yd) goes on the most clustered enemy
+  safe_target_8: value("unsafe aoe units::8") == 0
+  safe_target_10: value("unsafe aoe units::10") == 0
+  safe_self_12: value("unsafe aoe units::12;self") == 0
+  safe_cluster_8: value("unsafe aoe units::8;cluster") == 0
 
   # Icicles 200001, Fingers of Frost charges 74396 (the stack count, MG41; 44544 is only the aura state)
   icicles_full: stacks(self, 200001) >= 5
@@ -49,13 +56,14 @@ rows:
     relevance: normal + 9.5
   # Water Elemental Freeze at the target's position (MG40): the trigger is pet-exists and Freeze off the pet's cooldown
   - do: frost freeze
-    trigger: frost freeze ready
+    when: trigger("frost freeze ready") and safe_target_8
     relevance: normal + 9.0
   # Frozen Orb travels along the bot's facing: the action turns the bot to the target as it casts, so the row only
   # needs the target in front (90 degrees) and within 30 yd (MG47)
   - do: frost frozen orb
     when: >-
       target_alive and known(200007) and cooldown(200007) == 0 and in_arc(target, 90) and in_range(target, 30)
+      and safe_target_10
     relevance: normal + 8.5
 
   # The Flurry + Glacial Spike unit, either mode (MG42). Flurry needs 5 Icicles and standing; the Spike is own
@@ -97,13 +105,13 @@ rows:
     when: pack and known(200002) and icicles_full and cooldown(200004) > 4000
     relevance: normal + 7.0
   - do: mage cone of cold
-    when: pack and known(120) and cooldown(120) == 0 and enemies_in_cone(12, 104) >= 3
+    when: pack and known(120) and cooldown(120) == 0 and enemies_in_cone(12, 104) >= 3 and safe_self_12
     relevance: normal + 6.5
   # Blizzard builds Icicles: only below 5 and with the mana floor (no Improved Blizzard, no Frost Channeling)
   - do: frost blizzard
     when: >-
       pack and known(10) and stacks(self, 200001) < 5 and mana(self) >= 30
-      and value("most clustered enemy count::8") >= 3
+      and value("most clustered enemy count::8") >= 3 and safe_cluster_8
     relevance: normal + 6.0
   - do: frost fingers cap ice lance
     when: pack and stacks(self, 74396) >= 2

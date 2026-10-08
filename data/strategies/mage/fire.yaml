@@ -4,6 +4,8 @@
 # position in this file. The three rows that stay C++ share state with their actions or keep a clock of their own:
 # Flashpoint (combat-time and target-age clocks), Mana Gem (bag scan) and Evocation (EvocationAllowed is also the
 # action's re-check).
+# AoE rows are gated on `unsafe aoe units` (X11); the Flashpoint and Living Bomb on attacker rows are not (see the
+# notes at those rows).
 strategy: mage/fire
 class: mage
 conditions:
@@ -12,6 +14,14 @@ conditions:
   target_alive: alive(target)
   single: alive(target) and enemies_near_target(10) < 3
   pack: alive(target) and enemies_near_target(10) >= 3
+  # X11 gates: Living Bomb's explosion (10 yd) and a single-mode Meteor (8 yd) burst around the target; a pack Meteor,
+  # Flamestrike (5 yd) and Blizzard (8 yd) land on the most clustered enemy; Dragon's Breath (10 yd) is a cone from
+  # the bot
+  safe_target_10: value("unsafe aoe units::10") == 0
+  safe_target_8: value("unsafe aoe units::8") == 0
+  safe_cluster_8: value("unsafe aoe units::8;cluster") == 0
+  safe_cluster_5: value("unsafe aoe units::5;cluster") == 0
+  safe_self_10: value("unsafe aoe units::10;self") == 0
 
   hot_streak: aura(self, 48108)
   # The core's streak state (Stage HU): the first Hot Streak starter crit leaves this for 10 s, the next converts it
@@ -39,16 +49,19 @@ rows:
     relevance: normal + 7.5
   # Both modes, capped at 3 bombs in a pack. Never refreshed, or the explosion is lost.
   - do: fire living bomb
-    when: target_alive and not aura(target, 44457, own) and (enemies_near_target(10) < 3 or bomb_cap_open)
+    when: >-
+      target_alive and not aura(target, 44457, own) and (enemies_near_target(10) < 3 or bomb_cap_open)
+      and safe_target_10
     relevance: normal + 7.0
   - do: fire flashpoint
     trigger: fire flashpoint
     relevance: normal + 3.0
   - do: mage meteor
-    when: single and meteor_ready
+    when: single and meteor_ready and safe_target_8
     relevance: normal + 2.0
 
-  # Pack, ranked above the single list
+  # Pack, ranked above the single list. The bomb on another attacker has no gate: its explosion is centred on a unit
+  # that no `unsafe aoe units` form can name.
   - do: fire living bomb on attacker
     when: pack and bomb_cap_open and exists("attacker without aura id::44457;1;0;0;35")
     relevance: normal + 9.5
@@ -56,10 +69,10 @@ rows:
     when: pack and hot_streak
     relevance: normal + 9.0
   - do: mage dragon's breath
-    when: pack and known(31661) and cooldown(31661) == 0
+    when: pack and known(31661) and cooldown(31661) == 0 and safe_self_10
     relevance: normal + 8.5
   - do: mage meteor
-    when: pack and meteor_ready
+    when: pack and meteor_ready and safe_cluster_8
     relevance: normal + 8.0
   - do: fire pack flashpoint
     trigger: fire pack flashpoint
@@ -68,10 +81,13 @@ rows:
     when: pack and fanned_flames
     relevance: normal + 7.0
   - do: mage flamestrike
-    when: pack and known(2120) and not dynobj(2120) and value("most clustered enemy count::5") >= 4
+    when: >-
+      pack and known(2120) and not dynobj(2120) and value("most clustered enemy count::5") >= 4
+      and safe_cluster_5
     relevance: normal + 6.5
   - do: mage blizzard
-    when: pack and known(10) and dynobj(2120) and value("most clustered enemy count::8") >= 4
+    when: >-
+      pack and known(10) and dynobj(2120) and value("most clustered enemy count::8") >= 4 and safe_cluster_8
     relevance: normal + 6.0
 
   # Either mode, below the pack rows: the single-list rows the pack block doesn't list
