@@ -1715,7 +1715,10 @@ uint32 PlayerbotFactory::InitTalentsTree(bool increment /*false*/, bool use_temp
         /// @todo: match current talent with template
         specTab = AiFactory::GetPlayerSpecTab(bot);
         /// @todo: fix cat druid hardcode
-        if (bot->getClass() == CLASS_DRUID && specTab == DRUID_TAB_FERAL && bot->GetLevel() >= 20)
+        // Rework: Bestial Fury keeps the bear DPS link (slot 7) at any level
+        if (bot->getClass() == CLASS_DRUID && specTab == DRUID_TAB_FERAL && ai::druid_rework::IsBearDpsBuild(bot))
+            specTab = 7;
+        else if (bot->getClass() == CLASS_DRUID && specTab == DRUID_TAB_FERAL && bot->GetLevel() >= 20)
         {
             // Rework: a bear is the build with Elder Hide, not Thick Hide
             bool isCat = !ai::druid_rework::IsBearBuild(bot);

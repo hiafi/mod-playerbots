@@ -354,8 +354,11 @@ void AiFactory::AddDefaultCombatStrategies(Player* player, PlayerbotAI* const fa
                 engine->addStrategiesNoInit("resto", "cure", "dps assist", "tranquility", nullptr);
             else
             {
-                // Rework: a bear is the build with Elder Hide; Thick Hide is gone from the reworked Feral tree
-                if (player->HasSpell(SPELL_CAT_FORM) && !ai::druid_rework::IsBearBuild(player))
+                // Rework: Bestial Fury runs the bear DPS rotation; a bear is the build with Elder Hide, Thick Hide is
+                // gone from the reworked Feral tree
+                if (ai::druid_rework::IsBearDpsBuild(player))
+                    engine->addStrategiesNoInit("bear dps", "aoe", "dps assist", nullptr);
+                else if (player->HasSpell(SPELL_CAT_FORM) && !ai::druid_rework::IsBearBuild(player))
                     engine->addStrategiesNoInit("cat", "aoe", "cc", "dps assist", "feral charge", nullptr);
                 else
                     engine->addStrategiesNoInit("bear", "tank assist", "pull", "pull back", "feral charge", nullptr);
@@ -547,8 +550,9 @@ void AiFactory::AddDefaultNonCombatStrategies(Player* player, PlayerbotAI* const
         case CLASS_DRUID:
             if (tab == DRUID_TAB_FERAL)
             {
-                // Rework: a bear is the build with Elder Hide, not Thick Hide
-                if (player->GetLevel() >= 20 && !ai::druid_rework::IsBearBuild(player))
+                // Rework: a bear is the build with Elder Hide, not Thick Hide; Bestial Fury is a DPS at any level
+                if (ai::druid_rework::IsBearDpsBuild(player) ||
+                    (player->GetLevel() >= 20 && !ai::druid_rework::IsBearBuild(player)))
                     nonCombatEngine->addStrategy("dps assist", false);
                 else
                     nonCombatEngine->addStrategiesNoInit("tank assist", "pull", nullptr);

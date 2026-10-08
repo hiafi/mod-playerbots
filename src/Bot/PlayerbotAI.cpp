@@ -2338,8 +2338,8 @@ bool PlayerbotAI::IsTank(Player* player, bool bySpec)
             }
             break;
         case CLASS_DRUID:
-            // Rework: a bear is the build with Elder Hide, not Thick Hide
-            if (tab == DRUID_TAB_FERAL &&
+            // Rework: a bear is the build with Elder Hide, not Thick Hide; Bestial Fury (form 5) is a DPS, not a tank
+            if (tab == DRUID_TAB_FERAL && !ai::druid_rework::IsBearDpsBuild(player) &&
                 (player->GetShapeshiftForm() == FORM_BEAR || player->GetShapeshiftForm() == FORM_DIREBEAR ||
                  ai::druid_rework::IsBearBuild(player)))
             {
