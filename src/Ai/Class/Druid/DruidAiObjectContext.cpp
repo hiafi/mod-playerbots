@@ -12,6 +12,7 @@
 #include "DruidBalanceContext.h"
 #include "DruidBearActions.h"
 #include "DruidBearContext.h"
+#include "DruidBearDpsContext.h"
 #include "DruidCatContext.h"
 #include "DruidCatActions.h"
 #include "DruidPullStrategy.h"
@@ -65,6 +66,7 @@ public:
     {
         creators["bear"] = &DruidDruidStrategyFactoryInternal::bear;
         creators["tank"] = &DruidDruidStrategyFactoryInternal::bear;
+        creators["bear dps"] = &DruidDruidStrategyFactoryInternal::bear_dps;
         creators["cat"] = &DruidDruidStrategyFactoryInternal::cat;
         creators["balance"] = &DruidDruidStrategyFactoryInternal::balance;
         creators["dps"] = &DruidDruidStrategyFactoryInternal::cat;
@@ -73,6 +75,7 @@ public:
 
 private:
     static Strategy* bear(PlayerbotAI* botAI) { return new DruidReworkBearStrategy(botAI); }
+    static Strategy* bear_dps(PlayerbotAI* botAI) { return new DruidReworkBearDpsStrategy(botAI); }
     static Strategy* cat(PlayerbotAI* botAI) { return new DruidReworkCatStrategy(botAI); }
     static Strategy* balance(PlayerbotAI* botAI) { return new DruidReworkBalanceStrategy(botAI); }
     static Strategy* heal(PlayerbotAI* botAI) { return new DruidReworkRestoStrategy(botAI); }
@@ -422,6 +425,7 @@ void DruidAiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextLis
     actionContexts.Add(new DruidReworkActionFactory());
     actionContexts.Add(new DruidCatActionFactory());
     actionContexts.Add(new DruidBearActionFactory());
+    actionContexts.Add(new DruidBearDpsActionFactory());
     actionContexts.Add(new DruidBalanceActionFactory());
     actionContexts.Add(new DruidRestoActionFactory());
 }
@@ -454,5 +458,6 @@ void DruidAiObjectContext::BuildSharedValueContexts(SharedNamedObjectContextList
     valueContexts.Add(new DruidValueContextInternal());
     valueContexts.Add(new DruidBalanceValueFactory());
     valueContexts.Add(new DruidBearValueFactory());
+    valueContexts.Add(new DruidBearDpsValueFactory());
     valueContexts.Add(new DruidRestoValueFactory());
 }

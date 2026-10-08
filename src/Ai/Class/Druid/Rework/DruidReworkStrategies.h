@@ -16,7 +16,8 @@ class PlayerbotAI;
 
 // Registered as "nc". Not the stock druid nc: the upkeep rows are YAML ("druid/nc"), weapon oil or sharpening stone by
 // spec ("druid/nc-oil", "druid/nc-stone"), and the out-of-combat heals are "druid/nc-resto" for a Restoration bot and
-// "druid/nc-heal" for the rest. A key whose stage has not landed yet logs once and adds nothing.
+// "druid/nc-heal" for the rest; a Bestial Fury bot also gets "druid/nc-bear-dps", which keeps its form up. A key whose
+// stage has not landed yet logs once and adds nothing.
 class DruidReworkNonCombatStrategy : public NonCombatStrategy
 {
 public:
@@ -46,7 +47,7 @@ public:
     std::string const getName() override { return "aoe"; }
 };
 
-// Registered as "cc": the stock crowd-control rows of "druid/cc", none for a Cat (DR11).
+// Registered as "cc": the stock crowd-control rows of "druid/cc", none for a Cat (DR11) or a Bestial Fury bear.
 class DruidReworkCcStrategy : public Strategy
 {
 public:
