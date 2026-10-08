@@ -17,6 +17,7 @@
 #include "TankWarlockStrategy.h"
 #include "UseItemAction.h"
 #include "WarlockActions.h"
+#include "WarlockAffContext.h"
 #include "WarlockReworkContext.h"
 #include "WarlockTriggers.h"
 
@@ -36,14 +37,14 @@ public:
     }
 
 private:
-    static Strategy* nc(PlayerbotAI* botAI) { return new GenericWarlockNonCombatStrategy(botAI); }
+    static Strategy* nc(PlayerbotAI* botAI) { return new WarlockReworkNonCombatStrategy(botAI); }
     static Strategy* pull(PlayerbotAI* botAI) { return new PullStrategy(botAI, "shoot"); }
     static Strategy* boost(PlayerbotAI* botAI) { return new WarlockBoostStrategy(botAI); }
     static Strategy* cc(PlayerbotAI* botAI) { return new WarlockCcStrategy(botAI); }
     static Strategy* pet(PlayerbotAI* botAI) { return new WarlockPetStrategy(botAI); }
     static Strategy* meta_melee_aoe(PlayerbotAI* botAI) { return new MetaMeleeAoeStrategy(botAI); }
     static Strategy* tank(PlayerbotAI* botAI) { return new TankWarlockStrategy(botAI); }
-    static Strategy* aoe(PlayerbotAI* botAI) { return new AoEWarlockStrategy(botAI); }
+    static Strategy* aoe(PlayerbotAI* botAI) { return new WarlockReworkAoeStrategy(botAI); }
 };
 
 class WarlockCombatStrategyFactoryInternal : public NamedObjectContext<Strategy>
@@ -57,7 +58,7 @@ public:
     }
 
 private:
-    static Strategy* affliction(PlayerbotAI* botAI) { return new AfflictionWarlockStrategy(botAI); }
+    static Strategy* affliction(PlayerbotAI* botAI) { return new WarlockReworkAffStrategy(botAI); }
     static Strategy* demonology(PlayerbotAI* botAI) { return new DemonologyWarlockStrategy(botAI); }
     static Strategy* destruction(PlayerbotAI* botAI) { return new DestructionWarlockStrategy(botAI); }
 };
@@ -114,8 +115,14 @@ public:
     }
 
 private:
-    static Strategy* curse_of_agony(PlayerbotAI* botAI) { return new WarlockCurseOfAgonyStrategy(botAI); }
-    static Strategy* curse_of_elements(PlayerbotAI* botAI) { return new WarlockCurseOfTheElementsStrategy(botAI); }
+    static Strategy* curse_of_agony(PlayerbotAI* botAI)
+    {
+        return new WarlockReworkCurseStrategy(botAI, "curse of agony");
+    }
+    static Strategy* curse_of_elements(PlayerbotAI* botAI)
+    {
+        return new WarlockReworkCurseStrategy(botAI, "curse of elements");
+    }
     static Strategy* curse_of_doom(PlayerbotAI* botAI) { return new WarlockCurseOfDoomStrategy(botAI); }
     static Strategy* curse_of_exhaustion(PlayerbotAI* botAI) { return new WarlockCurseOfExhaustionStrategy(botAI); }
     static Strategy* curse_of_tongues(PlayerbotAI* botAI) { return new WarlockCurseOfTonguesStrategy(botAI); }
@@ -132,8 +139,14 @@ public:
     }
 
 private:
-    static Strategy* firestone(PlayerbotAI* ai) { return new UseFirestoneStrategy(ai); }
-    static Strategy* spellstone(PlayerbotAI* ai) { return new UseSpellstoneStrategy(ai); }
+    static Strategy* firestone(PlayerbotAI* ai)
+    {
+        return new WarlockReworkStoneStrategy(ai, "firestone", "warlock/firestone");
+    }
+    static Strategy* spellstone(PlayerbotAI* ai)
+    {
+        return new WarlockReworkStoneStrategy(ai, "spellstone", "warlock/spellstone");
+    }
 };
 
 class WarlockTriggerFactoryInternal : public NamedObjectContext<Trigger>
@@ -415,6 +428,7 @@ void WarlockAiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextL
     AiObjectContext::BuildSharedActionContexts(actionContexts);
     actionContexts.Add(new WarlockAiObjectContextInternal());
     actionContexts.Add(new WarlockReworkActionFactory());
+    actionContexts.Add(new WarlockAffActionFactory());
 }
 
 void WarlockAiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextList<Trigger>& triggerContexts)

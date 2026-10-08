@@ -1,0 +1,181 @@
+# The reworked Affliction warlock's rotation: "warlock/affliction", appended (after "warlock/combat") to the "affli"
+# combat strategy by WarlockReworkAffStrategy::InitTriggers. Each row queues its action at the relevance when its
+# condition holds (`when`, the expression language of StrategyExpression.h). Execution order is by relevance, not by
+# position in this file. Every action is a RowCheckedAction (it re-checks its own row before casting).
+# Rows that can fire together never share an action name and qualifier (they would merge into one basket and only the
+# first row would be re-checked): Drain Soul A3/A4, Soulburn A5/P1, Haunt A6/P5, Seed P2/P3 and Phantom Singularity
+# A10/P4 differ by name or qualifier. Merged on purpose: Agony A8/P6b and Corruption A7/P7 (the single-target and pack
+# modes exclude each other), Unstable Affliction A9/P8 (same), Drain Life A11/P9/A12 (one spell, any true row casts it).
+# The `do:` qualifier and the unit qualifier in `when:` are the same literal ("aff drain soul execute::25,30" and
+# "lowest health attacker below::25,30"): otherwise the action targets another unit than the one checked.
+# Pooling: Soul Shards are spent only by Soulburn (A5, P1); Haunt and Seed wait on `primed` or on the mode. Mana comes
+# from Life Tap (A13) above the Shadow Bolt filler (A14). Inevitable Demise has only Drain Life as a spender.
+# Life Tap carries only its guide health floor (WQ1); a tap costs about 1,467 health at level 60 (accepted risk).
+# Nothing here names Burning Rush or Dark Apotheosis (WL7); "warlock/combat" cancels them.
+# Spell ids: WARLOCK.PLAN section 2 and the Affliction table of WARLOCK.YAML-PASS section 2: Soul Shards 200709,
+# Soulburn 200710 (its marker aura 200711), Inevitable Demise 200723, Dark Soul: Misery 200732, Soul Harvest 200736,
+# Haunt 48181, Seed of Corruption 27243, Phantom Singularity 200729, Unstable Affliction 30108, Bane of Agony 980,
+# Corruption 172, Drain Soul 1120, Drain Life 689, Life Tap 1454.
+strategy: warlock/affliction
+class: warlock
+conditions:
+  # Soulburn's marker: the next Haunt or Seed of Corruption is empowered. (Soul Shards, aura 200709, and Inevitable
+  # Demise, aura 200723, are counted inline: stacks() is a number, and a named condition must be a bool or a value().)
+  primed: aura(self, 200711, own)
+  # WL32/WQ4: three attackers and the "aoe" strategy on
+  pack: value("warlock aoe enabled") and value("attacker count") >= 3
+  haunt_ready: known(48181) and cooldown(48181) == 0
+  # WL27/WL28: Dark Soul: Misery / Soul Harvest is up
+  burst_ds: aura(self, 200732, own)
+  burst_sh: aura(self, 200736, own)
+  # WL28: Agony was applied before the burst began, so a recast snapshots the burst
+  agony_stale: >-
+    (burst_ds and elapsed(target, 980, own) > elapsed(self, 200732, own))
+    or (burst_sh and elapsed(target, 980, own) > elapsed(self, 200736, own))
+  # WQ3: refresh Agony under 2 s left, or when it predates a burst
+  agony_due: not aura(target, 980, own) or remaining(target, 980, own) < 2000 or agony_stale
+rows:
+  # D1 (WL13): healthstone under 35%
+  - do: warlock healthstone
+    when: health_pct(self) < 35 and value("item count::healthstone") > 0
+    relevance: emergency + 2
+
+  # A1 (WL30): Dark Soul: Misery above every DoT, on elites and long fights
+  - do: aff dark soul
+    when: >-
+      known(200732) and cooldown(200732) == 0 and alive(target) and (elite(target) or lifetime(target) >= 20)
+    relevance: normal + 9.9
+
+  # A2 (WL36): Soul Harvest with both DoTs up
+  - do: aff soul harvest
+    when: >-
+      known(200736) and cooldown(200736) == 0 and alive(target) and aura(target, 172, own)
+      and aura(target, 980, own)
+    relevance: normal + 9.85
+
+  # A3 (WL31): Drain Soul on a target under 25%
+  - do: aff drain soul
+    when: known(1120) and alive(target) and health_pct(target) < 25 and not moving(self)
+    relevance: normal + 9.8
+
+  # A4: Drain Soul on any attacker under 25%, in both modes (guide section 8: no Shadow Bolt while one is)
+  - do: aff drain soul execute::25,30
+    when: known(1120) and alive("lowest health attacker below::25,30") and not moving(self)
+    relevance: normal + 9.75
+
+  # A5 (WL6a): Soulburn for Haunt, solo only
+  - do: aff soulburn haunt
+    when: >-
+      not pack and known(200710) and cooldown(200710) == 0 and stacks(self, 200709, own) >= 1 and not primed
+      and haunt_ready and alive(target) and not moving(self)
+    relevance: normal + 9.7
+
+  # P1: Soulburn for Seed of Corruption, in a pack only
+  - do: aff soulburn seed
+    when: >-
+      pack and known(200710) and cooldown(200710) == 0 and stacks(self, 200709, own) >= 1 and not primed
+      and known(27243) and alive(target) and enemies_near_target(10) >= 3 and value("unsafe aoe units::15") == 0
+      and not moving(self)
+    relevance: normal + 9.7
+
+  # P2 (WL6b): the primed Seed of Corruption
+  - do: aff primed seed
+    when: pack and known(27243) and primed and alive(target) and not moving(self)
+    relevance: normal + 9.65
+
+  # A6: Haunt on the target (consumes a primed marker)
+  - do: aff haunt
+    when: not pack and haunt_ready and alive(target) and not moving(self)
+    relevance: normal + 9.6
+
+  # P3: Seed of Corruption on a target without one
+  - do: aff seed
+    when: >-
+      pack and known(27243) and alive(target) and not aura(target, 27243, own)
+      and ms_since_cast(27243) > 3500 and value("unsafe aoe units::15") == 0 and not moving(self)
+    relevance: normal + 9.55
+
+  # P4: Phantom Singularity on the most clustered enemy
+  - do: aff pack phantom singularity::10
+    when: >-
+      pack and known(200729) and cooldown(200729) == 0 and alive("most clustered enemy::10")
+      and value("unsafe aoe units::10;cluster") == 0
+    relevance: normal + 9.5
+
+  # A7 (WL38): Corruption
+  - do: aff corruption
+    when: not pack and known(172) and alive(target) and not aura(target, 172, own)
+    relevance: normal + 9.5
+
+  # P5 (WL34): Haunt on the highest-health attacker that lacks it
+  - do: aff pack haunt::48181;1;0;0;30
+    when: >-
+      pack and not primed and haunt_ready and alive("attacker without aura id::48181;1;0;0;30")
+      and not moving(self)
+    relevance: normal + 9.45
+
+  # A8: Agony on the target (WQ3)
+  - do: aff agony
+    when: not pack and known(980) and alive(target) and agony_due
+    relevance: normal + 9.4
+
+  # P6 (WL33): Agony on the highest-health attacker that lacks it (or under 2 s left)
+  - do: aff pack agony::980;1;2000;15;30
+    when: pack and known(980) and alive("attacker without aura id::980;1;2000;15;30")
+    relevance: normal + 9.4
+
+  # P6b: refresh the target's Agony across a burst
+  - do: aff agony
+    when: pack and known(980) and alive(target) and agony_stale and lifetime(target) >= 15
+    relevance: normal + 9.38
+
+  # P7: Corruption in a pack
+  - do: aff corruption
+    when: pack and known(172) and alive(target) and not aura(target, 172, own)
+    relevance: normal + 9.35
+
+  # A9 (WL29): Unstable Affliction, refreshed at 5 s left
+  - do: aff unstable affliction
+    when: >-
+      not pack and known(30108) and alive(target) and remaining(target, 30108, own) <= 5000
+      and not moving(self)
+    relevance: normal + 9.3
+
+  # P8: Unstable Affliction in a pack, once per target
+  - do: aff unstable affliction
+    when: >-
+      pack and known(30108) and alive(target) and not aura(target, 30108, own) and not moving(self)
+    relevance: normal + 9.3
+
+  # P9: Drain Life at 40+ Inevitable Demise in a pack
+  - do: aff drain life
+    when: pack and known(689) and stacks(self, 200723, own) >= 40 and alive(target) and not moving(self)
+    relevance: normal + 9.25
+
+  # A10: Phantom Singularity on the target
+  - do: aff phantom singularity
+    when: >-
+      not pack and known(200729) and cooldown(200729) == 0 and alive(target) and value("unsafe aoe units::10") == 0
+    relevance: normal + 9.2
+
+  # A11 (WL37): Drain Life at 30+ Inevitable Demise
+  - do: aff drain life
+    when: not pack and known(689) and stacks(self, 200723, own) >= 30 and alive(target) and not moving(self)
+    relevance: normal + 9.1
+
+  # A12 (WL37): dump the Inevitable Demise stacks before the Drain Soul execute
+  - do: aff drain life
+    when: >-
+      known(689) and stacks(self, 200723, own) >= 10 and alive(target) and health_pct(target) < 35
+      and health_pct(target) >= 25 and not moving(self)
+    relevance: normal + 9.05
+
+  # A13 (WL11): Life Tap, guide floors only (WQ1)
+  - do: aff life tap
+    when: known(1454) and mana(self) < 30 and health_pct(self) > 40
+    relevance: normal + 1.5
+
+  # A14: the filler
+  - do: aff shadow bolt
+    when: alive(target) and not moving(self)
+    relevance: normal + 1
