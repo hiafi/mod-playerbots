@@ -19,6 +19,7 @@
 #include "WarlockActions.h"
 #include "WarlockAffContext.h"
 #include "WarlockDemoContext.h"
+#include "WarlockDestroContext.h"
 #include "WarlockReworkContext.h"
 #include "WarlockTriggers.h"
 
@@ -61,7 +62,7 @@ public:
 private:
     static Strategy* affliction(PlayerbotAI* botAI) { return new WarlockReworkAffStrategy(botAI); }
     static Strategy* demonology(PlayerbotAI* botAI) { return new WarlockReworkDemoStrategy(botAI); }
-    static Strategy* destruction(PlayerbotAI* botAI) { return new DestructionWarlockStrategy(botAI); }
+    static Strategy* destruction(PlayerbotAI* botAI) { return new WarlockReworkDestroStrategy(botAI); }
 };
 
 class WarlockPetStrategyFactoryInternal : public NamedObjectContext<Strategy>
@@ -430,6 +431,7 @@ void WarlockAiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextL
     actionContexts.Add(new WarlockAiObjectContextInternal());
     actionContexts.Add(new WarlockReworkActionFactory());
     actionContexts.Add(new WarlockAffActionFactory());
+    actionContexts.Add(new WarlockDestroActionFactory());
     actionContexts.Add(new WarlockDemoActionFactory());
 }
 
