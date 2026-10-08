@@ -2101,32 +2101,41 @@ AiPlayerbot.PremadeSpecLink.8.6.80 = --3203013301202330310030131231331
 # WARLOCK
 #
 
+# Warlock rework (custom talent trees): the links are the level-60 guide builds for Affliction, Demonology and
+# Destruction (docs/reworks/bot-strategy/warlock-aff-strat.md, warlock-demo-strat.md,
+# warlock-destr-strat.md; rework-bot-strategies WARLOCK YAML pass, Stage WC2). Each string is
+# "<affliction>-<demonology>-<destruction>" with one digit per talent in (tier, column) order, so a leading "-" or "--"
+# is an empty Affliction / Affliction+Demonology tab and the build sits in the tab its prefix points at (demonology is
+# "-", destruction is "--"). The stock links decoded as garbage on the reworked grid. .80 repeats .60 (at level 80 only
+# the .80 entry is read) until there are level-80 builds, the stock .70 lines are gone, and the PvP slots 3-5 reuse the
+# affliction, demonology and destruction PvE builds.
+# PremadeSpecName and PremadeSpecGlyph are unchanged: bot glyphs are off on this server (AiPlayerbot.BotGlyphs = 0),
+# so the glyph lists are never applied.
+
 AiPlayerbot.PremadeSpecName.9.0 = affli pve
 AiPlayerbot.PremadeSpecGlyph.9.0 = 45785,43390,50077,43394,43393,45779
-AiPlayerbot.PremadeSpecLink.9.0.60 = 2350022001113510053500131151
-AiPlayerbot.PremadeSpecLink.9.0.70 = 2350022001113510053500131151--55
-AiPlayerbot.PremadeSpecLink.9.0.80 = 2350022001123510253500331151--55000005
+AiPlayerbot.PremadeSpecLink.9.0.60 = 332002202232000103330010333112231
+AiPlayerbot.PremadeSpecLink.9.0.80 = 332002202232000103330010333112231
 AiPlayerbot.PremadeSpecName.9.1 = demo pve
 AiPlayerbot.PremadeSpecGlyph.9.1 = 45785,43390,50077,43394,43393,42459
-AiPlayerbot.PremadeSpecLink.9.1.60 = -003203301135112530135201051
-AiPlayerbot.PremadeSpecLink.9.1.70 = -003203301135112530135201051-55
-AiPlayerbot.PremadeSpecLink.9.1.80 = -003203301135112530135221351-55000005
+AiPlayerbot.PremadeSpecLink.9.1.60 = -302023202120330011003030013030300130231
+AiPlayerbot.PremadeSpecLink.9.1.80 = -302023202120330011003030013030300130231
 AiPlayerbot.PremadeSpecName.9.2 = destro pve
 AiPlayerbot.PremadeSpecGlyph.9.2 = 45785,43390,42454,43394,43393,42453
-AiPlayerbot.PremadeSpecLink.9.2.60 = --05203215200231051305031151
-AiPlayerbot.PremadeSpecLink.9.2.80 = 23-0302-05203215220331051335231351
+AiPlayerbot.PremadeSpecLink.9.2.60 = --3333200210220133030113023310231
+AiPlayerbot.PremadeSpecLink.9.2.80 = --3333200210220133030113023310231
 AiPlayerbot.PremadeSpecName.9.3 = affli pvp
 AiPlayerbot.PremadeSpecGlyph.9.3 = 50077,43392,42455,43390,43389,45783
-AiPlayerbot.PremadeSpecLink.9.3.60 = 0350002231223011053502301151
-AiPlayerbot.PremadeSpecLink.9.3.80 = 2350002231223111053502301151-2032003011302
+AiPlayerbot.PremadeSpecLink.9.3.60 = 332002202232000103330010333112231
+AiPlayerbot.PremadeSpecLink.9.3.80 = 332002202232000103330010333112231
 AiPlayerbot.PremadeSpecName.9.4 = demo pvp
 AiPlayerbot.PremadeSpecGlyph.9.4 = 42459,43392,45780,43390,43389,45783
-AiPlayerbot.PremadeSpecLink.9.4.60 = -003203301135202530135001251
-AiPlayerbot.PremadeSpecLink.9.4.80 = -003203301135202530135011351-052300152
+AiPlayerbot.PremadeSpecLink.9.4.60 = -302023202120330011003030013030300130231
+AiPlayerbot.PremadeSpecLink.9.4.80 = -302023202120330011003030013030300130231
 AiPlayerbot.PremadeSpecName.9.5 = destro pvp
 AiPlayerbot.PremadeSpecGlyph.9.5 = 42471,43392,42454,43390,43389,45783
-AiPlayerbot.PremadeSpecLink.9.5.60 = --05230015220331351005031051
-AiPlayerbot.PremadeSpecLink.9.5.80 = -2032003311302-05230015220331351005031051
+AiPlayerbot.PremadeSpecLink.9.5.60 = --3333200210220133030113023310231
+AiPlayerbot.PremadeSpecLink.9.5.80 = --3333200210220133030113023310231
 
 #
 #
