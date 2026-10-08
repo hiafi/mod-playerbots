@@ -1,9 +1,10 @@
 # The Bestial Fury bear DPS rotation, from the user's guide (docs/reworks/bot-strategy/druid-feral-bear-dps-strat.md):
-# "druid/bear-dps" is appended to the "bear dps" combat strategy by DruidReworkBearDpsStrategy::InitTriggers, and
-# "druid/nc-bear-dps" to "nc" for a bot with the Bestial Fury talent (200425). A bot runs this rotation if and only if
-# it has that talent. Each row queues its action at the relevance when its condition holds (`when`, the expression
-# language of StrategyExpression.h). Execution order is by relevance, not by position in this file. Actions named
-# "bear dps ..." and "druid ..." are RowCheckedAction (they re-check their own row before casting); only "reach melee"
+# "druid/bear-dps" is appended to the "bear dps" combat strategy by DruidReworkBearDpsStrategy::InitTriggers for a bot
+# with the Bestial Fury talent (200425). A bot runs this rotation if and only if it has that talent. The bot shifts in
+# combat only (F1, F2); out of combat it stays free to mount, eat, buff and swim. Each row queues its action at
+# the relevance when its condition holds (`when`, the expression language of StrategyExpression.h).
+# Execution order is by relevance, not by position in this file. Actions named "bear dps ..." and "druid ..." are
+# RowCheckedAction (they re-check their own row before casting); only "reach melee"
 # is a stock action. The charge is a row here, not the `feral charge` strategy (that one is for the tank).
 #
 # Bands: defensives (emergency) > forms, off-the-GCD rows, Berserk, the charge, `reach melee` (high) > pack (normal +
@@ -34,13 +35,14 @@
 # Answers to the plan's open questions (2026-10-08):
 #  - BQ1: only Faerie Fire 770 counts as an equivalent armor debuff (`armor_up`). Sunder and Expose stack with Thrash
 #    on this server (its group 1016 holds only Faerie Fire), and skipping Thrash also loses its bleed.
-#  - BQ2: Bear Form and Bestial Fury are kept up out of combat (`druid/nc-bear-dps`), which also carries Swell between
-#    pulls.
+#  - BQ2: the bot shifts in combat only (user ruling 2026-10-08); there are no out-of-combat form rows, so mounting,
+#    taxis and buffs keep working.
 #  - BQ3: rage is pooled for Pulverize: while it is ready but short of rage (`pool`), the spenders below it wait
 #    (S4, S6, S7, S9, S10). Mangle (S3) still fires, it is on a cooldown and refunds rage. Delete `pool` from those rows
 #    for the guide as written.
 #  - BQ4: a premade slot, 11.7 "bear dps pve", in the config.
-#  - BQ5: the AoE rows are gated the DPS way, by the `aoe` toggle and `unsafe aoe units::8 == 0` (`pack`).
+#  - BQ5: the AoE rows are gated the DPS way, by the `aoe` toggle and `unsafe aoe units::8;self == 0` (`pack`); Thrash,
+#    Swipe and Upheaval hit around the bot, so the count and the unsafe check are centred on the bot.
 #
 # Spell ids: Bear Form 5487, Bestial Fury 200425 (Swell 200426, Tooth and Claw 200438, Nurturing Instinct's Bloodtalons
 # 200430), Pulverize 200421, Upheaval 200422, Thrash 200423, Savage Bite 200439, Lacerate 33745, Mangle (Bear) 33878,
@@ -52,7 +54,7 @@ strategy: druid/bear-dps
 class: druid
 conditions:
   in_fury: aura(self, 200425)
-  in_bear: aura(self, 5487)
+  in_bear: aura(self, "5487,9634")
   rage: value("rage::self target")
   berserk: aura(self, 50334)
   bloodtalons: aura(self, 200430)
@@ -68,10 +70,10 @@ conditions:
   thrash_ok: known(200423) and cooldown(200423) == 0 and alive(target)
   # BQ1: the bot's own Thrash, or Faerie Fire from anyone
   armor_up: remaining(target, 200423, own) >= 3000 or aura(target, 770)
-  # BQ5: 3 or more enemies around the target, the aoe toggle on, and nobody unpulled nearby
+  # BQ5: 3 or more enemies around the bot, the aoe toggle on, and nobody unpulled nearby
   pack: >-
-    value("bear dps aoe enabled") and alive(target) and enemies_near_target(8) >= 3
-    and value("unsafe aoe units::8") == 0
+    value("bear dps aoe enabled") and alive(target) and enemies_within(8) >= 3
+    and value("unsafe aoe units::8;self") == 0
 rows:
   # D1: Barkskin when low, or as soon as anything is attacking the bot
   - do: druid barkskin
@@ -162,7 +164,7 @@ rows:
   # S5: Savage Bite at 2 Tooth and Claw charges, or 1 about to run out
   - do: bear dps capped bite
     when: >-
-      not pack and known(200439)
+      not pack and known(200439) and alive(target)
       and (stacks(self, 200438, own) >= 2 or (stacks(self, 200438, own) >= 1 and remaining(self, 200438, own) < 2000))
     relevance: normal + 8.5
   # S6: Lacerate up to 3 stacks, and refreshed before it drops
@@ -178,7 +180,7 @@ rows:
   # S8: Savage Bite with a charge, unless the Swell is nearly full and Pulverize is waiting for it
   - do: bear dps savage bite
     when: >-
-      not pack and known(200439) and stacks(self, 200438, own) >= 1
+      not pack and known(200439) and alive(target) and stacks(self, 200438, own) >= 1
       and (stacks(self, 200426, own) < 4 or not known(200421))
     relevance: normal + 8.2
   # S9: Maul
@@ -189,17 +191,3 @@ rows:
   - do: bear dps filler lacerate
     when: not pack and not pool and known(33745) and alive(target) and rage >= 50
     relevance: normal + 8
----
-# Out of combat: keep Bear Form and Bestial Fury up between pulls (BQ2). The same two rows as F1 and F2
-strategy: druid/nc-bear-dps
-class: druid
-conditions:
-  in_fury: aura(self, 200425)
-  in_bear: aura(self, 5487)
-rows:
-  - do: bear dps bear form
-    when: known(5487) and not in_bear and not in_fury
-    relevance: normal + 9
-  - do: bear dps bestial fury
-    when: known(200425) and in_bear and not in_fury
-    relevance: normal + 8.9

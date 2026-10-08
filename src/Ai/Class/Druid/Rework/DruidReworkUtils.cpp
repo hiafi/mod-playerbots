@@ -21,7 +21,8 @@ bool ai::druid_rework::IsBearBuild(Player* bot)
 
 bool ai::druid_rework::IsBearDpsBuild(Player* bot)
 {
-    // Bestial Fury is a talent with a shapeshift spell, but test it as a talent like Elder Hide: the active spec decides
+    // Bestial Fury is a talent with a shapeshift spell, but test it as a talent like Elder Hide: the active spec
+    // decides
     return bot->HasTalent(SPELL_BESTIAL_FURY, bot->GetActiveSpec());
 }
 

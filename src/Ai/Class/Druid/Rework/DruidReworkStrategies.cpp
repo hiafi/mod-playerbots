@@ -28,10 +28,6 @@ void DruidReworkNonCombatStrategy::InitTriggers(std::vector<TriggerNode*>& trigg
     bool const caster = spec == DruidSpec::Balance || spec == DruidSpec::Restoration;
     ai::data::AppendRows(caster ? "druid/nc-oil" : "druid/nc-stone", triggers);
     ai::data::AppendRows(spec == DruidSpec::Restoration ? "druid/nc-resto" : "druid/nc-heal", triggers);
-
-    // Bestial Fury is kept up between pulls, so the Swell it carries survives them (the heals above are form-guarded)
-    if (spec == DruidSpec::BearDps)
-        ai::data::AppendRows("druid/nc-bear-dps", triggers);
 }
 
 void DruidReworkBoostStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)

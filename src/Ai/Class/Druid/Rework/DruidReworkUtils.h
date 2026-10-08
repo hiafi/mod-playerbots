@@ -29,10 +29,9 @@ bool IsBearDpsBuild(Player* bot);
 
 }  // namespace ai::druid_rework
 
-// The spec of the bot's deepest talent tree; a Feral bot with Bestial Fury is a BearDps (checked first, so it wins over
-// Elder Hide), else a Cat when it has Cat Form and no Elder Hide, else a Bear (mirrors AiFactory's choice once DR1 swaps
-// its Thick Hide test). Balance below level 10 or with no points spent
-// (AiFactory's default).
+// The spec of the bot's deepest talent tree; a Feral bot with Bestial Fury is a BearDps (checked first, so it wins
+// over Elder Hide), else a Cat when it has Cat Form and no Elder Hide, else a Bear (mirrors AiFactory's choice once DR1
+// swaps its Thick Hide test). Balance below level 10 or with no points spent (AiFactory's default).
 DruidSpec GetDruidSpec(Player* bot);
 
 #endif

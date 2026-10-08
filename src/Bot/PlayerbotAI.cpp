@@ -14,6 +14,7 @@
 #include "Common.h"
 #include "CreatureData.h"
 #include "DBCStores.h"
+#include "DruidReworkIds.h"
 #include "DruidReworkUtils.h"
 #include "EmoteAction.h"
 #include "Engine.h"
@@ -4866,6 +4867,8 @@ bool PlayerbotAI::IsOpposing(uint8 race1, uint8 race2)
 
 void PlayerbotAI::RemoveShapeshift()
 {
+    // Rework: Bestial Fury replaces Bear Form; by id, as the hidden aura 200437 and a Hunter spell share its name
+    bot->RemoveAura(ai::druid_rework::SPELL_BESTIAL_FURY);
     RemoveAura("bear form");
     RemoveAura("dire bear form");
     RemoveAura("moonkin form");
