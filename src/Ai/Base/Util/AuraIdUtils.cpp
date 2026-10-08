@@ -9,6 +9,8 @@
 #include "SpellAuras.h"
 #include "Unit.h"
 
+#include <algorithm>
+
 namespace ai::aura
 {
 
@@ -58,6 +60,15 @@ int32 AuraRemainingMs(Unit* unit, std::vector<uint32> const& ids, ObjectGuid cas
         return 0;
 
     return aura->IsPermanent() ? -1 : aura->GetDuration();
+}
+
+int32 AuraElapsedMs(Unit* unit, std::vector<uint32> const& ids, ObjectGuid caster)
+{
+    Aura* aura = FindAura(unit, ids, caster);
+    if (!aura || aura->IsPermanent())
+        return 0;
+
+    return std::max(0, aura->GetMaxDuration() - aura->GetDuration());
 }
 
 bool HasAuraFromOtherCaster(Unit* unit, uint32 spellId)

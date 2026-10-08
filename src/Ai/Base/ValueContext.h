@@ -196,6 +196,8 @@ public:
         creators["elite enemies within"] = &ValueContext::elite_enemies_within;
         creators["most clustered enemy"] = &ValueContext::most_clustered_enemy;
         creators["enemies near target"] = &ValueContext::enemies_near_target;
+        creators["elite enemies near target"] = &ValueContext::elite_enemies_near_target;
+        creators["max health pct near target"] = &ValueContext::max_health_pct_near_target;
         creators["most clustered enemy count"] = &ValueContext::most_clustered_enemy_count;
         creators["unsafe aoe units"] = &ValueContext::unsafe_aoe_units;
         creators["attacker without aura id"] = &ValueContext::attacker_without_aura_id;
@@ -429,6 +431,14 @@ private:
     static UntypedValue* elite_enemies_within(PlayerbotAI* botAI) { return new EliteEnemiesWithinValue(botAI); }
     static UntypedValue* most_clustered_enemy(PlayerbotAI* botAI) { return new MostClusteredEnemyValue(botAI); }
     static UntypedValue* enemies_near_target(PlayerbotAI* botAI) { return new EnemiesNearTargetValue(botAI); }
+    static UntypedValue* elite_enemies_near_target(PlayerbotAI* botAI)
+    {
+        return new EliteEnemiesNearTargetValue(botAI);
+    }
+    static UntypedValue* max_health_pct_near_target(PlayerbotAI* botAI)
+    {
+        return new MaxHealthPctNearTargetValue(botAI);
+    }
     static UntypedValue* most_clustered_enemy_count(PlayerbotAI* botAI)
     {
         return new MostClusteredEnemyCountValue(botAI);

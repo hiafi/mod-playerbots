@@ -16,7 +16,9 @@ namespace
 {
 constexpr size_t WITHOUT_AURA_FIELDS = 5;
 constexpr size_t WITH_AURA_FIELDS = 3;
-constexpr char NEAREST_FIELD[] = "nearest";
+constexpr char NEAREST_FLAG[] = "nearest";
+constexpr char NOTARGET_FLAG[] = "notarget";
+constexpr char FREE_FLAG[] = "free";
 
 struct AuraQuery
 {
@@ -26,6 +28,8 @@ struct AuraQuery
     float minLifetimeSec = 0.0f;
     float range = 0.0f;
     bool nearest = false;
+    bool skipTarget = false;
+    bool skipControlled = false;
 };
 
 // Parses the "ids;owned;..." qualifiers. The field layout differs per value, so withoutAura selects it.
@@ -46,10 +50,28 @@ bool ParseAuraQuery(std::string const& qualifier, bool withoutAura, AuraQuery& q
     if (!withoutAura)
         return ai::qualifier::ParseNumber(fields[2], query.range);
 
-    query.nearest = fields.size() > required;
-    return ai::qualifier::ParseNumber(fields[2], query.refreshMs) &&
-           ai::qualifier::ParseNumber(fields[3], query.minLifetimeSec) &&
-           ai::qualifier::ParseNumber(fields[4], query.range) && (!query.nearest || fields[5] == NEAREST_FIELD);
+    if (!ai::qualifier::ParseNumber(fields[2], query.refreshMs) ||
+        !ai::qualifier::ParseNumber(fields[3], query.minLifetimeSec) ||
+        !ai::qualifier::ParseNumber(fields[4], query.range))
+        return false;
+
+    if (fields.size() == required)
+        return true;
+
+    // The optional flag field is a comma list: "nearest", "notarget", "free"
+    for (std::string const& flag : ai::qualifier::Split(fields[5], ','))
+    {
+        if (flag == NEAREST_FLAG)
+            query.nearest = true;
+        else if (flag == NOTARGET_FLAG)
+            query.skipTarget = true;
+        else if (flag == FREE_FLAG)
+            query.skipControlled = true;
+        else
+            return false;
+    }
+
+    return true;
 }
 }  // namespace
 
@@ -61,12 +83,17 @@ ObjectGuid AttackerWithoutAuraIdValue::CalculateGuid()
 
     ObjectGuid const caster = query.owned ? bot->GetGUID() : ObjectGuid::Empty;
     GuidSet const exclusions = GatherStrategyTargetExclusions(botAI, TargetValueExclusionType::Attacker);
+    Unit* const target = query.skipTarget ? AI_VALUE(Unit*, "current target") : nullptr;
+    ObjectGuid const currentTarget = target ? target->GetGUID() : ObjectGuid::Empty;
     Unit* best = nullptr;
     for (ObjectGuid const guid : AI_VALUE(GuidVector, "attackers"))
     {
         Unit* unit = botAI->GetUnit(guid);
         if (!unit || !unit->IsAlive() || exclusions.find(guid) != exclusions.end() ||
             bot->GetDistance(unit) > query.range)
+            continue;
+
+        if ((query.skipTarget && guid == currentTarget) || (query.skipControlled && ai::target::IsControlled(unit)))
             continue;
 
         // 0 means absent, -1 permanent

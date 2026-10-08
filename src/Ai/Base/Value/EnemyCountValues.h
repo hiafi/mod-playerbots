@@ -53,6 +53,34 @@ public:
     }
 
     uint8 Calculate() override;
+
+protected:
+    uint8 CountNear(bool eliteOnly);
+};
+
+// Same as EnemiesNearTargetValue, counting only elite and boss creatures. Qualifier: yards.
+class EliteEnemiesNearTargetValue : public EnemiesNearTargetValue
+{
+public:
+    EliteEnemiesNearTargetValue(PlayerbotAI* botAI, std::string const name = "elite enemies near target")
+        : EnemiesNearTargetValue(botAI, name)
+    {
+    }
+
+    uint8 Calculate() override;
+};
+
+// The highest health percent among the alive attackers within `yards` of the current target (the target itself
+// included), 0 when there is no target or none of them. Qualifier: yards.
+class MaxHealthPctNearTargetValue : public CalculatedValue<uint8>, public Qualified
+{
+public:
+    MaxHealthPctNearTargetValue(PlayerbotAI* botAI, std::string const name = "max health pct near target")
+        : CalculatedValue<uint8>(botAI, name, IN_MILLISECONDS)
+    {
+    }
+
+    uint8 Calculate() override;
 };
 
 // Alive attackers within `yards` of the bot and inside its frontal arc of `degrees` total width.
@@ -99,10 +127,11 @@ public:
 // Units that an area spell would pull or break: attackable units within `yards` of the centre (line of sight
 // ignored; critters, totems, triggers, non-combat pets and AoE-avoiding units skipped) that are not in combat, or
 // that carry crowd control damage breaks (Unit::HasBreakableByDamageCrowdControlAura: polymorph, fear, root, sap
-// and the like; a stun that damage doesn't break doesn't count). The centre itself counts if it matches. "Safe to AoE" means 0.
-// Qualifier: "yards[;cluster]", e.g. "10". The centre is the current target, or with "cluster" the
-// "most clustered enemy" for that radius, for spells placed on a pack rather than on the target. A malformed
-// qualifier gives 0.
+// and the like; a stun that damage doesn't break doesn't count). The centre itself counts if it matches.
+// "Safe to AoE" means 0.
+// Qualifier: "yards[;cluster|;self]", e.g. "10". The centre is the current target, with "cluster" the
+// "most clustered enemy" for that radius (spells placed on a pack rather than on the target), or with "self" the
+// bot (Hellfire, Immolation Aura and cones, which hit around the caster). A malformed qualifier gives 0.
 class UnsafeAoeUnitsValue : public CalculatedValue<uint8>, public Qualified
 {
 public:

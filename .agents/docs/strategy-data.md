@@ -101,6 +101,7 @@ arguments, not here.
 | `stacks(u, ids[, own])` | number | 0 | `ai::aura::AuraStacks` |
 | `remaining(u, ids[, own])` | ms | 0; infinity for a permanent aura | `ai::aura::AuraRemainingMs` |
 | `charges(u, ids[, own])` | number | 0 | `ai::aura::AuraCharges` |
+| `elapsed(u, ids[, own])` | ms | 0; also 0 for a permanent aura | `ai::aura::AuraElapsedMs`: max duration minus remaining of the found aura, i.e. time since it was applied or refreshed |
 | `known(spell)` | bool | | id: `Player::HasSpell`, or a talent in the active spec (`Player::HasTalent`), so passive talents count; name: `spell id::<name>` is not 0 |
 | `boss(u)` / `elite(u)` / `controlled(u)` | bool | false | `ai::target::IsBoss` / `IsElite` / `IsControlled` |
 | `is_self(u)` | bool | false | the unit is the bot |
@@ -121,6 +122,8 @@ for interval-1 triggers without per-tick state. A `data` trigger can't be nested
 **Conventions.**
 
 - A missing aura reads 0 (and `aura()` false). `remaining()` of a permanent aura compares as infinite.
+- `elapsed(target, 980, own) > elapsed(self, 200732, own)` asks "was the DoT applied before the buff": the DoT has been
+  up longer than the buff. A missing aura reads 0, so pair it with `aura()` when absence matters.
 - `cooldown()` ignores the global cooldown and returns 0 for an unknown spell. Gate on `known()` for a spell a level
   may lack: `known(642) and cooldown(642) == 0`.
 - A passive talent is never in the spellbook, so C++ must test it with `HasTalent(id, GetActiveSpec())`, not
@@ -188,6 +191,15 @@ the same literal in both places. A qualifier passed to the constructor wins (the
 distinct qualifier is a distinct action name, hence a distinct queue basket, and a distinct value instance with its own
 1 s scan.
 
+**Instant by aura.** A cast-time spell that a proc or buff makes instant (Molten Core's Soul Fire, Chaotic Inferno's
+Chaos Bolt) is cast on the move by registering it on `CastInstantByAuraAction(botAI, spell, {auraIds})`
+(`src/Ai/Base/Actions/`). With one of the auras up and the bot moving, its `isPossible()` calls
+`CanCastSpell(…, ignoreMovingCastTime = true)`, which skips only the cast-time half of the moving refusal (never a
+channel or an autorepeat spell); without the aura it is a plain `CastSpellAction`. The row still carries
+`not moving(self) or aura(self, <id>)`: the action base only lifts the C++ refusal. `PlayerbotAI::CastSpell`'s own
+moving guard is inert here, because `Spell::m_casttime` is 0 until `prepare` runs; the core decides at the cast, and if
+no aura grants the instant cast it refuses it as moving and the action fails for that tick.
+
 The shared party values a healer row reads, besides `value()` counts:
 
 | Value | Qualifier | Yields |
@@ -200,6 +212,14 @@ The shared party values a healer row reads, besides `value()` counts:
 
 The `unitValue` inside the `injured allies in cone` qualifier (`...;heal cluster unit::27,85`) is not checked when the
 YAML loads: a mistyped name resolves to no value and the count reads 0, so check it by hand.
+
+**Attacker lists.** The id-based DoT values (`attacker without aura id`, `attackers with aura id`,
+`lowest health attacker below`) are documented at the top of `AttackerAuraValues.h`. `attacker without aura id`
+takes an optional sixth field of comma-separated flags: `nearest` (nearest instead of highest health), `notarget` (skip
+the current target) and `free` (skip a stunned, confused, silenced or disarmed attacker):
+`"200974;1;0;0;40;notarget,free"`. `"nearest"` alone reads as before. Two more counts centre on the current target like
+`enemies near target`: `elite enemies near target::yards` (elites and bosses only, `uint8`) and `max health pct near
+target::yards` (the highest health percent among those attackers, 0 when none; a "pack is dying" check).
 
 **Missing units.** A Unit* value that finds nobody (no tank, nobody below the threshold) yields a missing unit, and
 `health_pct()` of it reads 0. A row that compares a unit value's health with `<` therefore also asks `alive(<unit

@@ -339,6 +339,17 @@ bool PetsAction::Execute(Event event)
     return true;
 }
 
+bool TogglePetSpellAutoCastAction::IsAutocastWanted(Pet* /*pet*/, SpellInfo const* spellInfo)
+{
+    for (uint32 disabledSpell : disabledPetSpells)
+    {
+        if (spellInfo->Id == disabledSpell)
+            return false;
+    }
+
+    return true;
+}
+
 bool TogglePetSpellAutoCastAction::Execute(Event /*event*/)
 {
     Pet* pet = bot->GetPet();
@@ -372,15 +383,7 @@ bool TogglePetSpellAutoCastAction::Execute(Event /*event*/)
         if (!spellInfo || !spellInfo->IsAutocastable())
             continue;
 
-        bool shouldApply = true;
-        for (uint32 disabledSpell : disabledPetSpells)
-        {
-            if (spellId == disabledSpell)
-            {
-                shouldApply = false;
-                break;
-            }
-        }
+        bool const shouldApply = IsAutocastWanted(pet, spellInfo);
         bool isAutoCast = false;
         for (unsigned int& m_autospell : pet->m_autospells)
         {

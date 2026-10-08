@@ -69,6 +69,8 @@ struct FunctionSpec
 // alive(u)                    the unit exists and is alive.
 // aura/stacks/remaining/charges(u, ids[, own])  ai::aura helpers. Missing unit, or no such aura: false / 0.
 //                             remaining() is ms, and infinity for a permanent aura.
+// elapsed(u, ids[, own])      ms since the found aura was applied or refreshed (max duration minus remaining). 0 when
+//                             absent or permanent.
 // known(spell)                id: Player::HasSpell; name: the value "spell id::<name>" is not 0.
 // boss/elite/controlled(u)    ai::target::IsBoss / IsElite (boss included) / IsControlled. Missing: false.
 // is_self(u)                  the unit is the bot. Missing: false.
@@ -98,6 +100,7 @@ constexpr FunctionSpec FUNCTIONS[] = {
     {"aura", ExprFn::Aura, ExprType::Bool, 2, 3, {ArgKind::Unit, ArgKind::Ids, ArgKind::Own}},
     {"stacks", ExprFn::Stacks, ExprType::Number, 2, 3, {ArgKind::Unit, ArgKind::Ids, ArgKind::Own}},
     {"remaining", ExprFn::Remaining, ExprType::Number, 2, 3, {ArgKind::Unit, ArgKind::Ids, ArgKind::Own}},
+    {"elapsed", ExprFn::Elapsed, ExprType::Number, 2, 3, {ArgKind::Unit, ArgKind::Ids, ArgKind::Own}},
     {"charges", ExprFn::Charges, ExprType::Number, 2, 3, {ArgKind::Unit, ArgKind::Ids, ArgKind::Own}},
     {"known", ExprFn::Known, ExprType::Bool, 1, 1, {ArgKind::Spell}},
     {"boss", ExprFn::Boss, ExprType::Bool, 1, 1, {ArgKind::Unit}},

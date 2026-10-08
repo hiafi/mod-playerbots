@@ -32,6 +32,9 @@ int32 AuraEffectAmount(Unit* unit, std::vector<uint32> const& ids, uint8 effInde
                        ObjectGuid caster = ObjectGuid::Empty);
 // Remaining duration in ms; 0 if absent; -1 if permanent.
 int32 AuraRemainingMs(Unit* unit, std::vector<uint32> const& ids, ObjectGuid caster = ObjectGuid::Empty);
+// Time elapsed since the found aura was applied or last refreshed, in ms: max duration minus remaining. 0 if absent or
+// permanent.
+int32 AuraElapsedMs(Unit* unit, std::vector<uint32> const& ids, ObjectGuid caster = ObjectGuid::Empty);
 // True if `unit` has an aura with id `spellId` applied by any caster other than `unit` itself.
 bool HasAuraFromOtherCaster(Unit* unit, uint32 spellId);
 

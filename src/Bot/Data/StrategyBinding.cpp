@@ -420,6 +420,7 @@ double BoundCondition::EvalCall(Node const& node) const
         case ExprFn::Aura:
         case ExprFn::Stacks:
         case ExprFn::Remaining:
+        case ExprFn::Elapsed:
         case ExprFn::Charges:
         {
             Unit* unit = Live(unitValue);
@@ -435,6 +436,8 @@ double BoundCondition::EvalCall(Node const& node) const
                     return ai::aura::AuraStacks(unit, call.ids, caster);
                 case ExprFn::Charges:
                     return ai::aura::AuraCharges(unit, call.ids, caster);
+                case ExprFn::Elapsed:
+                    return ai::aura::AuraElapsedMs(unit, call.ids, caster);
                 default:
                 {
                     // -1 is a permanent aura: it never runs out

@@ -1,0 +1,125 @@
+# Rows every reworked warlock shares, one document per list. The shells in WarlockReworkStrategies.cpp append them:
+# "warlock/combat" to each spec's combat strategy, "warlock/curse" to the "curse of ..." strategies, "warlock/nc" (plus
+# "warlock/nc-demo" for a Demonology bot) to "nc", and "warlock/spellstone" / "warlock/firestone" to the stone
+# strategies. Each row queues its actions at the relevance when its condition holds (`when`, the expression language of
+# StrategyExpression.h) or when an existing C++ trigger fires (`trigger`). Execution order is by relevance, not by
+# position in this file. Actions named "warlock ..." and "demo ..." are RowCheckedAction (they re-check their own row
+# before casting). Spell ids: WarlockReworkIds.h and the warlock rework plan.
+#
+# Toggles (WL7): only "warlock cancel burning rush" and "warlock cancel dark apotheosis" name 200738 / 200835, and they
+# remove the aura; nothing casts, probes or checks them with a cast action.
+# Life Tap rows carry only their guide health floor; a tap costs about 1,467 health at level 60 (accepted risk, WQ1).
+strategy: warlock/combat
+class: warlock
+rows:
+  # Dark Apotheosis is in no build and blocks Metamorphosis
+  - do: warlock cancel dark apotheosis
+    when: aura(self, 200835, own)
+    relevance: high + 9.5
+  # Burning Rush is never wanted (WL8)
+  - do: warlock cancel burning rush
+    when: aura(self, 200738, own)
+    relevance: high + 9.5
+  # WL21: the stock range check (melee reach only)
+  - do: flee
+    trigger: enemy too close for spell
+    relevance: move + 9
+  - do: spell lock
+    trigger: spell lock
+    relevance: interrupt
+  - do: devour magic purge
+    trigger: devour magic purge
+    relevance: dispel
+  # 29858 is on no trainer up to level 60, so this is inert until a bot learns it
+  - do: soulshatter
+    trigger: medium threat
+    relevance: dispel + 5
+---
+# Curse of the Elements on elites (WL10), unless the target already carries an equivalent: Curse of the Elements, Earth
+# and Moon, Ebon Plague
+strategy: warlock/curse
+class: warlock
+rows:
+  - do: warlock curse of the elements
+    when: >-
+      known(1490) and alive(target) and elite(target)
+      and not aura(target, "1490,11721,11722,27228,47865,60431,48511,48513,48514,51726,51734,51735")
+    relevance: normal + 9.95
+---
+# Out-of-combat upkeep; the stock order is soul link > armor > healthstone > soulstone > stones > life tap. Pet summons
+# stay at the pet strategies' relevance (29). Stock names follow the druid/nc precedent: out of combat there is no stale
+# basket to re-check.
+strategy: warlock/nc
+class: warlock
+rows:
+  # WL3: taunts off while grouped with a tank
+  - do: warlock toggle pet spell
+    trigger: has pet
+    relevance: raid
+  - do: set pet stance
+    trigger: new pet
+    relevance: raid
+  - do: warlock cancel dark apotheosis
+    when: aura(self, 200835, own)
+    relevance: high + 9.5
+  - do: warlock cancel burning rush
+    when: aura(self, 200738, own)
+    relevance: high + 9.5
+  # WL50: Soul Link aura 25228 is the one on the bot
+  - do: warlock soul link
+    when: known(19028) and alive("pet target") and not aura(self, 25228)
+    relevance: high + 8
+  - do: warlock fel armor
+    when: known(28176) and not aura(self, 28176, own)
+    relevance: high + 7
+  - do: warlock demon armor
+    when: known(706) and not known(28176) and not aura(self, 706, own)
+    relevance: high + 7
+  - do: warlock demon skin
+    when: known(687) and not known(706) and not aura(self, 687, own)
+    relevance: high + 7
+  # WL4: no shard gate, shards are an aura
+  - do: create healthstone
+    when: known(6201) and value("item count::healthstone") == 0 and not moving(self)
+    relevance: high + 6
+  - do: create soulstone
+    trigger: no soulstone
+    relevance: high + 5
+  - do: warlock life tap
+    when: known(1454) and mana(self) < 80 and health_pct(self) > 80
+    relevance: high + 3
+  - do: unending breath
+    trigger: unending breath
+    relevance: normal + 2
+  - do: unending breath on party
+    trigger: unending breath on party
+    relevance: normal + 1
+---
+# Demonology: the Felguard is summoned out of combat without Fel Domination (WL2). The check reads the real pet, so
+# Wild Imps still up cannot hide a dead Felguard.
+strategy: warlock/nc-demo
+class: warlock
+rows:
+  - do: demo nc summon felguard
+    when: known(30146) and not alive("pet target") and not moving(self)
+    relevance: high + 9
+---
+strategy: warlock/spellstone
+class: warlock
+rows:
+  - do: create spellstone
+    when: known(2362) and value("item count::spellstone") == 0 and not moving(self)
+    relevance: high + 4
+  - do: spellstone
+    trigger: spellstone
+    relevance: high + 4
+---
+strategy: warlock/firestone
+class: warlock
+rows:
+  - do: create firestone
+    when: known(6366) and value("item count::firestone") == 0 and not moving(self)
+    relevance: high + 4
+  - do: firestone
+    trigger: firestone
+    relevance: high + 4

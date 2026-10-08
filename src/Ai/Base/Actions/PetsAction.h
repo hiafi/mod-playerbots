@@ -10,7 +10,9 @@
 #include "Action.h"
 #include <string>
 
+class Pet;
 class PlayerbotAI;
+class SpellInfo;
 
 class PetsAction : public Action
 {
@@ -26,8 +28,13 @@ private:
 class TogglePetSpellAutoCastAction : public Action
 {
 public:
-    TogglePetSpellAutoCastAction(PlayerbotAI* ai) : Action(ai, "toggle pet spell") {}
+    TogglePetSpellAutoCastAction(PlayerbotAI* ai, std::string const name = "toggle pet spell") : Action(ai, name) {}
     virtual bool Execute(Event event) override;
+
+protected:
+    // Whether the pet's autocast of this spell should be on. The default is the stock rule: on unless the spell is in
+    // disabledPetSpells.
+    virtual bool IsAutocastWanted(Pet* pet, SpellInfo const* spellInfo);
 };
 
 class PetAttackAction : public Action

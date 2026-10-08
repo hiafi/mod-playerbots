@@ -73,6 +73,7 @@ enum class ExprFn : uint8
     Aura,
     Stacks,
     Remaining,
+    Elapsed,
     Charges,
     Known,
     Boss,

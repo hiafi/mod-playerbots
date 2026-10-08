@@ -517,8 +517,10 @@ public:
 
     virtual bool IsInterruptableSpellCasting(Unit* player, std::string const spell);
     virtual bool HasAuraToDispel(Unit* player, uint32 dispelType);
+    // ignoreMovingCastTime skips only the "has a cast time and the bot is moving" refusal, for a spell an aura makes
+    // instant; a channel or an autorepeat spell is still refused while moving.
     bool CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell = true, Item* itemTarget = nullptr,
-                      Item* castItem = nullptr);
+                      Item* castItem = nullptr, bool ignoreMovingCastTime = false);
     bool CanCastSpell(uint32 spellid, GameObject* goTarget, bool checkHasSpell = true);
     bool CanCastSpell(uint32 spellid, float x, float y, float z, bool checkHasSpell = true,
                       Item* itemTarget = nullptr);

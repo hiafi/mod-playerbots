@@ -17,10 +17,11 @@ class PlayerbotAI;
 // from the bot, like "enemies within". The Unit* values ignore targets a strategy excludes.
 
 // An alive attacker that lacks the aura, or holds it with less than refreshMs left, and is expected to live at least
-// minLifetimeSec (0 disables the check). Highest health first, or nearest first with the optional 6th field.
-// Qualifier: "ids;owned;refreshMs;minLifetimeSec;range[;nearest]": ids comma-separated spell ids, owned 1 for
-// the bot's own aura or 0 for any caster, nearest the literal word. E.g. "589,594;1;3000;12;30" or
-// "589;1;0;0;30;nearest".
+// minLifetimeSec (0 disables the check). Highest health first. Qualifier:
+// "ids;owned;refreshMs;minLifetimeSec;range[;flags]": ids comma-separated spell ids, owned 1 for the bot's own aura or
+// 0 for any caster, flags a comma list of the literal words `nearest` (nearest first instead), `notarget` (skip the
+// current target) and `free` (skip an attacker that is stunned, confused, silenced or disarmed). E.g.
+// "589,594;1;3000;12;30" or "589;1;0;0;30;nearest" or "200974;1;0;0;40;notarget,free".
 class AttackerWithoutAuraIdValue : public GuidCachedUnitValue, public Qualified
 {
 public:

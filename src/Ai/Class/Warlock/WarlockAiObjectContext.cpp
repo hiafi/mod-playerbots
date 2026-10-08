@@ -17,6 +17,7 @@
 #include "TankWarlockStrategy.h"
 #include "UseItemAction.h"
 #include "WarlockActions.h"
+#include "WarlockReworkContext.h"
 #include "WarlockTriggers.h"
 
 class WarlockStrategyFactoryInternal : public NamedObjectContext<Strategy>
@@ -413,6 +414,7 @@ void WarlockAiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextL
 {
     AiObjectContext::BuildSharedActionContexts(actionContexts);
     actionContexts.Add(new WarlockAiObjectContextInternal());
+    actionContexts.Add(new WarlockReworkActionFactory());
 }
 
 void WarlockAiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextList<Trigger>& triggerContexts)
@@ -424,4 +426,5 @@ void WarlockAiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContext
 void WarlockAiObjectContext::BuildSharedValueContexts(SharedNamedObjectContextList<UntypedValue>& valueContexts)
 {
     AiObjectContext::BuildSharedValueContexts(valueContexts);
+    valueContexts.Add(new WarlockReworkValueFactory());
 }

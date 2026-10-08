@@ -3333,7 +3333,8 @@ bool PlayerbotAI::CanCastSpell(std::string const name, Unit* target, Item* itemT
     return CanCastSpell(aiObjectContext->GetValue<uint32>("spell id", name)->Get(), target, true, itemTarget);
 }
 
-bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell, Item* itemTarget, Item* castItem)
+bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell, Item* itemTarget, Item* castItem,
+                               bool ignoreMovingCastTime)
 {
     if (!spellid)
     {
@@ -3409,7 +3410,8 @@ bool PlayerbotAI::CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell,
 
     uint32 CastingTime = !spellInfo->IsChanneled() ? spellInfo->CalcCastTime(bot) : spellInfo->GetDuration();
     // bool interruptOnMove = spellInfo->InterruptFlags & SPELL_INTERRUPT_FLAG_MOVEMENT;
-    if ((CastingTime || spellInfo->IsAutoRepeatRangedSpell()) && bot->isMoving())
+    bool const castTimeBlocks = CastingTime && (!ignoreMovingCastTime || spellInfo->IsChanneled());
+    if ((castTimeBlocks || spellInfo->IsAutoRepeatRangedSpell()) && bot->isMoving())
     {
         if (!sPlayerbotAIConfig.logInGroupOnly || (bot->GetGroup() && HasGameClientMaster()))
             LOG_DEBUG("playerbots", "Casting time and bot is moving - target name: {}, spellid: {}, bot name: {}",

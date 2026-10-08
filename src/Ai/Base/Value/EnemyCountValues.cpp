@@ -82,7 +82,11 @@ uint8 EnemiesWithinValue::CountWithin(bool eliteOnly)
     return ai::qualifier::ClampCount(count);
 }
 
-uint8 EnemiesNearTargetValue::Calculate()
+uint8 EnemiesNearTargetValue::Calculate() { return CountNear(false); }
+
+uint8 EliteEnemiesNearTargetValue::Calculate() { return CountNear(true); }
+
+uint8 EnemiesNearTargetValue::CountNear(bool eliteOnly)
 {
     std::vector<float> const args = ai::qualifier::ParseNumbers(qualifier, 1);
     if (args.empty())
@@ -96,11 +100,33 @@ uint8 EnemiesNearTargetValue::Calculate()
     for (ObjectGuid const guid : AI_VALUE(GuidVector, "attackers"))
     {
         Unit* unit = botAI->GetUnit(guid);
-        if (unit && unit->IsAlive() && unit->GetDistance(target->GetPosition()) <= args[0])
+        if (unit && unit->IsAlive() && unit->GetDistance(target->GetPosition()) <= args[0] &&
+            (!eliteOnly || ai::target::IsElite(unit)))
             ++count;
     }
 
     return ai::qualifier::ClampCount(count);
+}
+
+uint8 MaxHealthPctNearTargetValue::Calculate()
+{
+    std::vector<float> const args = ai::qualifier::ParseNumbers(qualifier, 1);
+    if (args.empty())
+        return 0;
+
+    Unit* target = AI_VALUE(Unit*, "current target");
+    if (!target)
+        return 0;
+
+    float highest = 0.0f;
+    for (ObjectGuid const guid : AI_VALUE(GuidVector, "attackers"))
+    {
+        Unit* unit = botAI->GetUnit(guid);
+        if (unit && unit->IsAlive() && unit->GetDistance(target->GetPosition()) <= args[0])
+            highest = std::max(highest, unit->GetHealthPct());
+    }
+
+    return static_cast<uint8>(std::min(highest, 100.0f));
 }
 
 uint8 EnemiesInConeValue::Calculate()
@@ -149,11 +175,16 @@ uint8 UnsafeAoeUnitsValue::Calculate()
     std::vector<std::string> const parts = ai::qualifier::Split(qualifier, ';');
     float yards = 0.0f;
     if (parts.empty() || parts.size() > 2 || !ai::qualifier::ParseNumber(parts[0], yards) || yards <= 0.0f ||
-        (parts.size() == 2 && parts[1] != "cluster"))
+        (parts.size() == 2 && parts[1] != "cluster" && parts[1] != "self"))
         return 0;
 
-    Unit* centre = parts.size() == 2 ? FindMostClusteredEnemy(botAI, bot, yards).centre
-                                     : AI_VALUE(Unit*, "current target");
+    Unit* centre = nullptr;
+    if (parts.size() == 1)
+        centre = AI_VALUE(Unit*, "current target");
+    else if (parts[1] == "cluster")
+        centre = FindMostClusteredEnemy(botAI, bot, yards).centre;
+    else
+        centre = bot;
     if (!centre)
         return 0;
 
