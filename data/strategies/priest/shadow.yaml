@@ -44,12 +44,22 @@ conditions:
   surrender_fallback: >-
     value("party has healer") and stacks(self, 200271) >= 125 and health_pct(self) >= 90 and combat_time() >= 90000
 rows:
-  # D1: Dispersion under 30% health or 20% mana (not during Surrender, which locks it out)
+  # D1: Dispersion under 30% health, or under 20% mana while Shadowfiend is unavailable (not during Surrender, which
+  # locks it out)
   - do: shadow dispersion
     when: >-
-      known(47585) and cooldown(47585) == 0 and (health_pct(self) < 30 or mana(self) < 20)
+      known(47585) and cooldown(47585) == 0
+      and (health_pct(self) < 30 or (mana(self) < 20 and (not known(34433) or cooldown(34433) > 0)))
       and not aura(self, "200269,200270")
     relevance: emergency + 3
+
+  # D8: Shadowfiend under 35% mana: the mana cooldown, and unlike Dispersion it keeps the bot casting (not during or
+  # right after Surrender to Madness)
+  - do: priest shadowfiend
+    when: >-
+      known(34433) and cooldown(34433) == 0 and mana(self) < 35 and alive(target)
+      and not aura(self, "200269,200270")
+    relevance: emergency + 2.5
 
   # D2: Power Word: Shield on itself under 35% while something is hitting it (not under Sundered Mind)
   - do: priest self shield
@@ -207,7 +217,7 @@ rows:
     relevance: normal + 8.0
 ---
 # Out of combat: Shadowform, and Vampiric Embrace when the build has it (a no-op for the guide build). No Fear Ward row
-# for Shadow (PLAN section 7) and no Shadowfiend row (PR3).
+# for Shadow (PLAN section 7); the combat strategy has the Shadowfiend row (D8).
 strategy: priest/nc-shadow
 class: priest
 conditions:

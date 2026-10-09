@@ -165,7 +165,7 @@ rows:
     when: alive(target) and value("party members below::95") == 0 and mana(self) > 70 and not bt_cp
     relevance: normal + 2.0
 
-  # 20: Shadowfiend under 35% mana (trained at 66: no-op at 60, PR3)
+  # 20: Shadowfiend under 35% mana (trained at 38)
   - do: priest shadowfiend
     when: known(34433) and cooldown(34433) == 0 and mana(self) < 35 and alive(target)
     relevance: normal + 1.5

@@ -44,7 +44,7 @@ bool EvocationAllowed(PlayerbotAI* botAI)
     Player* bot = botAI->GetBot();
     AiObjectContext* context = botAI->GetAiObjectContext();
     if (AI_VALUE2(uint8, "mana", "self target") >= LOW_MANA_PCT || !IsReady(bot, botAI, SPELL_EVOCATION) ||
-        ai::mage_rework::ManaGemUsable(bot))
+        ai::mage_rework::ManaGemUsable(botAI))
         return false;
 
     // Guard 1: never channel through Combustion
@@ -119,7 +119,7 @@ bool MageFireTrigger::IsReady(uint32 spellId)
 
 bool MageFireManaGemTrigger::Evaluate(Unit* /*target*/)
 {
-    return AI_VALUE2(uint8, "mana", "self target") < LOW_MANA_PCT && ai::mage_rework::ManaGemUsable(bot);
+    return AI_VALUE2(uint8, "mana", "self target") < LOW_MANA_PCT && ai::mage_rework::ManaGemUsable(botAI);
 }
 
 bool MageFireEvocationTrigger::Evaluate(Unit* /*target*/) { return ai::mage_fire::EvocationAllowed(botAI); }

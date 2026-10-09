@@ -54,6 +54,13 @@ rows:
   - do: icy veins
     when: target_alive and known(12472) and cooldown(12472) == 0 and lifetime(target) >= 20
     relevance: normal + 9.5
+  # Brilliance Aura: a party member under 40% mana, or the bot under 50%. Same row as Arcane's without BURN. Below
+  # the Spike (9.95), so the Spike still outranks it.
+  - do: arcane brilliance aura
+    when: >-
+      target_alive and known(200067) and cooldown(200067) == 0 and not aura(self, 200067)
+      and (value("party members below mana::40") >= 1 or mana(self) < 50)
+    relevance: normal + 9.5
   # Water Elemental Freeze at the target's position (MG40): the trigger is pet-exists and Freeze off the pet's cooldown
   - do: frost freeze
     when: trigger("frost freeze ready") and safe_target_8
@@ -71,6 +78,13 @@ rows:
   # The Spike outranks every other GCD row (Ice Barrier, Frozen Orb): nothing may land between Flurry and the Spike,
   # or the Spike lands after Shattering Cold is gone. It is only castable in that window, since the core refuses it
   # below 5 Icicles.
+  # Amplify Magic goes out just before Flurry, when Flurry is about to fire, never inside the Flurry-Spike window.
+  - do: arcane amplify magic
+    when: >-
+      target_alive and known(1008) and cooldown(1008) == 0 and not aura(target, 1008) and lifetime(target) >= 10
+      and icicles_full and known(200004) and cooldown(200004) == 0 and not moving(self)
+      and not shattered and ms_since_cast(200004) > 2000
+    relevance: normal + 8.1
   - do: frost flurry
     when: >-
       target_alive and known(200004) and cooldown(200004) == 0 and icicles_full and not moving(self)

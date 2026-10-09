@@ -10,6 +10,7 @@
 #include "Define.h"
 
 class Player;
+class PlayerbotAI;
 
 enum class MageSpec
 {
@@ -23,8 +24,9 @@ MageSpec GetMageSpec(Player* bot);
 
 namespace ai::mage_rework
 {
-// A Mana Agate in the bags and off cooldown (all three specs spend it before Evocation, MG6).
-bool ManaGemUsable(Player* bot);
+// A Mana Agate in the bags that the bot can use right now: off cooldown and passing the same CanCastSpell check the
+// item use makes (all three specs spend it before Evocation, MG6).
+bool ManaGemUsable(PlayerbotAI* botAI);
 }  // namespace ai::mage_rework
 
 #endif

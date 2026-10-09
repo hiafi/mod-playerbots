@@ -3,8 +3,8 @@
 # position in this file. The guide is docs/reworks/bot-strategy/mage-arcane-strat.md; MGnn names the Mage plan row
 # that settled a call. Spell ids: 12042 Arcane Power, 12043 Presence of Mind, 12051 Evocation, 1008 Amplify Magic,
 # 44425 Arcane Barrage, 36032 Arcane Blast stacks (on the bot), 44401 Missile Barrage proc, 200067 Brilliance Aura,
-# 200078 Temporal Convergence, 200079 Arcane Overload. Overload and Temporal Convergence are level-80 spells that a
-# level-60 bot may not have, so their rows are gated on known().
+# 200078 Temporal Convergence, 200079 Arcane Overload. Overload and Temporal Convergence are late talents (the level-60
+# sim bot casts Overload about 4 times a fight) that a bot may not have, so their rows are gated on known().
 # AoE rows are gated on `unsafe aoe units` (X11): Barrage (chain, 10 yd) and Overload (10 yd) around the target,
 # Explosion (10 yd) around the bot.
 # The mana thresholds are starting points (MG54); retune them after a sim run. The ones the actions re-check
@@ -25,6 +25,8 @@ conditions:
   # BURN: Arcane Power up, or ready with mana at 80%+ (C++ value, MG9)
   burn: value("arcane burn")
   evocation_ready: known(12051) and cooldown(12051) == 0
+  # A mana cooldown is ready (Evocation or Arcane Overload), so the bot spends its mana down to 30% (ruling 2026-10-08)
+  regen_ready: evocation_ready or (known(200079) and cooldown(200079) == 0)
   blast_4: stacks(self, 36032) >= 4
   missile_barrage: aura(self, 44401)
   # Presence of Mind and Arcane Power exclude each other's buff and share a category (Spell.dbc, category 1151):
@@ -70,6 +72,13 @@ rows:
       target_alive and burn and blast_4 and mana(self) >= 30 and known(200079) and cooldown(200079) == 0
       and safe_target_10
     relevance: normal + 8.0
+  # Overload outside BURN, single target: at a full stack with 30-50% mana, so the cooldown catches the spend. The upper
+  # bound is 50, not 35, since a 4-stack Blast moves mana by about 25 points and would step over a narrow window.
+  - do: arcane overload
+    when: >-
+      target_alive and single and not burn and blast_4 and mana(self) >= 30 and mana(self) < 50 and known(200079)
+      and cooldown(200079) == 0 and safe_target_10
+    relevance: normal + 8.0
   # Temporal Convergence at a full stack, only when Evocation and Arcane Power both have 20+ s left (MG17)
   - do: arcane temporal convergence
     when: >-
@@ -92,17 +101,13 @@ rows:
       single and missile_barrage and not moving(self)
       and (blast_4 or remaining(self, 44401) < 3000)
     relevance: normal + 6.5
-  # Barrage dumps the stacks by mana band, outside BURN (MG20): 3 stacks at 50-80%, 2 at 30-50%, 1 below 30%. No dump
-  # above 80% (tuned 2026-10-06: dumping at 4 stacks there held mana near 95% and cost ~15% DPS in the sim).
+  # Barrage outside BURN (user ruling 2026-10-08, replacing MG20's mana bands): with a mana cooldown ready (regen_ready)
+  # there is no dump above 30% mana, so Blast keeps casting at 4 stacks and the cooldown refills the bar; with neither
+  # ready, dump at 3 stacks; below 30%, at 1 stack. The 2026-10-06 "no dump above 80%" rule is gone by the same ruling.
   # The action re-checks BURN (a basket queued in the tick Arcane Power went out would dump it).
   - do: arcane barrage stacks
     when: >-
-      single and not burn and stacks(self, 36032) >= 3 and mana(self) >= 50 and mana(self) <= 80
-      and safe_target_10
-    relevance: normal + 6.0
-  - do: arcane barrage stacks
-    when: >-
-      single and not burn and stacks(self, 36032) >= 2 and mana(self) >= 30 and mana(self) < 50
+      single and not burn and not regen_ready and stacks(self, 36032) >= 3 and mana(self) >= 30
       and safe_target_10
     relevance: normal + 6.0
   - do: arcane barrage stacks
