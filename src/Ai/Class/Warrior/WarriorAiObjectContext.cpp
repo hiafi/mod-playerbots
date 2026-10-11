@@ -12,7 +12,9 @@
 #include "Playerbots.h"
 #include "TankWarriorStrategy.h"
 #include "WarriorActions.h"
+#include "WarriorProtContext.h"
 #include "WarriorPullStrategy.h"
+#include "WarriorReworkProtStrategy.h"
 #include "WarriorTriggers.h"
 
 class WarriorStrategyFactoryInternal : public NamedObjectContext<Strategy>
@@ -27,7 +29,8 @@ public:
 
 private:
     static Strategy* nc(PlayerbotAI* botAI) { return new GenericWarriorNonCombatStrategy(botAI); }
-    static Strategy* warrior_aoe(PlayerbotAI* botAI) { return new WarriorAoeStrategy(botAI); }
+    // Prot bots get the rework's pack rows, Arms and Fury the stock ones (WarriorReworkAoeStrategy)
+    static Strategy* warrior_aoe(PlayerbotAI* botAI) { return new WarriorReworkAoeStrategy(botAI); }
     static Strategy* pull(PlayerbotAI* botAI) { return new WarriorPullStrategy(botAI); }
 };
 
@@ -42,7 +45,8 @@ public:
     }
 
 private:
-    static Strategy* tank(PlayerbotAI* botAI) { return new TankWarriorStrategy(botAI); }
+    // The stock TankWarriorStrategy stays in the tree; the Protection rework replaces it under the same name
+    static Strategy* tank(PlayerbotAI* botAI) { return new WarriorReworkProtStrategy(botAI); }
     static Strategy* arms(PlayerbotAI* botAI) { return new ArmsWarriorStrategy(botAI); }
     static Strategy* fury(PlayerbotAI* botAI) { return new FuryWarriorStrategy(botAI); }
 };
@@ -342,12 +346,14 @@ void WarriorAiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextL
 {
     AiObjectContext::BuildSharedActionContexts(actionContexts);
     actionContexts.Add(new WarriorAiObjectContextInternal());
+    actionContexts.Add(new WarriorProtActionFactory());
 }
 
 void WarriorAiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextList<Trigger>& triggerContexts)
 {
     AiObjectContext::BuildSharedTriggerContexts(triggerContexts);
     triggerContexts.Add(new WarriorTriggerFactoryInternal());
+    triggerContexts.Add(new WarriorProtTriggerFactory());
 }
 
 void WarriorAiObjectContext::BuildSharedValueContexts(SharedNamedObjectContextList<UntypedValue>& valueContexts)
