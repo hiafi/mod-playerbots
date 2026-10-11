@@ -2187,6 +2187,8 @@ AiPlayerbot.PremadeSpecLink.11.6.60 = --2003303330103031223331030113031
 AiPlayerbot.PremadeSpecLink.11.6.80 = --2003303330103031223331030113031
 AiPlayerbot.PremadeSpecName.11.7 = bear dps pve
 AiPlayerbot.PremadeSpecGlyph.11.7 = 40897,43331,46372,43335,43332,40899
+# Bestial Fury first: without it a sub-20 Feral bot runs the bear tank strategy and respecs to the tank link on level-up
+AiPlayerbot.PremadeSpecLink.11.7.10 = -0001
 AiPlayerbot.PremadeSpecLink.11.7.60 = -150120300030322320003330100033232001
 AiPlayerbot.PremadeSpecLink.11.7.80 = -150120300030322320003330100033232001
 
