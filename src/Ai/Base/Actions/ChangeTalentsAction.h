@@ -31,6 +31,7 @@ private:
     std::string SpecList();
     std::string SpecPick(std::string param);
     std::string SpecApply(std::string param);
+    std::string SpecLink();
 };
 
 class AutoSetTalentsAction : public ChangeTalentsAction

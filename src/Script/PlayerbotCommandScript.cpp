@@ -11,6 +11,7 @@
 #include "PlayerbotMgr.h"
 #include "RandomPlayerbotMgr.h"
 #include "ScriptMgr.h"
+#include "Talentspec.h"
 
 using namespace Acore::ChatCommands;
 
@@ -32,6 +33,10 @@ public:
             {"unlink", HandleUnlinkAccountCommand, SEC_PLAYER, Console::No},
         };
 
+        static ChatCommandTable playerbotsTalentsCommandTable = {
+            {"link", HandleTalentsLinkCommand, SEC_PLAYER, Console::No},
+        };
+
         static ChatCommandTable playerbotsCommandTable = {
             {"bot", HandlePlayerbotCommand, SEC_PLAYER, Console::No},
             {"gtask", HandleGuildTaskCommand, SEC_GAMEMASTER, Console::Yes},
@@ -39,6 +44,7 @@ public:
             {"rndbot", HandleRandomPlayerbotCommand, SEC_GAMEMASTER, Console::Yes},
             {"debug", playerbotsDebugCommandTable},
             {"account", playerbotsAccountCommandTable},
+            {"talents", playerbotsTalentsCommandTable},
         };
 
         static ChatCommandTable commandTable = {
@@ -103,6 +109,21 @@ public:
     static bool HandleDebugBGCommand(ChatHandler* handler, char const* args)
     {
         return BGTactics::HandleConsoleCommand(handler, args);
+    }
+
+    // Exports the caller's own talents (not a bot's) in the PremadeSpecLink format
+    static bool HandleTalentsLinkCommand(ChatHandler* handler, char const* /*args*/)
+    {
+        Player* player = handler->GetSession() ? handler->GetSession()->GetPlayer() : nullptr;
+        if (!player)
+        {
+            handler->PSendSysMessage("This command must be used in-game.");
+            return false;
+        }
+
+        TalentSpec spec(player);
+        handler->PSendSysMessage("Your current talent link is: {}", spec.GetTalentLink());
+        return true;
     }
 
     static bool HandleSetSecurityKeyCommand(ChatHandler* handler, char const* args)

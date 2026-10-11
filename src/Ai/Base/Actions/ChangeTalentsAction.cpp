@@ -76,6 +76,10 @@ bool ChangeTalentsAction::Execute(Event event)
             out << SpecApply(param);
             botAI->ResetStrategies();
         }
+        else if (param.find("link") != std::string::npos)
+        {
+            out << SpecLink();
+        }
         else
         {
             out << "Unknown command.";
@@ -99,7 +103,16 @@ std::string ChangeTalentsAction::TalentsHelp()
 {
     std::ostringstream out;
     out << "Talents usage: talents switch <1/2>, talents autopick, talents spec list, "
-           "talents spec <specName>, talents apply <link>.";
+           "talents spec <specName>, talents apply <link>, talents link.";
+    return out.str();
+}
+
+// Same "<tab1>-<tab2>-<tab3>" format that "talents apply" and PremadeSpecLink take
+std::string ChangeTalentsAction::SpecLink()
+{
+    TalentSpec spec(bot);
+    std::ostringstream out;
+    out << "My current talent link is: " << spec.GetTalentLink();
     return out.str();
 }
 

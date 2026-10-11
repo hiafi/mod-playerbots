@@ -242,6 +242,7 @@ void TalentSpec::SortTalents(std::vector<TalentListEntry>& talents, uint32 sortB
 }
 
 // Set the talent ranks to the current rank of the player.
+// HasTalent, not HasSpell: Player::LearnTalent never adds passive talents to the spellbook
 void TalentSpec::ReadTalents(Player* bot)
 {
     for (auto& entry : talents)
@@ -251,7 +252,7 @@ void TalentSpec::ReadTalents(Player* bot)
             if (!spellId)
                 continue;
 
-            if (bot->HasSpell(spellId))
+            if (bot->HasTalent(spellId, bot->GetActiveSpec()))
             {
                 entry.rank = rank + 1;
                 points += 1;
