@@ -1,0 +1,189 @@
+# The reworked Protection warrior's single-target rotation, from the user's guide (docs/reworks/bot-strategy/
+# warrior-prot-strat.md, corrected by .agents/plans/rework-bot-strategies/rework-bot-strategies.WARRIOR.PLAN.md section
+# 3 and 5): "warrior/prot" is appended to the "tank" combat strategy by WarriorReworkProtStrategy::InitTriggers. The
+# pack rows are the `warrior/prot-aoe` document, appended to "aoe". Each row queues its action at the relevance when its
+# condition holds (`when`, the expression language of StrategyExpression.h) or when an existing C++ trigger fires
+# (`trigger`). Execution order is by relevance, not by position in this file. Actions named "prot ..." are
+# RowCheckedAction (they re-check their own row before casting); the others ("taunt", "commanding shout", "reach
+# melee", "charge", "shield bash", "challenging shout", "berserker rage") are stock.
+#
+# Bands: defensives (emergency) > taunt (interrupt) > stance, shout, the off-the-GCD rows, `reach melee` (high) > the
+# rotation (normal + 8.x; the pack rows of prot-aoe sit at normal + 9.x). Shield Block, Spell Reflection, Bloodrage,
+# Last Stand, Shield Wall and Defensive Stance are off the GCD (StartRecoveryTime 0 in spell_dbc), and so are Heroic
+# Strike and Cleave, which only flag the next swing: the engine skips the GCD-blocked rows above them, so they still
+# fire during the GCD. Heroic Strike waits for 50 rage so it never starves Shield Slam (20), Thunder Clap (20 minus
+# Improved Thunder Clap) or Revenge (5); its guard keeps it from re-queueing while one is already pending.
+#
+# Rows that queue the same action name and qualifier merge into one basket that keeps the first pusher's event, so only
+# that row is re-checked. The overlaps are on purpose (a failed re-check costs one tick): Shield Slam R1/R6, Thunder
+# Clap R2/R5, Devastate R7/R8. The first row of each basket (R6, R2, R8) is the one the engine re-checks, since it walks
+# the triggers in file order and keeps the event of the first row that holds; R6 and R8 are the broader conditions (R1
+# and R7 imply them), while R2 and R5 are mutually exclusive, so whichever holds is the one kept.
+#
+# Every spell a bot may not know yet carries `known()`: `cooldown()` of an unknown spell reads 0, and `known()` also
+# reads talents, so the passive ones work. Spell Reflection (23920) and Enraged Regeneration (55694) are on no live
+# trainer, so bots never learn them; their rows light up if the trainers get them (PW2). Shockwave (46968) is the 52nd
+# talent point, so it is not known at level 60, and its rows stay gated. Every row on the target has `alive(target)`.
+# Rage is `value("rage::self target")`; "tanking" is `value("my attacker count")`, every unit whose victim is the bot.
+#
+# Storm's Bulwark (the talent, ranks 200058/200059/200060) is what makes Thunder Clap grant a shield (the shield itself
+# is the absorb aura 200028), and the Shield Discipline buff (200064, set by a Shield Slam that hits, consumed by
+# Thunder Clap) only matters with it. Without the talent the buff would stay up for
+# 30 s and never be consumed, so rows R1/R2/R5 reduce to "Shield Slam on cooldown, Thunder Clap on cooldown". Shield
+# Slam, Devastate, Shield Block, Spell Reflection and Shield Wall need a shield: `prot shield` (a class trigger) is true
+# with one, and a bot without one falls back to Sunder Armor (R8b) and Thunder Clap. Revenge is castable only in the 5 s
+# after a dodge, parry or block (an aura state, Defensive Stance), so its rows are "castable" and never a cadence. Sword
+# and Board (a Revenge or Devastate proc) resets Shield Slam's cooldown, so it needs no row of its own. There is no
+# hold-position rule after a Thunder Clap (PW3): the Thunderstruck echo is centred on the caster, not the cast.
+#
+# Sunder Armor: Devastate and the Sunder Armor ability (7386, a trigger-spell effect) both leave the debuff 58567 on the
+# target, so the stacks and the time left are read from 58567, from the bot's own casts.
+#
+# Charge (the C1 row) needs Unrelenting (talent 200049), which lifts the stance and in-combat restrictions. Berserker
+# Rage (18499) has no stance requirement on this server (spell_dbc ShapeshiftMask 0), so the fear break casts it from
+# Defensive Stance with no swap. Shield Bash (72) works in Battle and Defensive Stance but needs a shield.
+#
+# Spell ids: Charge 100, Shield Bash 72, Defensive Stance 71, Heroic Strike 78, Cleave 845, Shield Wall 871,
+# Challenging Shout 1161, Shield Block 2565, Bloodrage 2687 (aura 29131), Thunder Clap 6343, Revenge 6572, Sunder Armor
+# 7386 (debuff 58567, also left by Devastate), Concussion Blow 12809, Last Stand 12975, Berserker Rage 18499 (also its
+# aura), Devastate 20243, Spell Reflection 23920, Shield Slam 23922, Shockwave 46968, Enraged Regeneration 55694.
+# Talents: Unrelenting 200049, Storm's Bulwark 200058/200059/200060 (absorb aura 200028), Shield Discipline 200062/
+# 200063 (buff 200064). Concussion Blow, Last Stand, Devastate and Shockwave are talents that grant the spell of the
+# same id.
+strategy: warrior/prot
+class: warrior
+conditions:
+  rage: value("rage::self target")
+  tanking: value("my attacker count") >= 1
+  shield: trigger("prot shield")
+  # The Storm's Bulwark talent: with it Shield Slam arms Thunder Clap's shield. Only the current rank is held, so any of
+  # the three
+  bulwark: known(200058) or known(200059) or known(200060)
+  disc_up: aura(self, 200064)
+  ss_ready: known(23922) and cooldown(23922) == 0 and alive(target) and shield
+  tc_ready: known(6343) and cooldown(6343) == 0 and alive(target)
+  devastate_ok: known(20243) and alive(target) and shield
+rows:
+  # R6: Shield Slam, any time it is ready (the free cast of Sword and Board lands here too)
+  - do: prot shield slam
+    when: ss_ready
+    relevance: normal + 8.3
+  # R1: Shield Slam first when Thunder Clap has nothing to spend (no Shield Discipline up), or always without Storm's
+  # Bulwark
+  - do: prot shield slam
+    when: ss_ready and (not bulwark or not disc_up)
+    relevance: normal + 8.8
+  # R2: Thunder Clap with Shield Discipline up, on cooldown without Storm's Bulwark, or without a shield to slam
+  - do: prot thunder clap
+    when: tc_ready and (not bulwark or not shield or disc_up)
+    relevance: normal + 8.7
+  # R3: Shockwave on cooldown (not known at level 60)
+  - do: prot shockwave
+    when: known(46968) and cooldown(46968) == 0 and alive(target) and in_range(target, 10)
+    relevance: normal + 8.6
+  # R4: Revenge whenever it is castable
+  - do: prot revenge
+    when: known(6572) and cooldown(6572) == 0 and alive(target) and trigger("revenge")
+    relevance: normal + 8.5
+  # R5: Thunder Clap without Shield Discipline when the next Shield Slam is more than 1.5 s away
+  - do: prot thunder clap
+    when: tc_ready and bulwark and shield and not disc_up and cooldown(23922) > 1500
+    relevance: normal + 8.4
+  # R6b: Concussion Blow on cooldown
+  - do: prot concussion blow
+    when: known(12809) and cooldown(12809) == 0 and alive(target)
+    relevance: normal + 8.2
+  # R8: Devastate, the filler that builds the Sunder stacks
+  - do: prot devastate
+    when: devastate_ok
+    relevance: normal + 8
+  # R7 (PW7): the Sunder refresh, once the debuff is up and about to lapse. Above Revenge and the late Thunder Clap, so
+  # a Sunder under 3 s left wins the GCD over every row but the Shield Slam / Thunder Clap pair (the basket takes the
+  # higher relevance of R7 and R8)
+  - do: prot devastate
+    when: >-
+      devastate_ok and stacks(target, "58567", own) >= 1
+      and remaining(target, "58567", own) < 3000
+    relevance: normal + 8.45
+  # R8b: without a shield Devastate cannot be cast, so Sunder Armor keeps the debuff at 5 stacks and fresh
+  - do: prot sunder armor
+    when: >-
+      known(7386) and alive(target) and not shield
+      and (stacks(target, "58567", own) < 5 or remaining(target, "58567", own) < 6000)
+    relevance: normal + 7.9
+
+  # D1: Last Stand at low health, above the rotation so a Thunder Clap lands under the raised maximum health
+  - do: prot last stand
+    when: known(12975) and cooldown(12975) == 0 and health_pct(self) < 40
+    relevance: emergency + 3
+  # D2: Shield Wall
+  - do: prot shield wall
+    when: known(871) and cooldown(871) == 0 and shield and health_pct(self) < 25
+    relevance: emergency + 2
+  # D3 (PW2): Enraged Regeneration, once Shield Wall is gone and an Enrage aura (Bloodrage, Berserker Rage) is up
+  - do: prot enraged regeneration
+    when: >-
+      known(55694) and cooldown(55694) == 0 and health_pct(self) < 35
+      and aura(self, "29131,18499") and (not known(871) or cooldown(871) > 0 or not shield)
+    relevance: emergency + 1
+  # D4: break a fear, sleep or sap with Berserker Rage (no stance swap: the spell has no stance requirement here)
+  - do: berserker rage
+    when: known(18499) and cooldown(18499) == 0 and trigger("fear sleep sap")
+    relevance: emergency + 1
+
+  # I1, I2: Shield Bash (works in Defensive Stance), on the current cast and on an enemy healer's
+  - do: shield bash
+    when: known(72) and cooldown(72) == 0 and shield and trigger("shield bash")
+    relevance: interrupt
+  - do: shield bash on enemy healer
+    when: known(72) and cooldown(72) == 0 and shield and trigger("shield bash on enemy healer")
+    relevance: interrupt
+
+  # G1: taunt a mob that has turned on someone else (stock chain: Taunt, Heroic Throw, Shield Slam)
+  - do: taunt
+    trigger: lose aggro
+    relevance: interrupt + 1
+
+  # F: Defensive Stance, the Prot stance
+  - do: prot defensive stance
+    when: known(71) and not aura(self, 71)
+    relevance: high + 9
+  # C1: Charge a target 8 to 25 yd away (Unrelenting lets it work in Defensive Stance and in combat). Above `reach
+  # melee`, so the bot charges rather than walks; on cooldown, or in range, `reach melee` takes over
+  - do: charge
+    when: >-
+      known(200049) and known(100) and cooldown(100) == 0 and alive(target) and in_range(target, 25)
+      and not in_range(target, 8)
+    relevance: high + 5
+  # K1: Commanding Shout, kept from the stock tank
+  - do: commanding shout
+    trigger: commanding shout
+    relevance: high + 8
+
+  # K2: Challenging Shout when a pack is on the group (the stock tank's panic button)
+  - do: challenging shout
+    when: known(1161) and cooldown(1161) == 0 and trigger("high aoe")
+    relevance: high + 3
+  # B1: Shield Block on cooldown while something is hitting the bot
+  - do: prot shield block
+    when: known(2565) and cooldown(2565) == 0 and shield and tanking
+    relevance: high + 7.6
+  # B2 (PW8): Spell Reflection on cooldown while tanking, with a Heroic Strike margin of rage
+  - do: prot spell reflection
+    when: known(23920) and cooldown(23920) == 0 and shield and tanking and rage >= 35
+    relevance: high + 7.4
+  # B3 (PW6): Bloodrage on cooldown while rage is low (it costs health)
+  - do: prot bloodrage
+    when: known(2687) and cooldown(2687) == 0 and rage < 70 and health_pct(self) > 50
+    relevance: high + 7.2
+  # H1: Heroic Strike above 50 rage on one or two targets (three or more: Cleave in prot-aoe)
+  - do: prot heroic strike
+    when: >-
+      known(78) and alive(target) and rage > 50 and enemies_within(8) < 3
+      and ms_since_cast(78) > 1500
+    relevance: high + 6.5
+
+  # M1: walk to a target out of melee range
+  - do: reach melee
+    trigger: enemy out of melee
+    relevance: high + 1
