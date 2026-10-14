@@ -432,6 +432,7 @@ public:
     bool altMaintenanceAttunementQs,
             altMaintenanceBags,
             altMaintenanceAmmo,
+            requireAmmo,
             altMaintenanceFood,
             altMaintenanceReagents,
             altMaintenanceConsumables,

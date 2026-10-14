@@ -1374,6 +1374,8 @@ void PlayerbotFactory::InitPetTalents()
             continue;
 
         TalentTabEntry const* talentTabInfo = sTalentTabStore.LookupEntry(talentInfo->TalentTab);
+        if (!talentTabInfo)
+            continue;
 
         // prevent learn talent for different family (cheating)
         if (!((1 << pet_family->petTalentType) & talentTabInfo->petTalentMask))
@@ -3910,6 +3912,20 @@ void PlayerbotFactory::ClearAllItems()
 
 void PlayerbotFactory::InitAmmo()
 {
+    // Randomize strips 46699 (ClearSpells/CancelAuras) and the core's grant only fires on login, level change or a
+    // successful cast, so re-grant it here before the NeedsAmmo early return.
+    constexpr uint32 SPELL_REQUIRES_NO_AMMO = 46699;
+    if (!sPlayerbotAIConfig.requireAmmo && !bot->HasAura(SPELL_REQUIRES_NO_AMMO))
+    {
+        if (!bot->HasSpell(SPELL_REQUIRES_NO_AMMO))
+            bot->addSpell(SPELL_REQUIRES_NO_AMMO, SPEC_MASK_ALL, true);
+        else
+            bot->CastSpell(bot, SPELL_REQUIRES_NO_AMMO, true);
+    }
+
+    if (!PlayerbotAI::NeedsAmmo(bot))
+        return;
+
     uint8 const botClass = bot->getClass();
     if (botClass != CLASS_HUNTER && botClass != CLASS_ROGUE && botClass != CLASS_WARRIOR)
         return;

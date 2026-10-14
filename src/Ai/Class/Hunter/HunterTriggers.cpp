@@ -100,6 +100,9 @@ bool HunterAspectOfThePackTrigger::IsActive()
 
 bool HunterLowAmmoTrigger::IsActive()
 {
+    if (!PlayerbotAI::NeedsAmmo(bot))
+        return false;
+
     uint32 ammoCount = AI_VALUE2(uint32, "item count", "ammo");
     return bot->GetGroup() && ammoCount > 0 && ammoCount < 100;
 }

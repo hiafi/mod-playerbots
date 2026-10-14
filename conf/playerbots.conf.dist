@@ -578,6 +578,10 @@ AiPlayerbot.AltMaintenanceReputation = 1
 AiPlayerbot.AltMaintenanceAttunementQuests = 1
 AiPlayerbot.AltMaintenanceKeyring = 1
 
+# 0 = bots never create, buy, equip or check ammo (for servers that grant 'Requires No Ammo' 46699)
+# Default: 1
+AiPlayerbot.RequireAmmo = 1
+
 # Enable/Disable autogear command, which automatically upgrades bots' gear
 # The quality is limited by AutoGearQualityLimit and AutoGearScoreLimit
 # In-game syntax (the argument can only request at or below the configured limits):

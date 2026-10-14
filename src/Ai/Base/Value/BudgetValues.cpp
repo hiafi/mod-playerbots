@@ -153,7 +153,7 @@ uint32 MoneyNeededForValue::Calculate()
             moneyWanted = AI_VALUE(uint32, "max repair cost");
             break;
         case NeedMoneyFor::ammo:
-            moneyWanted = (bot->getClass() == CLASS_HUNTER)
+            moneyWanted = (bot->getClass() == CLASS_HUNTER && PlayerbotAI::NeedsAmmo(bot))
                               ? (level * level * level) / 10
                               : 0;  // Or level^3 (1s @ lvl10, 30s @ lvl30, 2g @ lvl60, 5g @ lvl80): Todo replace
                                     // (should be best ammo buyable x 8 stacks cost)
