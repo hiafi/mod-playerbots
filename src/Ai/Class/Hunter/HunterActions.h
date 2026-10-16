@@ -193,6 +193,7 @@ class FeedPetAction : public Action
 public:
     FeedPetAction(PlayerbotAI* botAI) : Action(botAI, "feed pet") {}
     bool Execute(Event event) override;
+    bool isUseful() override;
 };
 
 class CastCallPetAction : public CastBuffSpellAction
@@ -223,10 +224,17 @@ class CastKillCommandAction : public CastBuffSpellAction
 public:
     CastKillCommandAction(PlayerbotAI* botAI) :
         CastBuffSpellAction(botAI, "kill command", false, 5000) {}
-    std::string const GetTargetName() override
-    {
-        return "pet target";
-    }
+    // The stock self-buff targets the pet; the rework's strike targets the current target
+    std::string const GetTargetName() override;
+    bool isUseful() override;
+    bool Execute(Event event) override;
+
+private:
+    // Beast Mastery check cached for 10 s: it walks the talent map, and a non-BM bot reaches it every tick
+    bool IsBeastMastery();
+
+    uint32 _beastMasteryCheckedAt = 0;
+    bool _beastMastery = false;
 };
 
 class CastBestialWrathAction : public CastBuffSpellAction

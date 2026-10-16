@@ -8,6 +8,8 @@
 #include "GenericSpellActions.h"
 #include "GenericTriggers.h"
 #include "HunterActions.h"
+#include "HunterReworkIds.h"
+#include "HunterReworkUtils.h"
 #include "Player.h"
 #include "PlayerbotAI.h"
 #include "PlayerbotAIConfig.h"
@@ -17,7 +19,16 @@
 
 bool KillCommandTrigger::IsActive()
 {
-    return !botAI->HasAura("kill command", GetTarget());
+    if (!ai::hunter_rework::IsKillCommandStrike())
+        return !botAI->HasAura("kill command", GetTarget());
+
+    // The rework's strike: a known spell off cooldown, a live attackable target and a pet that can act. All O(1).
+    if (!bot->HasSpell(ai::hunter_rework::SPELL_KILL_COMMAND) ||
+        bot->HasSpellCooldown(ai::hunter_rework::SPELL_KILL_COMMAND))
+        return false;
+
+    Unit* target = AI_VALUE(Unit*, "current target");
+    return target && target->IsAlive() && bot->IsValidAttackTarget(target) && AI_VALUE(bool, "hunter pet can act");
 }
 
 bool BlackArrowTrigger::IsActive()

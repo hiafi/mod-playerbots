@@ -10,6 +10,7 @@
 #include "GenericHunterStrategy.h"
 #include "HunterActions.h"
 #include "HunterBuffStrategies.h"
+#include "HunterReworkContext.h"
 #include "HunterTriggers.h"
 #include "MarksmanshipHunterStrategy.h"
 #include "NamedObjectContext.h"
@@ -284,6 +285,7 @@ void HunterAiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextLi
 {
     AiObjectContext::BuildSharedActionContexts(actionContexts);
     actionContexts.Add(new HunterAiObjectContextInternal());
+    actionContexts.Add(new HunterReworkActionFactory());
 }
 
 void HunterAiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextList<Trigger>& triggerContexts)
@@ -295,4 +297,5 @@ void HunterAiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextL
 void HunterAiObjectContext::BuildSharedValueContexts(SharedNamedObjectContextList<UntypedValue>& valueContexts)
 {
     AiObjectContext::BuildSharedValueContexts(valueContexts);
+    valueContexts.Add(new HunterReworkValueFactory());
 }

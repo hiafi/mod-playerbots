@@ -7,7 +7,9 @@
 #include "HunterActions.h"
 #include "Event.h"
 #include "GenericSpellActions.h"
+#include "HunterReworkUtils.h"
 #include "PlayerbotAI.h"
+#include "PlayerbotAIConfig.h"
 #include "Playerbots.h"
 
 bool CastViperStingAction::isUseful()
@@ -46,6 +48,45 @@ bool CastImmolationTrapAction::isUseful()
 Value<Unit*>* CastFreezingTrap::GetTargetValue()
 {
     return context->GetValue<Unit*>("cc target", "freezing trap");
+}
+
+// Hunter rework: the server pins happiness full, so there is nothing to feed
+bool FeedPetAction::isUseful() { return !sPlayerbotAIConfig.hunterRework; }
+
+std::string const CastKillCommandAction::GetTargetName()
+{
+    return ai::hunter_rework::IsKillCommandStrike() ? "current target" : "pet target";
+}
+
+bool CastKillCommandAction::isUseful()
+{
+    // Hunter rework: outside Beast Mastery the bot skips Kill Command (B2 / B3 may revisit)
+    if (sPlayerbotAIConfig.hunterRework && !IsBeastMastery())
+        return false;
+
+    if (!ai::hunter_rework::IsKillCommandStrike())
+        return CastBuffSpellAction::isUseful();
+
+    // The strike needs a pet that can act
+    return AI_VALUE(bool, "hunter pet can act") && CastSpellAction::isUseful();
+}
+
+bool CastKillCommandAction::IsBeastMastery()
+{
+    uint32 const now = getMSTime();
+    if (!_beastMasteryCheckedAt || now - _beastMasteryCheckedAt >= 10 * IN_MILLISECONDS)
+    {
+        _beastMasteryCheckedAt = now;
+        _beastMastery = ai::hunter_rework::IsBeastMasteryBot(bot);
+    }
+
+    return _beastMastery;
+}
+
+bool CastKillCommandAction::Execute(Event event)
+{
+    return ai::hunter_rework::IsKillCommandStrike() ? CastSpellAction::Execute(event)
+                                                    : CastBuffSpellAction::Execute(event);
 }
 
 bool FeedPetAction::Execute(Event /*event*/)

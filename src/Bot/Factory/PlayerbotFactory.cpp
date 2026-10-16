@@ -41,6 +41,8 @@
 #include "Trainer.h"
 #include "World.h"
 #include <array>
+#include <optional>
+#include <set>
 #include <unordered_set>
 #include <utility>
 
@@ -1367,6 +1369,26 @@ void PlayerbotFactory::InitPetTalents()
     std::map<uint32, std::vector<TalentEntry const*>> spells;
     bool diveTypePet = (1LL << ci->family) & diveMask;
 
+    // A dive row and a dash row are variants only where they share a cell (tab, row, column), as on stock data. Where
+    // the data gives one of them a cell of its own (the rework keeps Cunning's Mobility, 2207, alone), every pet
+    // type may learn it.
+    auto const cellOf = [](uint32 talentId) -> std::optional<std::array<uint32, 3>>
+    {
+        TalentEntry const* talent = sTalentStore.LookupEntry(talentId);
+        if (!talent)
+            return std::nullopt;
+
+        return std::array<uint32, 3>{talent->TalentTab, talent->Row, talent->Col};
+    };
+    std::set<std::array<uint32, 3>> diveCells;
+    std::set<std::array<uint32, 3>> dashCells;
+    for (uint32 talentId : {2201u, 2208u, 2219u, 2203u})
+        if (auto cell = cellOf(talentId))
+            diveCells.insert(*cell);
+    for (uint32 talentId : {2119u, 2207u, 2111u, 2109u})
+        if (auto cell = cellOf(talentId))
+            dashCells.insert(*cell);
+
     for (uint32 i = 0; i < sTalentStore.GetNumRows(); ++i)
     {
         TalentEntry const* talentInfo = sTalentStore.LookupEntry(i);
@@ -1382,11 +1404,12 @@ void PlayerbotFactory::InitPetTalents()
             continue;
         bool diveClass = talentInfo->TalentID == 2201 || talentInfo->TalentID == 2208 || talentInfo->TalentID == 2219 ||
                          talentInfo->TalentID == 2203;
-        if (diveClass && !diveTypePet)
+        std::array<uint32, 3> const cell{talentInfo->TalentTab, talentInfo->Row, talentInfo->Col};
+        if (diveClass && !diveTypePet && dashCells.count(cell))
             continue;
         bool dashClass = talentInfo->TalentID == 2119 || talentInfo->TalentID == 2207 || talentInfo->TalentID == 2111 ||
                          talentInfo->TalentID == 2109;
-        if (dashClass && diveTypePet)
+        if (dashClass && diveTypePet && diveCells.count(cell))
             continue;
         spells[talentInfo->Row].push_back(talentInfo);
     }
@@ -1511,6 +1534,7 @@ void PlayerbotFactory::InitPet()
             return;
 
         std::vector<uint32> ids;
+        std::vector<uint32> preferredIds;
 
         CreatureTemplateContainer const* creatures = sObjectMgr->GetCreatureTemplates();
 
@@ -1539,7 +1563,16 @@ void PlayerbotFactory::InitPet()
                 continue;
 
             ids.push_back(itr->first);
+
+            if (std::find(sPlayerbotAIConfig.preferredHunterPetFamilies.begin(),
+                          sPlayerbotAIConfig.preferredHunterPetFamilies.end(),
+                          itr->second.family) != sPlayerbotAIConfig.preferredHunterPetFamilies.end())
+                preferredIds.push_back(itr->first);
         }
+
+        // Preferred families win when one is tameable at this level; otherwise the stock pool stays
+        if (!preferredIds.empty())
+            ids = std::move(preferredIds);
 
         if (ids.empty())
         {

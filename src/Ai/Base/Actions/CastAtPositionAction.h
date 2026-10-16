@@ -53,6 +53,9 @@ protected:
     bool FindPosition(WorldLocation& position);
     bool HasLineOfSight(WorldLocation const& position);
 
+    // For a subclass whose fallback depends on its qualifier ("most clustered enemy::<radius>")
+    void SetFallbackUnit(std::string const fallbackUnit) { _fallbackUnit = fallbackUnit; }
+
 private:
     uint32 _spellId;
     std::string _positionValue;

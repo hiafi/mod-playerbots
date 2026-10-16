@@ -1240,6 +1240,13 @@ AiPlayerbot.GearScoreCheck = 0
 # Default: 0 (disabled)
 AiPlayerbot.HunterWolfPet = 0
 
+# Set to 1 when the server runs the hunter rework (pinned pet happiness, Kill Command as a strike on the target, the
+# shared pet talent tree): bots stop feeding pets, use the rework pet autocast policy (basic attack and buff/debuff
+# utility on; Web Pull, Cower, Dash, Last Stand and Bullheaded off; Growl only when solo), and skip Kill Command
+# outside Beast Mastery.
+# Default: 0 (disabled)
+AiPlayerbot.HunterRework = 0
+
 # Default pet stance when a bot summons a pet
 # 0 = Passive, 1 = Defensive, 2 = Aggressive
 # Default: 1 (Defensive)
@@ -1253,6 +1260,12 @@ AiPlayerbot.PetChatCommandDebug = 0
 # Prohibit hunter bots from creating pets with any family ID listed below in ExcludedHunterPetFamilies
 # See the creature_family database table for all pet families by ID (note: ID for spiders is 3)
 AiPlayerbot.ExcludedHunterPetFamilies = ""
+
+# Hunter bots tame a pet from these family IDs when one is available at their level (comma-separated; 1 = Wolf,
+# 11 = Raptor, 4 = Bear, 3 = Spider). If none qualifies they fall back to the normal pool. HunterWolfPet and
+# ExcludedHunterPetFamilies still apply first.
+# Default: "" (no preference)
+AiPlayerbot.PreferredHunterPetFamilies = ""
 
 #
 #
@@ -1901,15 +1914,22 @@ AiPlayerbot.PremadeSpecLink.3.5.80 = -005305201-2300302510233330533135001031
 
 # HUNTER PET
 #
-# Ferocity
-AiPlayerbot.PremadeHunterPetLink.0.16 = 2100003130003010101
-AiPlayerbot.PremadeHunterPetLink.0.20 = 2100003130103010122
-# Tenacity
-AiPlayerbot.PremadeHunterPetLink.1.16 = 21103000300120101001
-AiPlayerbot.PremadeHunterPetLink.1.20 = 21303010300120101002
-# Cunning
-AiPlayerbot.PremadeHunterPetLink.2.16 = 2100020330000211001
-AiPlayerbot.PremadeHunterPetLink.2.20 = 21000203300002110221
+# Links for the reworked shared pet tree (the same 11 talents on all three pet types). A digit is the rank of the
+# n-th talent in (row, column) order:
+#   Great Stamina 3, Natural Armor 2, Spider's Bite 3, Blood of the Rhino 2, Pet Barding 2, Boar's Speed 3,
+#   Lionhearted 2, Great Resistance 3, Grace of the Mantis 2, Mobility 2, Bloodthirsty 2.
+# Row 3 opens at 9 points spent, row 4 at 12. The .16 key is the 11 points every pet has at 60, the .20 key adds the
+# 4 points of a Beast Mastery hunter with Kindred Spirits 3/3 (Grace of the Mantis 2, Bloodthirsty 2). Keep both keys
+# non-empty: .20 is what selects link mode over random picks.
+# Ferocity: damage and speed (GS 3, SB 3, BS 3, LH 2)
+AiPlayerbot.PremadeHunterPetLink.0.16 = 30300320000
+AiPlayerbot.PremadeHunterPetLink.0.20 = 30300320202
+# Tenacity: survivability (GS 3, NA 2, BotR 2, PB 2, LH 2)
+AiPlayerbot.PremadeHunterPetLink.1.16 = 32022020000
+AiPlayerbot.PremadeHunterPetLink.1.20 = 32022020202
+# Cunning: damage and resistance (GS 3, SB 3, BS 2, GR 3)
+AiPlayerbot.PremadeHunterPetLink.2.16 = 30300203000
+AiPlayerbot.PremadeHunterPetLink.2.20 = 30300203202
 
 #
 #
