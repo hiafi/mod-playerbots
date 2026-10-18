@@ -1,0 +1,148 @@
+# Beast Mastery rows, appended to the "bm" combat strategy by HunterReworkBmStrategy::InitTriggers (after
+# "hunter/common"). Each row queues its actions at the relevance when its condition holds (`when`, the expression
+# language of StrategyExpression.h) or when an existing C++ trigger fires (`trigger`). Execution order is by relevance,
+# not by position in this file: GCD rows sit in the normal band, ordered by the guide (docs/reworks/bot-strategy/
+# hunter-bm-strat.md as corrected by the built spell data); the off-GCD ones in high and interrupt.
+# Actions named "hunter ..." are RowCheckedAction. Rows that can hold together have their own action names: the two
+# Multi-Shot rows, and the commands (an area command and the other are exclusive per name and mode).
+#
+# Spell and aura ids (check by id: names are shared): 34026 Kill Command, 201800 / 201801 Command I / II,
+# 19574 Bestial Wrath (aura on the pet; The Beast Within 34471 on the hunter), 201802 Stampede, 3044 Arcane Shot,
+# 56641 Steady Shot, 201811 Cobra Shot 3/3 hidden aura (instant Steady Shot), 2643 Multi-Shot, 201806 Beast Cleave
+# buff (the talent passive is 201848), 1978 Serpent Sting, 3043 Scorpid Sting, 53351 Kill Shot, 34490 Silencing Shot,
+# 3045 Rapid Fire, 19577 Intimidation (aura on the pet), 3034 Viper Sting, 13813 Explosive Trap.
+# Talents the rows read: Beast Cleave 201848 (known() reads the talent), Bestial Wrath 19574 (a castable talent).
+strategy: hunter/bm
+class: hunter
+conditions:
+  # Modes. The pack is 3+ enemies within 8 yd of the target (the target counts itself).
+  # `co -aoe` turns the pack rows off (B1 review M1), as the other reworked classes do
+  pack: value("hunter aoe enabled") and alive(target) and enemies_near_target(8) >= 3
+  single: alive(target) and not pack
+  # Brief BM 11: a boss, or more than 15 s to live, or an elite when the estimate reads 0
+  long_fight: boss(target) or lifetime(target) > 15 or (elite(target) and lifetime(target) == 0)
+  pet_alive: value("hunter pet can act")
+  bw_up: aura("pet target", 19574, own)
+  # Cobra Shot 3/3 grants the hidden aura the core checks; Steady Shot is instant while it is up
+  instant_steady: aura(self, 201811)
+  # Beast Cleave refresh: the talent is taken and the buff from the last Multi-Shot has under 2 s left (or is gone)
+  cleave_low: known(201848) and remaining(self, 201806, own) < 2000
+  # Multi-Shot's splash is around the target; the Explosive Trap's blast is around the pack unit (brief BM 2)
+  safe_aoe: value("unsafe aoe units::10") == 0
+  safe_cluster: value("unsafe aoe units::10;cluster") == 0
+  kc_ready: known(34026) and cooldown(34026) == 0
+  # Kill Command opens a fresh target: commands wait up to 2 s while it is ready
+  kc_first: not kc_ready or time_since_target_change() > 2000
+  # Bestial Wrath not worth holding Command II for: active, unknown (no talent yet) or over 10 s away
+  bw_no_hold: bw_up or not known(19574) or cooldown(19574) > 10000
+  multi_ready: known(2643) and cooldown(2643) == 0
+  # The target is a caster (or any unit) casting a spell
+  casting: value("hunter target casting")
+rows:
+  # ---- Off the global cooldown ----
+  - do: silencing shot
+    trigger: silencing shot
+    relevance: interrupt
+  # Bestial Wrath: pet ready, a long fight, and (single) Kill Command ready or under 1.5 s away. Also casts The Beast
+  # Within on the hunter.
+  - do: hunter bm bestial wrath
+    when: >-
+      alive(target) and known(19574) and cooldown(19574) == 0 and pet_alive and long_fight
+      and (pack or cooldown(34026) < 1500)
+    relevance: high + 5
+  # Rapid Fire: a boss or elite with more than 20 s to live, with Bestial Wrath active or over 60 s away (or untaken)
+  - do: hunter rapid fire
+    when: >-
+      alive(target) and known(3045) and cooldown(3045) == 0 and (boss(target) or elite(target))
+      and lifetime(target) > 20 and (bw_up or not known(19574) or cooldown(19574) > 60000)
+    relevance: high + 4
+
+  # ---- Both modes ----
+  - do: hunter bm kill shot
+    when: alive(target) and known(53351) and cooldown(53351) == 0 and health_pct(target) < 20
+    relevance: normal + 9.5
+  # Stampede only inside Bestial Wrath on a long fight, or on a boss while Bestial Wrath is over 60 s away
+  - do: hunter bm stampede
+    when: >-
+      alive(target) and known(201802) and cooldown(201802) == 0 and pet_alive and in_range(target, 40)
+      and ((bw_up and long_fight) or (boss(target) and cooldown(19574) > 60000))
+    relevance: normal + 8.5
+  - do: hunter bm kill command
+    when: alive(target) and kc_ready and pet_alive and in_range(target, 40)
+    relevance: normal + 8
+  # Intimidation: a caster the pet is meleeing (or Kill Command just hit), Silencing Shot being on cooldown
+  - do: hunter intimidation
+    when: >-
+      alive(target) and known(19577) and cooldown(19577) == 0 and pet_alive and casting and not boss(target)
+      and (value("hunter pet on target") or ms_since_cast(34026) < 2000) and not aura("pet target", 19577)
+      and (not known(34490) or cooldown(34490) > 0)
+    relevance: normal + 7.8
+  # Viper Sting slows a caster Silencing Shot can't reach (it is on cooldown)
+  - do: hunter viper sting
+    when: >-
+      alive(target) and known(3034) and cooldown(3034) == 0 and casting and not aura(target, 3034, own)
+      and known(34490) and cooldown(34490) > 0
+    relevance: normal + 6.8
+  - do: hunter bm arcane shot
+    when: alive(target) and known(3044) and cooldown(3044) == 0
+    relevance: normal + 5.5
+  # Steady Shot: never started on the move without Cobra Shot 3/3 (the action lifts the refusal only with the aura)
+  - do: hunter bm steady shot
+    when: alive(target) and known(56641) and (not moving(self) or instant_steady)
+    relevance: normal + 4
+
+  # ---- Single target (1 or 2 enemies) ----
+  # Command II is held for Bestial Wrath; Command I is not
+  - do: hunter bm command ii
+    when: >-
+      single and known(201801) and cooldown(201801) == 0 and value("hunter command ready::2") and kc_first
+      and bw_no_hold
+    relevance: normal + 7.5
+  - do: hunter bm command i
+    when: >-
+      single and known(201800) and cooldown(201800) == 0 and value("hunter command ready::1") and kc_first
+    relevance: normal + 7
+  - do: hunter bm serpent sting
+    when: single and known(1978) and not aura(target, 1978, own) and lifetime(target) > 10
+    relevance: normal + 6.5
+  - do: hunter bm scorpid sting
+    when: single and boss(target) and known(3043) and cooldown(3043) == 0 and not aura(target, 3043, own)
+    relevance: normal + 6
+
+  # ---- Pack (3+ enemies within 8 yd of the target) ----
+  # Multi-Shot opens and refreshes Beast Cleave, above everything but Kill Shot
+  - do: hunter bm multi-shot cleave
+    when: pack and multi_ready and cleave_low and safe_aoe
+    relevance: normal + 9
+  # The area command first (Bear's Swipe is Command I, Raptor's Leaping Tear and Spider's Venomous Cloud are Command
+  # II), then the other. No Bestial Wrath hold on packs.
+  - do: hunter bm command ii
+    when: >-
+      pack and known(201801) and cooldown(201801) == 0 and value("hunter command ready::2")
+      and value("hunter command aoe::2") and kc_first
+    relevance: normal + 7.6
+  - do: hunter bm command i
+    when: >-
+      pack and known(201800) and cooldown(201800) == 0 and value("hunter command ready::1")
+      and value("hunter command aoe::1") and kc_first
+    relevance: normal + 7.5
+  - do: hunter bm command ii
+    when: >-
+      pack and known(201801) and cooldown(201801) == 0 and value("hunter command ready::2")
+      and not value("hunter command aoe::2") and kc_first
+    relevance: normal + 7
+  - do: hunter bm command i
+    when: >-
+      pack and known(201800) and cooldown(201800) == 0 and value("hunter command ready::1")
+      and not value("hunter command aoe::1") and kc_first
+    relevance: normal + 6.9
+  # The trap is thrown at the densest point of the pack (30 yd), when 3+ enemies are within 10 yd of it and nobody
+  # crowd-controlled or out of combat is in the blast
+  - do: hunter explosive trap at pack::10
+    when: >-
+      pack and known(13813) and cooldown(13813) == 0 and value("most clustered enemy count::10") >= 3
+      and safe_cluster
+    relevance: normal + 5
+  - do: hunter bm multi-shot
+    when: pack and multi_ready and safe_aoe
+    relevance: normal + 4.5

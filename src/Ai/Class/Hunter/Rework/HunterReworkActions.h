@@ -8,6 +8,7 @@
 #define PLAYERBOTS_HUNTERREWORKACTIONS_H
 
 #include "CastAtPositionAction.h"
+#include "GenericSpellActions.h"
 #include "MovementActions.h"
 #include "PetsAction.h"
 
@@ -44,6 +45,27 @@ public:
 
 private:
     float GetStandOffDistance();
+};
+
+// An aspect cast on the bot, by the spell's name. The stock buff actions look the aura up by name, and an aspect shares
+// its name with a hidden aura (Aspect of the Beast's marker 201875), so the row's own id checks decide instead; this
+// action only casts.
+class HunterAspectAction : public CastSpellAction
+{
+public:
+    HunterAspectAction(PlayerbotAI* botAI, std::string const spell) : CastSpellAction(botAI, spell) {}
+
+    std::string const GetTargetName() override { return "self target"; }
+};
+
+// Master's Call on the bot: the pet frees itself and the cast target (the bot) of roots and snares. The row decides
+// when, from "hunter pet impaired".
+class HunterMastersCallAction : public CastSpellAction
+{
+public:
+    HunterMastersCallAction(PlayerbotAI* botAI) : CastSpellAction(botAI, "master's call") {}
+
+    std::string const GetTargetName() override { return "self target"; }
 };
 
 // The pet autocast toggle under the rework policy (only active with AiPlayerbot.HunterRework): the basic attack and

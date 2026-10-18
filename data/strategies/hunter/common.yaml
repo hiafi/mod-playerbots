@@ -1,0 +1,74 @@
+# Rows every reworked hunter spec shares, appended to the spec strategies by HunterReworkGenericStrategy::InitTriggers
+# (the guides' setup and defensive tables). Each row queues its actions at the relevance when its condition holds
+# (`when`, the expression language of StrategyExpression.h) or when an existing C++ trigger fires (`trigger`). Execution
+# order is by relevance, not by position in this file. Actions named "hunter ..." are RowCheckedAction (they re-check
+# their own row before casting). Kill Shot and Silencing Shot are in each spec's own file (they top its list).
+# Spell ids: 1130 Hunter's Mark, 34477 Misdirection (aura 34477 on the hunter, proc buff 35079), 136 Mend Pet,
+# 53271 Master's Call, 19263 Deterrence, 5384 Feign Death, 781 Disengage.
+strategy: hunter/common
+class: hunter
+conditions:
+  target_alive: alive(target)
+  # A tank other than the bot is in the group (Misdirection target, Feign Death)
+  has_tank: alive("main tank") and not is_self("main tank")
+  # Something is attacking the bot
+  hit_me: value("my attacker count") >= 1
+rows:
+  # The stock no-ammo row; inert while AiPlayerbot.RequireAmmo is 0
+  - do: equip upgrades packet action
+    trigger: no ammo
+    relevance: move
+
+  # Setup: Misdirection on the tank at the pull, then Hunter's Mark if no hunter has marked the target
+  - do: hunter misdirection
+    when: >-
+      target_alive and known(34477) and cooldown(34477) == 0 and has_tank and not aura(self, "34477,35079")
+      and combat_time() < 10000
+    relevance: high + 9.7
+  - do: hunter hunters mark
+    when: >-
+      target_alive and known(1130) and not aura(target, 1130)
+      and (boss(target) or elite(target) or lifetime(target) > 10)
+    relevance: high + 9.5
+
+  # Dispel: enrage or a magic buff on the target
+  - do: tranquilizing shot
+    trigger: tranquilizing shot enrage
+    relevance: dispel
+  - do: tranquilizing shot
+    trigger: tranquilizing shot magic
+    relevance: dispel
+
+  # A runner fleeing at low health
+  - do: concussive shot
+    trigger: concussive shot on snare target
+    relevance: high
+
+  # The target is in melee range of the bot and not attacking it: step back to shoot
+  - do: flee
+    trigger: hunter too close
+    relevance: move + 4
+
+  # Pet: Mend Pet in combat; Master's Call when the pet is rooted or snared and the fight is a boss or an elite
+  - do: hunter mend pet
+    when: known(136) and alive("pet target") and health_pct("pet target") < 40 and not aura("pet target", 136, own)
+    relevance: high + 8
+  - do: hunter masters call
+    when: >-
+      known(53271) and cooldown(53271) == 0 and alive("pet target") and value("hunter pet impaired")
+      and target_alive and (boss(target) or elite(target))
+    relevance: high + 7
+
+  # Survival, all off the global cooldown. Feign Death needs a tank to drop threat onto, so Disengage is the escape
+  # whenever Feign Death is unavailable, unused (no tank) or on cooldown.
+  - do: hunter deterrence
+    when: known(19263) and cooldown(19263) == 0 and health_pct(self) < 30 and hit_me
+    relevance: emergency + 4
+  - do: hunter feign death
+    when: known(5384) and cooldown(5384) == 0 and has_tank and hit_me
+    relevance: emergency + 3
+  - do: hunter disengage
+    when: >-
+      known(781) and cooldown(781) == 0 and hit_me and enemies_within(6) >= 1
+      and (not has_tank or not known(5384) or cooldown(5384) > 0)
+    relevance: emergency + 2

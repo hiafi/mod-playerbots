@@ -19,6 +19,9 @@ namespace ai::hunter_rework
 constexpr uint32 SPELL_KILL_COMMAND = 34026;
 constexpr uint32 SPELL_EXPLOSIVE_TRAP = 13813;
 
+// Beast Mastery: the hidden aura Cobra Shot 3/3 grants, which makes Steady Shot instant (core spell 201811)
+constexpr uint32 SPELL_COBRA_SHOT_TRANSFORM = 201811;
+
 // Pet abilities (autocast policy)
 constexpr uint32 SPELL_GROWL = 2649;
 constexpr uint32 SPELL_COWER = 1742;

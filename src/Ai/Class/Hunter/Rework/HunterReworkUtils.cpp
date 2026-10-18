@@ -11,8 +11,10 @@
 #include "Pet.h"
 #include "Player.h"
 #include "PlayerbotAI.h"
+#include "Spell.h"
 #include "SpellInfo.h"
 #include "SpellMgr.h"
+#include <algorithm>
 
 namespace ai::hunter_rework
 {
@@ -72,14 +74,32 @@ uint32 CommandSpell(Pet const* pet, uint8 slot)
     return slot == 0 ? kit->commandI : kit->commandII;
 }
 
+namespace
+{
+bool HasAreaEffect(SpellInfo const* spellInfo)
+{
+    for (SpellEffectInfo const& effect : spellInfo->GetEffects())
+        if (effect.RadiusEntry || effect.ChainTarget > 1)
+            return true;
+
+    return false;
+}
+}  // namespace
+
 bool IsAreaSpell(SpellInfo const* spellInfo)
 {
     if (!spellInfo)
         return false;
 
+    if (HasAreaEffect(spellInfo))
+        return true;
+
+    // Venomous Cloud's area sits on the spell its TRIGGER_SPELL effect casts; one level is enough
     for (SpellEffectInfo const& effect : spellInfo->GetEffects())
-        if (effect.RadiusEntry || effect.ChainTarget > 1)
-            return true;
+        if (effect.Effect == SPELL_EFFECT_TRIGGER_SPELL && effect.TriggerSpell)
+            if (SpellInfo const* triggered = sSpellMgr->GetSpellInfo(effect.TriggerSpell);
+                triggered && HasAreaEffect(triggered))
+                return true;
 
     return false;
 }
@@ -91,8 +111,15 @@ bool CommandReady(Player* bot, Unit* target, uint32 spellId)
     if (!pet || !spellInfo || !target || !PetCanAct(bot))
         return false;
 
+    // The core's CheckPetCanAct range branch: a melee-range spell is measured centre to centre, less the reach margin
     float const range = spellInfo->GetMaxRange(false, pet);
-    if (range > 0.0f && !pet->IsWithinDist(target, range))
+    if (spellInfo->RangeEntry && (spellInfo->RangeEntry->Flags & SPELL_RANGE_MELEE))
+    {
+        float const margin = pet->GetLeewayBonusRange(target) > 0.0f ? MIN_MELEE_REACH : 2 * MIN_MELEE_REACH;
+        if (!pet->IsWithinMeleeRange(target, std::max(range - margin, 0.0f)))
+            return false;
+    }
+    else if (range > 0.0f && !pet->IsWithinDist(target, range))
         return false;
 
     return pet->IsWithinLOSInMap(target);

@@ -28,11 +28,12 @@ bool PetCanAct(Player* bot);
 // slot. The ids come from the mirrored table in HunterReworkIds.h.
 uint32 CommandSpell(Pet const* pet, uint8 slot);
 
-// An area or chain spell: any effect with a radius, or a chain of more than one target.
+// An area or chain spell: any effect with a radius, or a chain of more than one target, on the spell itself or on the
+// spell one of its TRIGGER_SPELL effects casts.
 bool IsAreaSpell(SpellInfo const* spellInfo);
 
-// Mirror of the core's press check for a commanded spell: PetCanAct, the target in the spell's range from the pet
-// (reach included) and in the pet's line of sight.
+// Mirror of the core's press check for a commanded spell (CheckPetCanAct): PetCanAct, the target in the spell's range
+// from the pet (a melee-range spell with the core's reach margin) and in the pet's line of sight.
 bool CommandReady(Player* bot, Unit* target, uint32 spellId);
 
 // Whether Kill Command (34026) is the rework's strike on the target (hunter-cast, no aura effect) and not the stock
