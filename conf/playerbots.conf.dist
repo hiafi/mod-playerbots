@@ -1886,45 +1886,41 @@ AiPlayerbot.PremadeSpecLink.2.5.80 = 0-0-33300202310030031033300213310130301
 # HUNTER
 #
 
-# Hunter rework (custom talent trees): the Beast Mastery links are the guide builds at levels 30, 45 and 60
-# (docs/reworks/bot-strategy/hunter-bm-strat.md). Each string is "<beast mastery>-<marksmanship>-<survival>" with one
-# digit per talent in (row, column) order, so the trailing "--" are the empty Marksmanship and Survival tabs (tab order
-# BM-MM-SV, TalentTab OrderIndex 0/1/2). Each link contains the one before it, so no talent is ever unlearned. .80
-# repeats .60 (at level 80 only the .80 entry is read). The stock links decoded as garbage on the reworked grid; the
-# stock .40 key is gone. PremadeSpecName and PremadeSpecGlyph are unchanged: bot glyphs are off on this server
-# (AiPlayerbot.BotGlyphs = 0), so the glyph lists are never applied. Survival keeps its stock links until its bot stage.
-# The Marksmanship links ("pve", spec 3.1) are the guide builds at 30, 45 and 60
-# (docs/reworks/bot-strategy/hunter-mm-strat.md), in the same form: the leading "-" is the empty Beast Mastery tab.
-# Sniper's Mark comes with .30, Viper's Mark and Readiness with .45, Falcon's Mark, Trick Shots, Triangulation and
-# Chimera Shot with .60. .80 repeats .60. The stock 3.1.60 and 3.1.80 keys are replaced.
+# Hunter rework (custom talent trees): the three pve slots are the guide builds at levels 30, 45 and 60
+# (docs/reworks/bot-strategy/hunter-bm-strat.md, hunter-mm-strat.md and Appendix A of
+# docs/reworks/hunter-survival-rework.md). Each string is "<beast mastery>-<marksmanship>-<survival>" with one digit per
+# talent in (row, column) order, so an empty tab is a bare "-" (tab order BM-MM-SV, TalentTab OrderIndex 0/1/2). Each link
+# contains the one before it, so no talent is ever unlearned. .80 repeats .60 (at level 80 only the .80 entry is read).
+# The stock links decoded as garbage on the reworked grid; the stock 3.0.40 key is gone. PremadeSpecName and
+# PremadeSpecGlyph are unchanged: bot glyphs are off on this server (AiPlayerbot.BotGlyphs = 0), so the glyph lists are
+# never applied. The stock pvp slots (3.3 bm pvp, 3.4 mm pvp, 3.5 surv pvp) are removed for the rework: their links
+# decoded as garbage too, this server has no PvP, and ChangeTalentsAction stops listing at the first empty name. Their
+# RandomClassSpecProb/RandomClassSpecIndex lines below stay (probability 0).
+# Beast Mastery (spec 3.0): Command I and II with .30, Bestial Wrath and Beast Cleave with .45, Cobra Shot 3 and
+# Stampede with .60.
 AiPlayerbot.PremadeSpecName.3.0 = bm pve
 AiPlayerbot.PremadeSpecGlyph.3.0 = 42912,43350,42902,43351,43338,42914
 AiPlayerbot.PremadeSpecLink.3.0.30 = 0330233013020001--
 AiPlayerbot.PremadeSpecLink.3.0.45 = 03302330130303112000231101--
 AiPlayerbot.PremadeSpecLink.3.0.60 = 033023301303031120002311033003331--
 AiPlayerbot.PremadeSpecLink.3.0.80 = 033023301303031120002311033003331--
+# Marksmanship (spec 3.1): Sniper's Mark comes with .30, Viper's Mark and Readiness with .45, Falcon's Mark, Trick Shots,
+# Triangulation and Chimera Shot with .60.
 AiPlayerbot.PremadeSpecName.3.1 = mm pve
 AiPlayerbot.PremadeSpecGlyph.3.1 = 42912,43350,45625,43351,43338,42914
 AiPlayerbot.PremadeSpecLink.3.1.30 = -03303003313001001-
 AiPlayerbot.PremadeSpecLink.3.1.45 = -2330300331303300130013001-
 AiPlayerbot.PremadeSpecLink.3.1.60 = -233030033130330013001310130031331-
 AiPlayerbot.PremadeSpecLink.3.1.80 = -233030033130330013001310130031331-
+# Survival (spec 3.2): .30 gives Deadly Focus 2, Wildfire Bomb and Explosive Shot; .45 adds Lock and Load 3, Mantis
+# Strike, Killer Instinct 3 and Shrapnel; .60 adds Volatile Payload 3, Tar Bomb, T.N.T. 3, Dark Hunting 2 and Cluster
+# Bombs. The stock 3.2.60 and 3.2.80 keys are replaced.
 AiPlayerbot.PremadeSpecName.3.2 = surv pve
 AiPlayerbot.PremadeSpecGlyph.3.2 = 45733,43350,45731,43351,43338,45732
-AiPlayerbot.PremadeSpecLink.3.2.60 = --5000032500033330502135201311
-AiPlayerbot.PremadeSpecLink.3.2.80 = -005305101-5000032500033330532135301321
-AiPlayerbot.PremadeSpecName.3.3 = bm pvp
-AiPlayerbot.PremadeSpecGlyph.3.3 = 42897,42900,42902,43356,43338,42900
-AiPlayerbot.PremadeSpecLink.3.3.60 = 05203201505012233100531151
-AiPlayerbot.PremadeSpecLink.3.3.80 = 05203201505012233100531351-005305101-03
-AiPlayerbot.PremadeSpecName.3.4 = mm pvp
-AiPlayerbot.PremadeSpecGlyph.3.4 = 42912,43351,42897,43338,43356,42904
-AiPlayerbot.PremadeSpecLink.3.4.60 = -034305101030213231135031051
-AiPlayerbot.PremadeSpecLink.3.4.80 = -035305101030213233135031051-53013020102
-AiPlayerbot.PremadeSpecName.3.5 = surv pvp
-AiPlayerbot.PremadeSpecGlyph.3.5 = 42912,43350,42904,43356,43338,45731
-AiPlayerbot.PremadeSpecLink.3.5.60 = --2300302410233030533135001031
-AiPlayerbot.PremadeSpecLink.3.5.80 = -005305201-2300302510233330533135001031
+AiPlayerbot.PremadeSpecLink.3.2.30 = --2333330100020001
+AiPlayerbot.PremadeSpecLink.3.2.45 = --23333301000330110032302
+AiPlayerbot.PremadeSpecLink.3.2.60 = --2333330100033111003233300030013201
+AiPlayerbot.PremadeSpecLink.3.2.80 = --2333330100033111003233300030013201
 
 
 # HUNTER PET

@@ -30,6 +30,19 @@ constexpr uint32 SPELL_VIPERS_MARK = 201921;
 constexpr uint32 SPELL_FALCONS_MARK = 201922;
 constexpr std::array<uint32, 3> MM_MARKS = {SPELL_SNIPERS_MARK, SPELL_VIPERS_MARK, SPELL_FALCONS_MARK};
 
+// Survival (core HunterData.h; keep in sync). The rows read the auras by id in the YAML; these are the spells the
+// Survival actions cast.
+constexpr uint32 SPELL_RAPTOR_STRIKE = 2973;
+constexpr uint32 SPELL_MONGOOSE_BITE = 1495;
+constexpr uint32 SPELL_MANTIS_STRIKE = 202040;
+constexpr uint32 SPELL_EXPLOSIVE_SHOT = 53301;
+constexpr uint32 SPELL_WILDFIRE_BOMB = 202045;
+constexpr uint32 SPELL_TAR_BOMB = 202047;
+constexpr uint32 SPELL_CLUSTER_BOMBS = 202051;
+constexpr uint32 SPELL_GLAIVE_TOSS = 201600;
+constexpr uint32 SPELL_FROST_TRAP = 13809;
+constexpr uint32 SPELL_SNAKE_TRAP = 34600;
+
 // Pet abilities (autocast policy)
 constexpr uint32 SPELL_GROWL = 2649;
 constexpr uint32 SPELL_COWER = 1742;

@@ -16,6 +16,8 @@
 #include "HunterReworkMmStrategy.h"
 #include "HunterReworkContext.h"
 #include "HunterReworkStrategies.h"
+#include "HunterReworkSvStrategy.h"
+#include "HunterSvContext.h"
 #include "HunterTriggers.h"
 #include "MarksmanshipHunterStrategy.h"
 #include "NamedObjectContext.h"
@@ -41,6 +43,7 @@ public:
         {
             creators["bm"] = &HunterStrategyFactoryInternal::beast_mastery_rework;
             creators["mm"] = &HunterStrategyFactoryInternal::marksmanship_rework;
+            creators["surv"] = &HunterStrategyFactoryInternal::survival_rework;
             creators["aoe"] = &HunterStrategyFactoryInternal::aoe_rework;
         }
     }
@@ -56,6 +59,7 @@ private:
     static Strategy* aoe(PlayerbotAI* botAI) { return new AoEHunterStrategy(botAI); }
     static Strategy* beast_mastery_rework(PlayerbotAI* botAI) { return new HunterReworkBmStrategy(botAI); }
     static Strategy* marksmanship_rework(PlayerbotAI* botAI) { return new HunterReworkMmStrategy(botAI); }
+    static Strategy* survival_rework(PlayerbotAI* botAI) { return new HunterReworkSvStrategy(botAI); }
     static Strategy* aoe_rework(PlayerbotAI* botAI) { return new HunterReworkAoeStrategy(botAI); }
 };
 
@@ -308,6 +312,7 @@ void HunterAiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextLi
     actionContexts.Add(new HunterReworkActionFactory());
     actionContexts.Add(new HunterBmActionFactory());
     actionContexts.Add(new HunterMmActionFactory());
+    actionContexts.Add(new HunterSvActionFactory());
 }
 
 void HunterAiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextList<Trigger>& triggerContexts)

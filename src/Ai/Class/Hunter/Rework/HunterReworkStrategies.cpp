@@ -13,6 +13,7 @@
 namespace
 {
 bool IsMarksmanshipBot(Player* bot) { return AiFactory::GetPlayerSpecTab(bot) == HUNTER_TAB_MARKSMANSHIP; }
+bool IsSurvivalBot(Player* bot) { return AiFactory::GetPlayerSpecTab(bot) == HUNTER_TAB_SURVIVAL; }
 }  // namespace
 
 void HunterReworkAspectStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
@@ -21,13 +22,16 @@ void HunterReworkAspectStrategy::InitTriggers(std::vector<TriggerNode*>& trigger
         ai::data::AppendRows("hunter/aspect-bm", triggers);
     else if (IsMarksmanshipBot(botAI->GetBot()))
         ai::data::AppendRows("hunter/aspect-mm", triggers);
+    else if (IsSurvivalBot(botAI->GetBot()))
+        ai::data::AppendRows("hunter/aspect-sv", triggers);
     else
         HunterBuffDpsStrategy::InitTriggers(triggers);
 }
 
 void HunterReworkAoeStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
-    if (ai::hunter_rework::IsBeastMasteryBot(botAI->GetBot()))
+    // Beast Mastery and Survival keep their pack rows in bm.yaml and sv.yaml (Survival has no Volley or Multi-Shot)
+    if (ai::hunter_rework::IsBeastMasteryBot(botAI->GetBot()) || IsSurvivalBot(botAI->GetBot()))
         return;
 
     // Marksmanship keeps its pack rows in mm.yaml; only the stock Volley cancel stays: it ends the channel once fewer

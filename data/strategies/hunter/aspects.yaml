@@ -32,3 +32,21 @@ rows:
   - do: hunter aspect of the hawk
     when: known(13165) and not aura(self, 13165) and free_to_swap
     relevance: high
+---
+# Survival: Aspect of the Dragonhawk all the time (the Aspect of the Hawk before it is learned at 16); Viper has no
+# damage penalty, so it is a mana engine only: from below 15% mana until mana is back above 60%, then the damage aspect
+# returns. Auras by id: 61846 Dragonhawk (its explosion spell 201601 is a direct Fire hit, not an aura on the bot).
+strategy: hunter/aspect-sv
+class: hunter
+conditions:
+  free_to_swap: not aura(self, 34074) or mana(self) > 60
+rows:
+  - do: hunter aspect of the viper
+    when: known(34074) and mana(self) < 15 and not aura(self, 34074)
+    relevance: high + 9
+  - do: hunter aspect of the dragonhawk
+    when: known(61846) and not aura(self, 61846) and free_to_swap
+    relevance: high
+  - do: hunter aspect of the hawk
+    when: not known(61846) and known(13165) and not aura(self, 13165) and free_to_swap
+    relevance: high
