@@ -199,10 +199,7 @@ rows:
     relevance: normal + 8
 
   # ---- Boss cooldown and the leveling rows (every row gates on known()) ----
-  # Scorpid Sting on a boss that has none from this bot (stings stack, so Serpent Sting stays)
-  - do: hunter sv scorpid sting
-    when: alive(target) and boss(target) and known(3043) and cooldown(3043) == 0 and not aura(target, 3043, own)
-    relevance: normal + 6.5
+  # No Scorpid Sting: not worth its GCD and 11% base mana for Survival (user 2026-10-18)
   # Serpent Sting and Arcane Shot only until Explosive Shot is learned (30); never Arcane Shot after it
   - do: hunter sv serpent sting
     when: >-
