@@ -13,8 +13,9 @@
 class PlayerbotAI;
 
 // Registered as "bdps" when AiPlayerbot.HunterRework is on. A Beast Mastery bot gets the rows of "hunter/aspect-bm"
-// (data/strategies/hunter/aspects.yaml); a Marksmanship or Survival bot keeps the stock strategy's own rows until
-// their stages land. The spec is read in InitTriggers so a rebuilt strategy follows a respec. Runs in both engines.
+// (data/strategies/hunter/aspects.yaml), a Marksmanship bot those of "hunter/aspect-mm"; a Survival bot keeps the stock
+// strategy's own rows until its stage lands. The spec is read in InitTriggers so a rebuilt strategy follows a respec.
+// Runs in both engines.
 class HunterReworkAspectStrategy : public HunterBuffDpsStrategy
 {
 public:
@@ -24,8 +25,8 @@ public:
 };
 
 // Registered as "aoe" when AiPlayerbot.HunterRework is on. The reworked specs keep their pack rows in their own YAML
-// (a "pack" condition), so this adds nothing for them; the stock Volley and Multi-Shot rows stay for a spec whose stage
-// has not landed. Still the toggle `co +aoe` / `co -aoe`.
+// (a "pack" condition), so this adds nothing for Beast Mastery and only the stock Volley cancel for Marksmanship; the
+// stock Volley and Multi-Shot rows stay for a spec whose stage has not landed. Still the toggle `co +aoe` / `co -aoe`.
 class HunterReworkAoeStrategy : public AoEHunterStrategy
 {
 public:

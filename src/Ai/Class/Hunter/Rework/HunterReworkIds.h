@@ -22,6 +22,14 @@ constexpr uint32 SPELL_EXPLOSIVE_TRAP = 13813;
 // Beast Mastery: the hidden aura Cobra Shot 3/3 grants, which makes Steady Shot instant (core spell 201811)
 constexpr uint32 SPELL_COBRA_SHOT_TRANSFORM = 201811;
 
+// Marksmanship (core HunterData.h; keep in sync)
+constexpr uint32 SPELL_AIMED_SHOT = 19434;
+constexpr uint32 SPELL_FIRE = 201940;  // Fire! (Master Marksman): the next Aimed Shot is instant and free
+constexpr uint32 SPELL_SNIPERS_MARK = 201920;
+constexpr uint32 SPELL_VIPERS_MARK = 201921;
+constexpr uint32 SPELL_FALCONS_MARK = 201922;
+constexpr std::array<uint32, 3> MM_MARKS = {SPELL_SNIPERS_MARK, SPELL_VIPERS_MARK, SPELL_FALCONS_MARK};
+
 // Pet abilities (autocast policy)
 constexpr uint32 SPELL_GROWL = 2649;
 constexpr uint32 SPELL_COWER = 1742;

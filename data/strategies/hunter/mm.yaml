@@ -1,0 +1,170 @@
+# Marksmanship rows, appended to the "mm" combat strategy by HunterReworkMmStrategy::InitTriggers (after
+# "hunter/common"). Each row queues its actions at the relevance when its condition holds (`when`, the expression
+# language of StrategyExpression.h) or when an existing C++ trigger fires (`trigger`). Execution order is by relevance,
+# not by position in this file: GCD rows sit in the normal band, ordered by the guide (docs/reworks/bot-strategy/
+# hunter-mm-strat.md as corrected by the built spell data and the B2 handoff); the off-GCD ones in high and interrupt.
+# Actions named "hunter mm ..." are RowCheckedAction. Rows that can hold together have their own action names or
+# qualifiers (a qualifier on a non-Qualified action only keeps the baskets apart): the Aimed Shot rows, the two
+# Multi-Shot rows, the Chimera rows. Rows of the two modes (single, pack) share action names where they are exclusive.
+#
+# Spell and aura ids (check by id: names are shared by buffs, talents and twins):
+#   19434 Aimed Shot (twins 201934 ricochet, 201935 bounce), 201940 Fire! (buff: next Aimed Shot instant and free),
+#   53209 Chimera Shot, 56641 Steady Shot, 3044 Arcane Shot, 2643 Multi-Shot, 1510 Volley, 53351 Kill Shot,
+#   201920 / 201921 / 201922 Sniper's / Viper's / Falcon's Mark (castable talents; the debuff has the spell's id),
+#   201975 Trick Shots (talent passive; the buff it grants on every Multi-Shot is 201943), 23989 Readiness,
+#   3045 Rapid Fire, 34490 Silencing Shot, 1978 Serpent Sting, 3043 Scorpid Sting.
+# Talents the rows read: the marks, Aimed Shot, Readiness and Chimera Shot (castable: known() is HasSpell), Trick Shots
+# 201975 (a passive: known() reads the talent). Sniper's Mark arrives with .30, Viper's Mark and Readiness with .45,
+# Falcon's Mark, Trick Shots and Chimera Shot with .60; a row gated on a missing one never fires.
+strategy: hunter/mm
+class: hunter
+conditions:
+  # Modes. The pack is 3+ enemies within 8 yd of the target (the target counts itself). `co -aoe` turns the pack rows
+  # off (B1 review M1): single is then every alive target
+  pack: value("hunter aoe enabled") and alive(target) and enemies_near_target(8) >= 3
+  single: alive(target) and not pack
+
+  # The bot's own marks on the target (the marks are per hunter)
+  m_s: aura(target, 201920, own)
+  m_v: aura(target, 201921, own)
+  m_f: aura(target, 201922, own)
+  any_mark: m_s or m_v or m_f
+  # Every mark present has 8 or more stacks (the visible count reads 1 for 0 and 1, so "8 or more" is safe)
+  all_high: >-
+    any_mark and (not m_s or stacks(target, 201920, own) >= 8) and (not m_v or stacks(target, 201921, own) >= 8)
+    and (not m_f or stacks(target, 201922, own) >= 8)
+  # Aimed Shot reads the marks when its cast completes (2.0 s live): a mark with under cast time + 1.5 s left is about
+  # to be lost (brief MM 4)
+  mark_expiring: >-
+    (m_s and remaining(target, 201920, own) < 3500) or (m_v and remaining(target, 201921, own) < 3500)
+    or (m_f and remaining(target, 201922, own) < 3500)
+  # A mark is pressed on a target with more than 6 s to live (or an unknown time to live)
+  pressable: lifetime(target) == 0 or lifetime(target) > 6
+  # No mark on the target and none will be pressable within 6 s: waiting for stacks would wait for nothing. A mark
+  # that is not worth pressing on a short-lived target (pressable) does not count as coming.
+  no_mark_soon: >-
+    not any_mark and (not known(201920) or cooldown(201920) > 6000 or not pressable)
+    and (not known(201921) or cooldown(201921) > 6000 or not pressable)
+    and (not known(201922) or cooldown(201922) > 6000 or not pressable)
+  # The marks are missiles (speed 40): none is re-pressed within 1.5 s of any press (it has not landed yet)
+  no_recent_mark: >-
+    ms_since_cast(201920) > 1500 and ms_since_cast(201921) > 1500 and ms_since_cast(201922) > 1500
+  dying: lifetime(target) > 0 and lifetime(target) < 4
+  # Fire! (Master Marksman): the next Aimed Shot is instant and free; one charge, 20 s
+  fire: aura(self, 201940)
+  # Aimed Shot is ready and no Volley channel is running (the channel would be broken by the cast)
+  aimed_ready: known(19434) and cooldown(19434) == 0 and not channeling(1510)
+  # A cast Aimed Shot is never started on the move; Fire! makes it instant
+  can_aim: not moving(self) or fire
+  # Multi-Shot splash, Volley's ground area: nothing out of combat or crowd-controlled within 8 yd of the target
+  safe_aoe: value("unsafe aoe units::8") == 0
+  multi_ready: known(2643) and cooldown(2643) == 0
+  chimera_ready: known(53209) and cooldown(53209) == 0
+  # Trick Shots: the buff every Multi-Shot grants; the next Aimed Shot spends it and ricochets
+  trick_buff: aura(self, 201943, own)
+rows:
+  # ---- Off the global cooldown ----
+  - do: silencing shot
+    trigger: silencing shot
+    relevance: interrupt
+  # Rapid Fire: a boss or elite with more than 30 s to live. Above Readiness (below), so when both hold Rapid Fire goes
+  # first and Readiness hands it back (brief MM 17).
+  - do: hunter rapid fire
+    when: >-
+      alive(target) and known(3045) and cooldown(3045) == 0 and (boss(target) or elite(target))
+      and lifetime(target) > 30
+    relevance: high + 4
+
+  # ---- Both modes ----
+  - do: hunter mm kill shot
+    when: alive(target) and known(53351) and cooldown(53351) == 0 and health_pct(target) < 20
+    relevance: normal + 9.5
+  # Readiness within 3 s of an Aimed Shot that consumed all three marks (a bot-side tracker, brief MM 16 option a).
+  # Its GCD is 1 s. The only use of Readiness. The tracker clears when it is cast. Aimed Shot must be on cooldown: a
+  # shot that never completed (interrupted, target died) started none, and Readiness would reset nothing.
+  - do: hunter mm readiness
+    when: >-
+      known(23989) and cooldown(23989) == 0 and cooldown(19434) > 0 and value("hunter mm triple consumed")
+    relevance: normal + 9.3
+  # Fire! spent before it runs out, or on the move: through the Aimed Shot action (the triple record included)
+  - do: hunter mm aimed shot::fire-expiring
+    when: alive(target) and aimed_ready and fire and remaining(self, 201940, own) < 3000
+    relevance: normal + 8.75
+  - do: hunter mm aimed shot::fire-moving
+    when: alive(target) and aimed_ready and moving(self) and fire
+    relevance: normal + 8.2
+  - do: hunter mm arcane shot
+    when: alive(target) and known(3044) and cooldown(3044) == 0
+    relevance: normal + 5.5
+  # Steady Shot is never started on the move
+  - do: hunter mm steady shot
+    when: alive(target) and known(56641) and not moving(self)
+    relevance: normal + 4
+
+  # ---- Single target (1 or 2 enemies) ----
+  # Each mark in turn, never re-pressed while up (a re-press resets its stacks and its cooldown)
+  - do: hunter mm sniper's mark
+    when: >-
+      single and known(201920) and cooldown(201920) == 0 and not m_s and pressable and ms_since_cast(201920) > 1500
+    relevance: normal + 9
+  - do: hunter mm viper's mark
+    when: >-
+      single and known(201921) and cooldown(201921) == 0 and not m_v and pressable and ms_since_cast(201921) > 1500
+    relevance: normal + 8.9
+  - do: hunter mm falcon's mark
+    when: >-
+      single and known(201922) and cooldown(201922) == 0 and not m_f and pressable and ms_since_cast(201922) > 1500
+    relevance: normal + 8.8
+  - do: hunter mm chimera shot
+    when: single and chimera_ready
+    relevance: normal + 8.5
+  # Aimed Shot waits for stacks: 8+ on every mark, a mark about to expire, no mark coming, or a dying target
+  - do: hunter mm aimed shot
+    when: single and aimed_ready and can_aim and (all_high or mark_expiring or no_mark_soon or dying)
+    relevance: normal + 8
+  # Chimera Shot refreshes Serpent Sting only if it is already on the target: one manual sting
+  - do: hunter mm serpent sting
+    when: single and known(1978) and not aura(target, 1978, own) and lifetime(target) > 8
+    relevance: normal + 6.5
+  - do: hunter mm scorpid sting
+    when: single and boss(target) and known(3043) and cooldown(3043) == 0 and not aura(target, 3043, own)
+    relevance: normal + 6
+
+  # ---- Pack (3+ enemies within 8 yd of the target); the bot does not wait for stacks ----
+  # A mark when the target has none: Viper's, then Sniper's, then Falcon's. No mark within 1.5 s of any press.
+  - do: hunter mm viper's mark
+    when: >-
+      pack and known(201921) and cooldown(201921) == 0 and not any_mark and no_recent_mark and pressable
+    relevance: normal + 9
+  - do: hunter mm sniper's mark
+    when: >-
+      pack and known(201920) and cooldown(201920) == 0 and not any_mark and no_recent_mark and pressable
+    relevance: normal + 8.9
+  - do: hunter mm falcon's mark
+    when: >-
+      pack and known(201922) and cooldown(201922) == 0 and not any_mark and no_recent_mark and pressable
+    relevance: normal + 8.8
+  # Multi-Shot copies the primary's marks onto the others and grants Trick Shots (the buff only exists with the talent)
+  - do: hunter mm multi-shot::trick
+    when: pack and known(201975) and any_mark and multi_ready and not trick_buff and safe_aoe
+    relevance: normal + 8.7
+  # Aimed Shot ricochets while the Trick Shots buff is up and another marked enemy is within 8 yd of the target
+  - do: hunter mm aimed shot::trick
+    when: >-
+      pack and aimed_ready and can_aim and trick_buff and value("hunter mm marked near target::8") >= 1
+    relevance: normal + 8.6
+  - do: hunter mm volley
+    when: >-
+      pack and known(1510) and not channeling(1510) and enemies_near_target(8) >= 4 and not moving(self)
+      and (not known(19434) or cooldown(19434) > 3000) and mana(self) > 30 and safe_aoe
+    relevance: normal + 8.4
+  - do: hunter mm chimera shot::pack
+    when: pack and chimera_ready
+    relevance: normal + 8
+  # A plain nuke in a pack without Trick Shots (before .60), or with it when no mark can go up (B2 review m2)
+  - do: hunter mm aimed shot::plain
+    when: pack and aimed_ready and can_aim and (not known(201975) or (not any_mark and no_recent_mark))
+    relevance: normal + 7.9
+  - do: hunter mm multi-shot
+    when: pack and multi_ready and safe_aoe
+    relevance: normal + 5.8

@@ -1892,8 +1892,11 @@ AiPlayerbot.PremadeSpecLink.2.5.80 = 0-0-33300202310030031033300213310130301
 # BM-MM-SV, TalentTab OrderIndex 0/1/2). Each link contains the one before it, so no talent is ever unlearned. .80
 # repeats .60 (at level 80 only the .80 entry is read). The stock links decoded as garbage on the reworked grid; the
 # stock .40 key is gone. PremadeSpecName and PremadeSpecGlyph are unchanged: bot glyphs are off on this server
-# (AiPlayerbot.BotGlyphs = 0), so the glyph lists are never applied. Marksmanship and Survival keep their stock links
-# until their bot stages.
+# (AiPlayerbot.BotGlyphs = 0), so the glyph lists are never applied. Survival keeps its stock links until its bot stage.
+# The Marksmanship links ("pve", spec 3.1) are the guide builds at 30, 45 and 60
+# (docs/reworks/bot-strategy/hunter-mm-strat.md), in the same form: the leading "-" is the empty Beast Mastery tab.
+# Sniper's Mark comes with .30, Viper's Mark and Readiness with .45, Falcon's Mark, Trick Shots, Triangulation and
+# Chimera Shot with .60. .80 repeats .60. The stock 3.1.60 and 3.1.80 keys are replaced.
 AiPlayerbot.PremadeSpecName.3.0 = bm pve
 AiPlayerbot.PremadeSpecGlyph.3.0 = 42912,43350,42902,43351,43338,42914
 AiPlayerbot.PremadeSpecLink.3.0.30 = 0330233013020001--
@@ -1902,8 +1905,10 @@ AiPlayerbot.PremadeSpecLink.3.0.60 = 033023301303031120002311033003331--
 AiPlayerbot.PremadeSpecLink.3.0.80 = 033023301303031120002311033003331--
 AiPlayerbot.PremadeSpecName.3.1 = mm pve
 AiPlayerbot.PremadeSpecGlyph.3.1 = 42912,43350,45625,43351,43338,42914
-AiPlayerbot.PremadeSpecLink.3.1.60 = -035305101030013233115031151
-AiPlayerbot.PremadeSpecLink.3.1.80 = 502-035305101230013233135031351-5000002
+AiPlayerbot.PremadeSpecLink.3.1.30 = -03303003313001001-
+AiPlayerbot.PremadeSpecLink.3.1.45 = -2330300331303300130013001-
+AiPlayerbot.PremadeSpecLink.3.1.60 = -233030033130330013001310130031331-
+AiPlayerbot.PremadeSpecLink.3.1.80 = -233030033130330013001310130031331-
 AiPlayerbot.PremadeSpecName.3.2 = surv pve
 AiPlayerbot.PremadeSpecGlyph.3.2 = 45733,43350,45731,43351,43338,45732
 AiPlayerbot.PremadeSpecLink.3.2.60 = --5000032500033330502135201311

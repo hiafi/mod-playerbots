@@ -5,20 +5,35 @@
  */
 
 #include "HunterReworkStrategies.h"
+#include "AiFactory.h"
 #include "HunterReworkUtils.h"
 #include "Playerbots.h"
 #include "StrategyData.h"
+
+namespace
+{
+bool IsMarksmanshipBot(Player* bot) { return AiFactory::GetPlayerSpecTab(bot) == HUNTER_TAB_MARKSMANSHIP; }
+}  // namespace
 
 void HunterReworkAspectStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
     if (ai::hunter_rework::IsBeastMasteryBot(botAI->GetBot()))
         ai::data::AppendRows("hunter/aspect-bm", triggers);
+    else if (IsMarksmanshipBot(botAI->GetBot()))
+        ai::data::AppendRows("hunter/aspect-mm", triggers);
     else
         HunterBuffDpsStrategy::InitTriggers(triggers);
 }
 
 void HunterReworkAoeStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
-    if (!ai::hunter_rework::IsBeastMasteryBot(botAI->GetBot()))
+    if (ai::hunter_rework::IsBeastMasteryBot(botAI->GetBot()))
+        return;
+
+    // Marksmanship keeps its pack rows in mm.yaml; only the stock Volley cancel stays: it ends the channel once fewer
+    // than two attackers are left (the 6 s channel would otherwise spend its ticks on one target)
+    if (IsMarksmanshipBot(botAI->GetBot()))
+        triggers.push_back(new TriggerNode("volley channel check", {NextAction("cancel channel", 23.0f)}));
+    else
         AoEHunterStrategy::InitTriggers(triggers);
 }

@@ -18,3 +18,17 @@ rows:
   - do: hunter aspect of the hawk
     when: known(13165) and not known(13161) and not aura(self, 13165) and free_to_swap
     relevance: high
+---
+# Marksmanship: Aspect of the Hawk (20% on a ranged crit for Quick Shots) all the time; Viper has no damage penalty,
+# so it is a mana engine only: from below 15% mana until mana is back above 60%, then Hawk returns.
+strategy: hunter/aspect-mm
+class: hunter
+conditions:
+  free_to_swap: not aura(self, 34074) or mana(self) > 60
+rows:
+  - do: hunter aspect of the viper
+    when: known(34074) and mana(self) < 15 and not aura(self, 34074)
+    relevance: high + 9
+  - do: hunter aspect of the hawk
+    when: known(13165) and not aura(self, 13165) and free_to_swap
+    relevance: high
