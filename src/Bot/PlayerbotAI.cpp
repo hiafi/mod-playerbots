@@ -3989,7 +3989,15 @@ bool PlayerbotAI::CastSpell(uint32 spellId, float x, float y, float z, Item* ite
         return false;
     }
 
-    spell->prepare(&targets);
+    // A refused cast (no mana, out of line of sight, ...) must fail the action, as the unit-target CastSpell does;
+    // otherwise the row "succeeds" every tick without casting and starves every row below it
+    if (spell->prepare(&targets) != SPELL_CAST_OK)
+    {
+        if (oldSel)
+            bot->SetSelection(oldSel);
+
+        return false;
+    }
 
     if (bot->isMoving() && spell->GetCastTime())
     {
