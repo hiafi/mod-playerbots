@@ -388,6 +388,7 @@ public:
     bool autoPickTalents;
     bool autoUpgradeEquip;
     int32 hunterWolfPet;
+    bool hunterRework;
     int32 defaultPetStance;
     int32 petChatCommandDebug;
     bool autoLearnTrainerSpells;
@@ -432,6 +433,7 @@ public:
     bool altMaintenanceAttunementQs,
             altMaintenanceBags,
             altMaintenanceAmmo,
+            requireAmmo,
             altMaintenanceFood,
             altMaintenanceReagents,
             altMaintenanceConsumables,
@@ -486,6 +488,7 @@ public:
     bool IsRestrictedHealerDPSMap(uint32 mapId) const;
 
     std::vector<uint32> excludedHunterPetFamilies;
+    std::vector<uint32> preferredHunterPetFamilies;
 
     // Random bot level brackets (periodic redistribution across per-faction level ranges). See
     // RandomBotLevelMgr; percentages here are the as-configured values, not the runtime working copy.

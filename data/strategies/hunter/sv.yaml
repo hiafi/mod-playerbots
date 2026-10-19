@@ -1,0 +1,221 @@
+# Survival rows, appended to the "surv" combat strategy by HunterReworkSvStrategy::InitTriggers (after
+# "hunter/common"). Each row queues its actions at the relevance when its condition holds (`when`, the expression
+# language of StrategyExpression.h) or when an existing C++ trigger fires (`trigger`). Execution order is by relevance,
+# not by position in this file: GCD rows sit in the normal band, ordered by the guide (Appendix A of
+# docs/reworks/hunter-survival-rework.md as corrected by the built spell data and the B3 handoff); the off-GCD and
+# positioning ones in high and interrupt. Actions named "hunter sv ..." are RowCheckedAction; "hunter sv" casts go by
+# spell id (HunterSvCastAction, HunterSvGroundCastAction). A spell pressed by several rows has one action name per row
+# (a `::label` qualifier keeps the baskets apart); a label that starts with "pack" marks an area cast.
+#
+# Spell and aura ids (check by id: names are shared by buffs, talent passives and twins):
+#   2973 Raptor Strike, 1495 Mongoose Bite (buff Mongoose Fury 202042), 202040 Mantis Strike (the window is a buff of
+#   the same name, 202041), 53301 Explosive Shot (shares a 6 s cooldown with Arcane Shot 3044), 56453 Lock and Load
+#   (the buff: the talent's passive ranks 56342-56344 share its name), 202045 Wildfire Bomb, 202047 Tar Bomb (applies
+#   Tarred 202048), 202051 Cluster Bombs, 201600 Glaive Toss, 13813 Explosive Trap, 13809 Frost Trap, 34600 Snake
+#   Trap, 53351 Kill Shot, 34490 Silencing Shot, 3045 Rapid Fire, 3043 Scorpid Sting, 1978 Serpent Sting, 56641 Steady
+#   Shot, 202081 Deadly Focus rank 2 (a passive: known() reads the talent).
+# Deadly Focus 2/2 (`df2`) is what puts the strikes at 15 yd; without it the bot plays a ranged hunter with no strikes
+# and no stand-off. Never in the list: Arcane Shot once Explosive Shot is known (user ruling SV 12), Steady Shot, Kill
+# Command, Multi-Shot and Volley at df2, Glaive Toss on a single target, Disengage for damage, dismissing the pet.
+# Talents the rows read: Deadly Focus 202081, Wildfire Bomb and Explosive Shot (the .30 link), Mantis Strike (.45, with
+# Killer Instinct 3/3 that opens its window), Tar Bomb and Cluster Bombs (.60).
+strategy: hunter/sv
+class: hunter
+conditions:
+  # Modes. The pack is 3+ enemies within 8 yd of the target (the target counts itself). `co -aoe` turns the pack rows
+  # off (B1 review M1): single is then every alive target. `two` is exactly one other enemy there.
+  pack: value("hunter aoe enabled") and alive(target) and enemies_near_target(8) >= 3
+  single: alive(target) and not pack
+  two: alive(target) and enemies_near_target(8) == 2
+
+  # Deadly Focus 2/2: the strikes reach 15 yd (rank 1 is damage only)
+  df2: known(202081)
+
+  # The target carries this bot's Tarred (Tar Bomb, 12 s)
+  tarred: aura(target, 202048, own)
+  # Lock and Load: the next Arcane or Explosive Shot is free and ready (12 s, 1 charge)
+  lnl: aura(self, 56453)
+  # Mantis Strike's window (6 s) is up; Mongoose Fury (the next Mongoose Bite +100%) is up
+  mantis: df2 and aura(self, 202041)
+  fury: aura(self, 202042)
+
+  # Readiness of the buttons the lists press (cooldown() reads the live value: Mantis Strike, Demolitions and the
+  # talents move Wildfire Bomb's; known() is false below the level or without the talent)
+  es_ready: known(53301) and cooldown(53301) == 0
+  tar_ready: known(202047) and cooldown(202047) == 0
+  cluster_ready: known(202051) and cooldown(202051) == 0
+  wildfire_ready: known(202045) and cooldown(202045) == 0
+  glaive_ready: known(201600) and cooldown(201600) == 0
+  mongoose_ready: df2 and known(1495) and cooldown(1495) == 0
+  trap_ready: known(13813) and cooldown(13813) == 0
+  frost_ready: known(13809) and cooldown(13809) == 0
+  snake_ready: known(34600) and cooldown(34600) == 0
+
+  # Cluster Bombs is held for a Tarred window: the target is Tarred with 2 s or more left, or Tar Bomb is over 15 s
+  # from ready (just cast). Without Tar Bomb there is no window to wait for.
+  cluster_window: >-
+    not known(202047) or remaining(target, 202048, own) >= 2000 or cooldown(202047) > 15000
+  # On a pack nothing waits for a window that will not come: Tarred (any time left), Tar Bomb just cast, or a pack
+  # that dies within 8 s (lifetime reads 0 for "unknown", so it needs the > 0 term)
+  pack_cluster_window: >-
+    not known(202047) or tarred or cooldown(202047) > 15000 or (lifetime(target) > 0 and lifetime(target) < 8)
+
+  # Ground casts land on the most clustered enemy ("hunter pack unit"); nothing out of combat or crowd-controlled
+  # may stand within their blast around that unit. The Explosive Trap blast is 10 yd, Cluster Bombs' five blasts 5 yd
+  # each (centred within 8 yd of the pack unit).
+  safe_cluster10: value("unsafe aoe units::10;cluster") == 0
+  # Target-centred AoE gates (B3 review M2): no crowd-controlled or idle mob near the target
+  safe8: value("unsafe aoe units::8") == 0
+  safe10: value("unsafe aoe units::10") == 0
+  safe_cluster8: value("unsafe aoe units::8;cluster") == 0
+rows:
+  # ---- Off the global cooldown ----
+  - do: silencing shot
+    trigger: silencing shot
+    relevance: interrupt
+  # Rapid Fire on cooldown against a boss or an elite with more than 30 s to live
+  - do: hunter rapid fire
+    when: >-
+      alive(target) and known(3045) and cooldown(3045) == 0 and (boss(target) or elite(target))
+      and lifetime(target) > 30
+    relevance: high + 4
+
+  # ---- Positioning ----
+  # Stand 15 yd from the target once the strikes reach that far (Deadly Focus 2/2); the action moves only when the bot
+  # is farther than 16 yd, and never closer than Auto Shot's minimum range. Below Misdirection (high + 9.7), above the
+  # rest of the generic rows and the rotation.
+  # 13 yd, inside the strict 15 yd strike and bomb range (B3 review M1: 15 left a dead band at 15-16 yd)
+  - do: hunter stand off::13
+    when: df2 and alive(target)
+    relevance: high + 9.6
+
+  # ---- Both modes ----
+  - do: hunter sv kill shot
+    when: alive(target) and known(53351) and cooldown(53351) == 0 and health_pct(target) < 20
+    relevance: normal + 9.5
+
+  # ---- Single target (1 or 2 enemies; first true wins, in this order) ----
+  # 3. Tar Bomb, with more than 8 s to live
+  - do: hunter sv tar bomb
+    when: single and tar_ready and lifetime(target) > 8 and safe8
+    relevance: normal + 9
+  # 4. Cluster Bombs at the target's position inside the Tarred window: the deliberate hold
+  - do: hunter sv cluster bombs::target
+    when: single and cluster_ready and cluster_window and safe8
+    relevance: normal + 8.8
+  # 5. Wildfire Bomb
+  - do: hunter sv wildfire bomb
+    when: single and wildfire_ready and safe8
+    relevance: normal + 8.6
+  # 6. Explosive Shot with Lock and Load, spent at once
+  - do: hunter sv explosive shot::lnl
+    when: single and es_ready and lnl
+    relevance: normal + 8.4
+  # 7. Mantis Strike when its window has under 2.5 s left
+  - do: hunter sv mantis strike
+    when: single and known(202040) and mantis and remaining(self, 202041) < 2500
+    relevance: normal + 8.2
+  # Two targets: Explosive Shot (line 9) moves above line 8, its splash being worth more than an empowered bite
+  - do: hunter sv explosive shot::two
+    when: two and es_ready
+    relevance: normal + 8.1
+  # 8. Mongoose Bite with Mongoose Fury
+  - do: hunter sv mongoose bite::fury
+    when: single and mongoose_ready and fury
+    relevance: normal + 8
+  # 9. Explosive Shot
+  - do: hunter sv explosive shot
+    when: single and es_ready
+    relevance: normal + 7.8
+  # 10. Explosive Trap thrown at the target
+  - do: hunter sv explosive trap::target
+    when: single and trap_ready and safe10
+    relevance: normal + 7.6
+  # 11. Mantis Strike
+  - do: hunter sv mantis strike::plain
+    when: single and known(202040) and mantis
+    relevance: normal + 7.4
+  # Two targets: Glaive Toss just above line 12 (two targets at 60 potency each beat Raptor Strike)
+  - do: hunter glaive toss
+    when: two and value("hunter aoe enabled") and glaive_ready and safe10
+    relevance: normal + 7.3
+  # 12. Mongoose Bite
+  - do: hunter sv mongoose bite
+    when: single and mongoose_ready
+    relevance: normal + 7.2
+  # 13. Snake Trap at the target, with more than 15 s to live
+  - do: hunter sv snake trap::target
+    when: single and snake_ready and lifetime(target) > 15 and safe8
+    relevance: normal + 7
+
+  # ---- Pack (3+ enemies within 8 yd of the target; nothing waits for a window that will not come) ----
+  # 2. Tar Bomb, with more than 6 s to live
+  - do: hunter sv tar bomb::pack
+    when: pack and tar_ready and lifetime(target) > 6 and safe8
+    relevance: normal + 9
+  # 3. Cluster Bombs at the pack unit
+  - do: hunter sv cluster bombs::8
+    when: pack and cluster_ready and pack_cluster_window and safe_cluster8
+    relevance: normal + 8.9
+  # 4. Explosive Trap at the pack
+  - do: hunter explosive trap at pack::10
+    when: pack and trap_ready and safe_cluster10
+    relevance: normal + 8.8
+  # 5. Frost Trap at the pack: a guaranteed Lock and Load (so not while it is up), with more than 8 s to live, and
+  # not when the group has asked this bot for a Freezing Trap (they share a cooldown; the "freezing trap" trigger is
+  # the one the cc strategy's own row, relevance 23, reads, and is read last: it scans). All normal-band rows sit
+  # below that row.
+  - do: hunter sv frost trap::10
+    when: >-
+      pack and frost_ready and not lnl and lifetime(target) > 8 and safe_cluster10 and not trigger("freezing trap")
+    relevance: normal + 8.7
+  # 6. Wildfire Bomb
+  - do: hunter sv wildfire bomb::pack
+    when: pack and wildfire_ready and safe8
+    relevance: normal + 8.6
+  # 7. Glaive Toss
+  - do: hunter glaive toss::pack
+    when: pack and glaive_ready and safe10
+    relevance: normal + 8.5
+  # 8. Explosive Shot with Lock and Load
+  - do: hunter sv explosive shot::pack-lnl
+    when: pack and es_ready and lnl
+    relevance: normal + 8.4
+  # 9. Mantis Strike
+  - do: hunter sv mantis strike::pack
+    when: pack and known(202040) and mantis
+    relevance: normal + 8.3
+  # 10. Explosive Shot
+  - do: hunter sv explosive shot::pack
+    when: pack and es_ready
+    relevance: normal + 8.2
+  # 11. Mongoose Bite
+  - do: hunter sv mongoose bite::pack
+    when: pack and mongoose_ready
+    relevance: normal + 8.1
+  # 12. Snake Trap at the pack unit, with more than 10 s to live
+  - do: hunter sv snake trap::8
+    when: pack and snake_ready and lifetime(target) > 10 and safe_cluster8
+    relevance: normal + 8
+
+  # ---- Boss cooldown and the leveling rows (every row gates on known()) ----
+  # No Scorpid Sting: not worth its GCD and 11% base mana for Survival (user 2026-10-18)
+  # Serpent Sting and Arcane Shot only until Explosive Shot is learned (30); never Arcane Shot after it
+  - do: hunter sv serpent sting
+    when: >-
+      alive(target) and known(1978) and not known(53301) and not aura(target, 1978, own) and lifetime(target) > 8
+    relevance: normal + 6.8
+  - do: hunter sv arcane shot
+    when: alive(target) and known(3044) and not known(53301) and cooldown(3044) == 0
+    relevance: normal + 6.7
+  # Raptor Strike: the filler (mana engine) at 15 yd with Deadly Focus 2/2; before it, only when already in melee
+  - do: hunter sv raptor strike
+    when: alive(target) and df2 and known(2973)
+    relevance: normal + 6
+  - do: hunter sv raptor strike::melee
+    when: alive(target) and not df2 and known(2973) and in_range(target, 5)
+    relevance: normal + 6
+  # Steady Shot before Deadly Focus 2/2 only, and never started on the move
+  - do: hunter sv steady shot
+    when: alive(target) and not df2 and known(56641) and not moving(self)
+    relevance: normal + 5.5

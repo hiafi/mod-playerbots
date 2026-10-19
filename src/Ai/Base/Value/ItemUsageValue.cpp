@@ -383,6 +383,9 @@ ItemUsage ItemUsageValue::QueryItemUsageForEquip(ItemTemplate const* itemProto, 
 
 ItemUsage ItemUsageValue::QueryItemUsageForAmmo(ItemTemplate const* proto)
 {
+    if (!PlayerbotAI::NeedsAmmo(bot))
+        return ITEM_USAGE_NONE;
+
     if (bot->getClass() != CLASS_HUNTER || bot->getClass() != CLASS_ROGUE || bot->getClass() != CLASS_WARRIOR)
         return ITEM_USAGE_NONE;
 

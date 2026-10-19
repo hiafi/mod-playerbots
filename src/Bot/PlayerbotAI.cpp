@@ -3989,7 +3989,15 @@ bool PlayerbotAI::CastSpell(uint32 spellId, float x, float y, float z, Item* ite
         return false;
     }
 
-    spell->prepare(&targets);
+    // A refused cast (no mana, out of line of sight, ...) must fail the action, as the unit-target CastSpell does;
+    // otherwise the row "succeeds" every tick without casting and starves every row below it
+    if (spell->prepare(&targets) != SPELL_CAST_OK)
+    {
+        if (oldSel)
+            bot->SetSelection(oldSel);
+
+        return false;
+    }
 
     if (bot->isMoving() && spell->GetCastTime())
     {
@@ -5505,6 +5513,20 @@ Item* PlayerbotAI::FindPoison() const
 {
     return FindItemInInventory([](ItemTemplate const* pItemProto) -> bool
                                { return pItemProto->Class == ITEM_CLASS_CONSUMABLE && pItemProto->SubClass == 6; });
+}
+
+// Whether this bot has to carry, buy, equip or check ammo.
+// Deliberately does not read the ranged weapon's ammo_type: it only switches off the client's own ammo check, bots
+// have no client, and the server still demands ammo from any caster without 46699 (Spell::CheckItems).
+// The RequireAmmo switch is needed on top of the aura: PlayerbotFactory::Randomize calls ClearSpells() and
+// CancelAuras() before InitAmmo(), so a re-randomized bot has no 46699 at that moment and would otherwise be
+// handed thousands of arrows.
+bool PlayerbotAI::NeedsAmmo(Player const* bot)
+{
+    // Requires No Ammo, granted server-wide by the hunter rework's T2
+    constexpr uint32 SPELL_REQUIRES_NO_AMMO = 46699;
+
+    return sPlayerbotAIConfig.requireAmmo && !bot->HasAura(SPELL_REQUIRES_NO_AMMO);
 }
 
 // Find Ammo

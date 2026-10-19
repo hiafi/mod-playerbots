@@ -111,9 +111,11 @@ class LockAndLoadTrigger : public BuffTrigger
 public:
     LockAndLoadTrigger(PlayerbotAI* botAI) : BuffTrigger(botAI, "lock and load") {}
 
+    // The buff by id. The name "Lock and Load" is also the talent's always-on passive ranks (56342-56344), which the
+    // name match found on every talented bot, so the trigger was always true. 56453 is the buff in the stock data too.
     bool IsActive() override
     {
-        return botAI->HasAura("lock and load", botAI->GetBot());
+        return botAI->GetBot()->HasAura(56453);
     }
 };
 

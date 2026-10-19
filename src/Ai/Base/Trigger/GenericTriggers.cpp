@@ -731,6 +731,9 @@ Value<Unit*>* BuffOnMainTankTrigger::GetTargetValue() { return context->GetValue
 
 bool AmmoCountTrigger::IsActive()
 {
+    if (!PlayerbotAI::NeedsAmmo(bot))
+        return false;
+
     if (bot->GetUInt32Value(PLAYER_AMMO_ID) != 0)
         return ItemCountTrigger::IsActive();  // Ammo already equipped
 

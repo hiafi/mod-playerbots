@@ -103,7 +103,7 @@ public:
         Player* bot = botAI->GetBot();
         if (bot->getClass() == CLASS_HUNTER)
         {
-            if (!bot->GetUInt32Value(PLAYER_AMMO_ID))
+            if (PlayerbotAI::NeedsAmmo(bot) && !bot->GetUInt32Value(PLAYER_AMMO_ID))
             {
                 botAI->TellError("Out of ammo!");
                 return false;

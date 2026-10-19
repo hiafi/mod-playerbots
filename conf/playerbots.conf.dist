@@ -578,6 +578,10 @@ AiPlayerbot.AltMaintenanceReputation = 1
 AiPlayerbot.AltMaintenanceAttunementQuests = 1
 AiPlayerbot.AltMaintenanceKeyring = 1
 
+# 0 = bots never create, buy, equip or check ammo (for servers that grant 'Requires No Ammo' 46699)
+# Default: 1
+AiPlayerbot.RequireAmmo = 1
+
 # Enable/Disable autogear command, which automatically upgrades bots' gear
 # The quality is limited by AutoGearQualityLimit and AutoGearScoreLimit
 # In-game syntax (the argument can only request at or below the configured limits):
@@ -1236,6 +1240,14 @@ AiPlayerbot.GearScoreCheck = 0
 # Default: 0 (disabled)
 AiPlayerbot.HunterWolfPet = 0
 
+# Set to 1 when the server runs the hunter rework (pinned pet happiness, Kill Command as a strike on the target, the
+# shared pet talent tree): bots stop feeding pets, use the rework pet autocast policy (basic attack and buff/debuff
+# utility on; Web Pull, Cower, Dash, Last Stand and Bullheaded off; Growl only when solo), skip Kill Command outside
+# Beast Mastery, and play the reworked Beast Mastery rotation (data/strategies/hunter/) with its aspect and pack
+# rows.
+# Default: 0 (disabled)
+AiPlayerbot.HunterRework = 0
+
 # Default pet stance when a bot summons a pet
 # 0 = Passive, 1 = Defensive, 2 = Aggressive
 # Default: 1 (Defensive)
@@ -1249,6 +1261,12 @@ AiPlayerbot.PetChatCommandDebug = 0
 # Prohibit hunter bots from creating pets with any family ID listed below in ExcludedHunterPetFamilies
 # See the creature_family database table for all pet families by ID (note: ID for spiders is 3)
 AiPlayerbot.ExcludedHunterPetFamilies = ""
+
+# Hunter bots tame a pet from these family IDs when one is available at their level (comma-separated; 1 = Wolf,
+# 11 = Raptor, 4 = Bear, 3 = Spider). If none qualifies they fall back to the normal pool. HunterWolfPet and
+# ExcludedHunterPetFamilies still apply first.
+# Default: "" (no preference)
+AiPlayerbot.PreferredHunterPetFamilies = ""
 
 #
 #
@@ -1868,44 +1886,61 @@ AiPlayerbot.PremadeSpecLink.2.5.80 = 0-0-33300202310030031033300213310130301
 # HUNTER
 #
 
+# Hunter rework (custom talent trees): the three pve slots are the guide builds at levels 30, 45 and 60
+# (docs/reworks/bot-strategy/hunter-bm-strat.md, hunter-mm-strat.md and Appendix A of
+# docs/reworks/hunter-survival-rework.md). Each string is "<beast mastery>-<marksmanship>-<survival>" with one digit per
+# talent in (row, column) order, so an empty tab is a bare "-" (tab order BM-MM-SV, TalentTab OrderIndex 0/1/2). Each link
+# contains the one before it, so no talent is ever unlearned. .80 repeats .60 (at level 80 only the .80 entry is read).
+# The stock links decoded as garbage on the reworked grid; the stock 3.0.40 key is gone. PremadeSpecName and
+# PremadeSpecGlyph are unchanged: bot glyphs are off on this server (AiPlayerbot.BotGlyphs = 0), so the glyph lists are
+# never applied. The stock pvp slots (3.3 bm pvp, 3.4 mm pvp, 3.5 surv pvp) are removed for the rework: their links
+# decoded as garbage too, this server has no PvP, and ChangeTalentsAction stops listing at the first empty name. Their
+# RandomClassSpecProb/RandomClassSpecIndex lines below stay (probability 0).
+# Beast Mastery (spec 3.0): Command I and II with .30, Bestial Wrath and Beast Cleave with .45, Cobra Shot 3 and
+# Stampede with .60.
 AiPlayerbot.PremadeSpecName.3.0 = bm pve
 AiPlayerbot.PremadeSpecGlyph.3.0 = 42912,43350,42902,43351,43338,42914
-AiPlayerbot.PremadeSpecLink.3.0.40 = 512002015051122301
-AiPlayerbot.PremadeSpecLink.3.0.60 = 51200201505112233110531151
-AiPlayerbot.PremadeSpecLink.3.0.80 = 51200201505112233111531351-0323031-5
+AiPlayerbot.PremadeSpecLink.3.0.30 = 0330233013020001--
+AiPlayerbot.PremadeSpecLink.3.0.45 = 03302330130303112000231101--
+AiPlayerbot.PremadeSpecLink.3.0.60 = 033023301303031120002311033003331--
+AiPlayerbot.PremadeSpecLink.3.0.80 = 033023301303031120002311033003331--
+# Marksmanship (spec 3.1): Sniper's Mark comes with .30, Viper's Mark and Readiness with .45, Falcon's Mark, Trick Shots,
+# Triangulation and Chimera Shot with .60.
 AiPlayerbot.PremadeSpecName.3.1 = mm pve
 AiPlayerbot.PremadeSpecGlyph.3.1 = 42912,43350,45625,43351,43338,42914
-AiPlayerbot.PremadeSpecLink.3.1.60 = -035305101030013233115031151
-AiPlayerbot.PremadeSpecLink.3.1.80 = 502-035305101230013233135031351-5000002
+AiPlayerbot.PremadeSpecLink.3.1.30 = -03303003313001001-
+AiPlayerbot.PremadeSpecLink.3.1.45 = -2330300331303300130013001-
+AiPlayerbot.PremadeSpecLink.3.1.60 = -233030033130330013001310130031331-
+AiPlayerbot.PremadeSpecLink.3.1.80 = -233030033130330013001310130031331-
+# Survival (spec 3.2): .30 gives Deadly Focus 2, Wildfire Bomb and Explosive Shot; .45 adds Lock and Load 3, Mantis
+# Strike, Killer Instinct 3 and Shrapnel; .60 adds Volatile Payload 3, Tar Bomb, T.N.T. 3, Dark Hunting 2 and Cluster
+# Bombs. The stock 3.2.60 and 3.2.80 keys are replaced.
 AiPlayerbot.PremadeSpecName.3.2 = surv pve
 AiPlayerbot.PremadeSpecGlyph.3.2 = 45733,43350,45731,43351,43338,45732
-AiPlayerbot.PremadeSpecLink.3.2.60 = --5000032500033330502135201311
-AiPlayerbot.PremadeSpecLink.3.2.80 = -005305101-5000032500033330532135301321
-AiPlayerbot.PremadeSpecName.3.3 = bm pvp
-AiPlayerbot.PremadeSpecGlyph.3.3 = 42897,42900,42902,43356,43338,42900
-AiPlayerbot.PremadeSpecLink.3.3.60 = 05203201505012233100531151
-AiPlayerbot.PremadeSpecLink.3.3.80 = 05203201505012233100531351-005305101-03
-AiPlayerbot.PremadeSpecName.3.4 = mm pvp
-AiPlayerbot.PremadeSpecGlyph.3.4 = 42912,43351,42897,43338,43356,42904
-AiPlayerbot.PremadeSpecLink.3.4.60 = -034305101030213231135031051
-AiPlayerbot.PremadeSpecLink.3.4.80 = -035305101030213233135031051-53013020102
-AiPlayerbot.PremadeSpecName.3.5 = surv pvp
-AiPlayerbot.PremadeSpecGlyph.3.5 = 42912,43350,42904,43356,43338,45731
-AiPlayerbot.PremadeSpecLink.3.5.60 = --2300302410233030533135001031
-AiPlayerbot.PremadeSpecLink.3.5.80 = -005305201-2300302510233330533135001031
+AiPlayerbot.PremadeSpecLink.3.2.30 = --2333330100020001
+AiPlayerbot.PremadeSpecLink.3.2.45 = --23333301000330110032302
+AiPlayerbot.PremadeSpecLink.3.2.60 = --2333330100033111003233300030013201
+AiPlayerbot.PremadeSpecLink.3.2.80 = --2333330100033111003233300030013201
 
 
 # HUNTER PET
 #
-# Ferocity
-AiPlayerbot.PremadeHunterPetLink.0.16 = 2100003130003010101
-AiPlayerbot.PremadeHunterPetLink.0.20 = 2100003130103010122
-# Tenacity
-AiPlayerbot.PremadeHunterPetLink.1.16 = 21103000300120101001
-AiPlayerbot.PremadeHunterPetLink.1.20 = 21303010300120101002
-# Cunning
-AiPlayerbot.PremadeHunterPetLink.2.16 = 2100020330000211001
-AiPlayerbot.PremadeHunterPetLink.2.20 = 21000203300002110221
+# Links for the reworked shared pet tree (the same 11 talents on all three pet types). A digit is the rank of the
+# n-th talent in (row, column) order:
+#   Great Stamina 3, Natural Armor 2, Spider's Bite 3, Blood of the Rhino 2, Pet Barding 2, Boar's Speed 3,
+#   Lionhearted 2, Great Resistance 3, Grace of the Mantis 2, Mobility 2, Bloodthirsty 2.
+# Row 3 opens at 9 points spent, row 4 at 12. The .16 key is the 11 points every pet has at 60, the .20 key adds the
+# 4 points of a Beast Mastery hunter with Kindred Spirits 3/3 (Grace of the Mantis 2, Bloodthirsty 2). Keep both keys
+# non-empty: .20 is what selects link mode over random picks.
+# Ferocity: damage and speed (GS 3, SB 3, BS 3, LH 2)
+AiPlayerbot.PremadeHunterPetLink.0.16 = 30300320000
+AiPlayerbot.PremadeHunterPetLink.0.20 = 30300320202
+# Tenacity: survivability (GS 3, NA 2, BotR 2, PB 2, LH 2)
+AiPlayerbot.PremadeHunterPetLink.1.16 = 32022020000
+AiPlayerbot.PremadeHunterPetLink.1.20 = 32022020202
+# Cunning: damage and resistance (GS 3, SB 3, BS 2, GR 3)
+AiPlayerbot.PremadeHunterPetLink.2.16 = 30300203000
+AiPlayerbot.PremadeHunterPetLink.2.20 = 30300203202
 
 #
 #

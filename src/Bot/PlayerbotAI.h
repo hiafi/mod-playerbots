@@ -495,6 +495,7 @@ public:
     void Ping(float x, float y);
     Item* FindPoison() const;
     Item* FindAmmo() const;
+    static bool NeedsAmmo(Player const* bot);
     Item* FindBandage() const;
     Item* FindOpenableItem() const;
     Item* FindLockedItem() const;

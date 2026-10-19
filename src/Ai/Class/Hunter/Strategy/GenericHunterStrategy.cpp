@@ -5,6 +5,7 @@
  */
 
 #include "GenericHunterStrategy.h"
+#include "Playerbots.h"
 
 class GenericHunterStrategyActionNodeFactory : public NamedObjectFactory<ActionNode>
 {
@@ -103,5 +104,7 @@ void HunterCcStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 
 void HunterTrapWeaveStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
-    triggers.push_back(new TriggerNode("immolation trap no cd", { NextAction("reach melee", 23.0f) }));
+    // Hunter rework: Trap Launcher throws traps 30 yd, so walking into melee for one is wrong
+    if (!sPlayerbotAIConfig.hunterRework)
+        triggers.push_back(new TriggerNode("immolation trap no cd", { NextAction("reach melee", 23.0f) }));
 }

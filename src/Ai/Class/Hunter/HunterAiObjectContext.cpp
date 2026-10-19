@@ -9,7 +9,15 @@
 #include "GenericHunterNonCombatStrategy.h"
 #include "GenericHunterStrategy.h"
 #include "HunterActions.h"
+#include "HunterBmContext.h"
 #include "HunterBuffStrategies.h"
+#include "HunterMmContext.h"
+#include "HunterReworkBmStrategy.h"
+#include "HunterReworkMmStrategy.h"
+#include "HunterReworkContext.h"
+#include "HunterReworkStrategies.h"
+#include "HunterReworkSvStrategy.h"
+#include "HunterSvContext.h"
 #include "HunterTriggers.h"
 #include "MarksmanshipHunterStrategy.h"
 #include "NamedObjectContext.h"
@@ -29,6 +37,15 @@ public:
         creators["mm"] = &HunterStrategyFactoryInternal::marksmanship;
         creators["surv"] = &HunterStrategyFactoryInternal::survival;
         creators["aoe"] = &HunterStrategyFactoryInternal::aoe;
+
+        // The reworked hunter's strategies replace the stock ones only with AiPlayerbot.HunterRework on
+        if (sPlayerbotAIConfig.hunterRework)
+        {
+            creators["bm"] = &HunterStrategyFactoryInternal::beast_mastery_rework;
+            creators["mm"] = &HunterStrategyFactoryInternal::marksmanship_rework;
+            creators["surv"] = &HunterStrategyFactoryInternal::survival_rework;
+            creators["aoe"] = &HunterStrategyFactoryInternal::aoe_rework;
+        }
     }
 
 private:
@@ -40,6 +57,10 @@ private:
     static Strategy* marksmanship(PlayerbotAI* botAI) { return new MarksmanshipHunterStrategy(botAI); }
     static Strategy* survival(PlayerbotAI* botAI) { return new SurvivalHunterStrategy(botAI); }
     static Strategy* aoe(PlayerbotAI* botAI) { return new AoEHunterStrategy(botAI); }
+    static Strategy* beast_mastery_rework(PlayerbotAI* botAI) { return new HunterReworkBmStrategy(botAI); }
+    static Strategy* marksmanship_rework(PlayerbotAI* botAI) { return new HunterReworkMmStrategy(botAI); }
+    static Strategy* survival_rework(PlayerbotAI* botAI) { return new HunterReworkSvStrategy(botAI); }
+    static Strategy* aoe_rework(PlayerbotAI* botAI) { return new HunterReworkAoeStrategy(botAI); }
 };
 
 class HunterBuffStrategyFactoryInternal : public NamedObjectContext<Strategy>
@@ -50,12 +71,16 @@ public:
         creators["bspeed"] = &HunterBuffStrategyFactoryInternal::bspeed;
         creators["bdps"] = &HunterBuffStrategyFactoryInternal::bdps;
         creators["rnature"] = &HunterBuffStrategyFactoryInternal::rnature;
+
+        if (sPlayerbotAIConfig.hunterRework)
+            creators["bdps"] = &HunterBuffStrategyFactoryInternal::bdps_rework;
     }
 
 private:
     static Strategy* bspeed(PlayerbotAI* botAI) { return new HunterBuffSpeedStrategy(botAI); }
     static Strategy* bdps(PlayerbotAI* botAI) { return new HunterBuffDpsStrategy(botAI); }
     static Strategy* rnature(PlayerbotAI* botAI) { return new HunterNatureResistanceStrategy(botAI); }
+    static Strategy* bdps_rework(PlayerbotAI* botAI) { return new HunterReworkAspectStrategy(botAI); }
 };
 
 class HunterTriggerFactoryInternal : public NamedObjectContext<Trigger>
@@ -284,15 +309,22 @@ void HunterAiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextLi
 {
     AiObjectContext::BuildSharedActionContexts(actionContexts);
     actionContexts.Add(new HunterAiObjectContextInternal());
+    actionContexts.Add(new HunterReworkActionFactory());
+    actionContexts.Add(new HunterBmActionFactory());
+    actionContexts.Add(new HunterMmActionFactory());
+    actionContexts.Add(new HunterSvActionFactory());
 }
 
 void HunterAiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextList<Trigger>& triggerContexts)
 {
     AiObjectContext::BuildSharedTriggerContexts(triggerContexts);
     triggerContexts.Add(new HunterTriggerFactoryInternal());
+    triggerContexts.Add(new HunterReworkTriggerFactory());
 }
 
 void HunterAiObjectContext::BuildSharedValueContexts(SharedNamedObjectContextList<UntypedValue>& valueContexts)
 {
     AiObjectContext::BuildSharedValueContexts(valueContexts);
+    valueContexts.Add(new HunterReworkValueFactory());
+    valueContexts.Add(new HunterMmValueFactory());
 }
