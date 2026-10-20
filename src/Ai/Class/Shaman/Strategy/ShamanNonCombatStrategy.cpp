@@ -108,6 +108,9 @@ void ShamanNonCombatStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("party member cleanse spirit curse", { NextAction("cleanse spirit curse on party", 23.0f) }));
 
     // Out of Combat Buff Triggers
+    // Rework: one Elemental Attunement per shaman, picked from the group makeup (never swapped in combat)
+    triggers.push_back(new TriggerNode("shaman attunement missing", { NextAction("shaman attunement", 21.5f), }));
+
     Player* bot = botAI->GetBot();
     int tab = AiFactory::GetPlayerSpecTab(bot);
 
@@ -118,8 +121,9 @@ void ShamanNonCombatStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     }
     else if (tab == SHAMAN_TAB_ENHANCEMENT)
     {
+        // Rework: the imbues are auras and only one is up at a time (a second cast replaces the first), so there is
+        // no off-hand imbue
         triggers.push_back(new TriggerNode("main hand weapon no imbue", { NextAction("windfury weapon main hand", 22.0f), }));
-        triggers.push_back(new TriggerNode("off hand weapon no imbue", { NextAction("flametongue weapon off hand", 21.0f), }));
         triggers.push_back(new TriggerNode("lightning shield", { NextAction("lightning shield", 20.0f), }));
     }
     else if (tab == SHAMAN_TAB_RESTORATION)

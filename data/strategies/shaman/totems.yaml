@@ -1,0 +1,55 @@
+# The reworked shaman's utility totems: "shaman/totems" (every spec) and "shaman/totems-fire" (the damage specs),
+# appended to the "shaman totems" strategy by ShamanReworkTotemsStrategy::InitTriggers. That strategy stands for the
+# stock totem strategies AiFactory adds ("stoneskin", "strength of earth"): the stock totems are retired (SH0b). Source:
+# the Totems section of docs/reworks/bot-strategy/shaman-elemental-bot-guide.md. A totem is never placed in an element
+# whose elemental is out (it would replace the elemental): every totem action checks the slot. Every action is a
+# RowCheckedAction. The totems are cast by id (the rework keeps the stock names on the new spells).
+# Not implemented (listed in the stage report): Grounding (no detector for a dangerous single target cast), Windwalk
+# (no "group is moving" test), Earthbind to kite a pack, Capacitor (it is placed at the bot's feet, not at the pack).
+# Spell ids (DBC names): Tremor Totem 8143, Healing Stream Totem 5394, Cleansing Totem 8170, Earthen Wall Totem 202261,
+# Searing Totem 3599, Magma Totem 202268 (ground summon; 8190 stays for the NPC casters).
+strategy: shaman/totems
+class: shaman
+rows:
+  # Earth: Tremor when a party member is feared, charmed or asleep (a bot in that state cannot cast, so the bot's own
+  # auras are not tested)
+  - do: shaman tremor totem
+    when: known(8143) and cooldown(8143) == 0 and value("shaman party fear count") >= 1
+    relevance: high + 9
+
+  # Water: Healing Stream when 2 or more allies are below 80%; Cleansing when 2 or more have a poison or a disease
+  - do: shaman healing stream totem
+    when: known(5394) and cooldown(5394) == 0 and value("party members below::80") >= 2
+    relevance: normal + 8.4
+  - do: shaman cleansing totem
+    when: known(8170) and cooldown(8170) == 0 and value("shaman party cure count") >= 2
+    relevance: normal + 8.3
+
+  # Earth: Earthen Wall on the tank below 50% (the totem is summoned at an ally; the guide's "before a dangerous cast"
+  # has no detector, so the health stands in)
+  - do: shaman earthen wall totem
+    when: >-
+      known(202261) and cooldown(202261) == 0 and alive("main tank") and not is_self("main tank")
+      and health_pct("main tank") < 50 and in_range("main tank", 35)
+    relevance: normal + 8.45
+---
+# Fire totems of the damage specs: Searing on a single target, Magma on a pack, neither over an active Fire slot (the
+# Fire Elemental, or a totem still out). Magma is dropped at the pack's center; it is not cast over the Fire Elemental.
+strategy: shaman/totems-fire
+class: shaman
+conditions:
+  pack: value("shaman aoe enabled") and alive(target) and enemies_near_target(8) >= 3
+  fire_slot_free: not value("shaman totem active::fire")
+rows:
+  # Searing Totem fires at an enemy within 20 yd of the totem, which stands at the bot's feet: the target must be close
+  - do: shaman searing totem
+    when: >-
+      known(3599) and cooldown(3599) == 0 and alive(target) and not pack and fire_slot_free and in_range(target, 18)
+      and mana(self) >= 30
+    relevance: normal + 8.7
+
+  - do: shaman magma totem
+    when: >-
+      pack and known(202268) and cooldown(202268) == 0 and fire_slot_free and mana(self) >= 40
+      and value("unsafe aoe units::8;cluster") == 0
+    relevance: normal + 9.55
