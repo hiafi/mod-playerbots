@@ -82,6 +82,44 @@ uint32 ChooseAttunement(Player* bot, int tab);
 // The bot carries an attunement of its own
 bool HasOwnAttunement(Player* bot);
 
+// "earth", "fire", "water", "air" or "storm" (the Air slot's elemental) to the SummonSlot of the element
+bool ParseTotemSlot(std::string const& name, uint8& slot);
+
+// Milliseconds left on the totem in one of the bot's totem slots (any totem, not only an elemental), 0 when it is empty
+uint32 SlotTotemTimeLeftMs(Player* bot, uint8 slot);
+
+// The creature entry of the totem in one of the bot's totem slots, 0 when it is empty
+uint32 SlotTotemEntry(Player* bot, uint8 slot);
+
+// A bounded ring of health samples on the getMSTime() clock (the sim drives that clock; the wall clock does not follow
+// it). A value keeps one per bot and adds a sample each time it is read, at most one every SAMPLE_GAP_MS.
+class HealthHistory
+{
+public:
+    static constexpr uint32 SAMPLE_GAP_MS = 150;
+
+    void Reset() { _count = 0; }
+    void Add(uint32 nowMs, uint64 health);
+
+    // The highest health sampled within windowMs before nowMs, 0 with no sample that recent
+    uint64 PeakWithin(uint32 nowMs, uint32 windowMs) const;
+    // The oldest health sampled within windowMs before nowMs, 0 with no sample that recent
+    uint64 OldestWithin(uint32 nowMs, uint32 windowMs) const;
+
+private:
+    struct Sample
+    {
+        uint32 stamp;
+        uint64 health;
+    };
+
+    static constexpr uint8 CAPACITY = 32;
+
+    std::array<Sample, CAPACITY> _ring = {};
+    uint8 _count = 0;
+    uint8 _head = 0;  // the slot the next sample goes to
+};
+
 }  // namespace ai::shaman_rework
 
 #endif

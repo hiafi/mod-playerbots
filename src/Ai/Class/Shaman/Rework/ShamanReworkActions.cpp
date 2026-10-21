@@ -10,6 +10,7 @@
 #include "Creature.h"
 #include "Playerbots.h"
 #include "RowCheckedAction.h"
+#include "ShamanActions.h"
 #include "ShamanReworkIds.h"
 #include "ShamanReworkUtils.h"
 #include "SpellInfo.h"
@@ -23,6 +24,8 @@ namespace
 // How far from the bot a ground spell is dropped: inside the spells' own ranges (Earthquake 35, Magma 30)
 constexpr float EARTHQUAKE_RANGE = 33.0f;
 constexpr float MAGMA_RANGE = 28.0f;
+// Healing Rain's range is 30 yd: the spot is the center of the stack, which can be a few yards from the bot
+constexpr float RAIN_RANGE = 28.0f;
 // Fire Nova hits enemies within this radius of its source
 constexpr float FIRE_NOVA_RADIUS = 8.0f;
 // ... and the origin must be within Fire Nova's range of the bot (the spell refuses it otherwise)
@@ -31,6 +34,13 @@ constexpr float FIRE_NOVA_RANGE = 30.0f;
 constexpr char CURRENT_TARGET[] = "current target";
 constexpr char SELF_TARGET[] = "self target";
 constexpr char MAIN_TANK[] = "main tank";
+constexpr char EFFECTIVE_TANK[] = "effective tank";
+constexpr char TANK_FIRST_HEAL_TARGET[] = "tank first heal target";
+constexpr char RAIN_TARGET[] = "shaman rain target";
+constexpr char CHAIN_HEAL_TARGET[] = "shaman chain heal target";
+constexpr char EARTH_SHIELD_TARGET[] = "shaman earth shield target";
+constexpr char WITHOUT_OWN_AURA[] = "party member without own aura";
+constexpr char HEAL_CLUSTER_UNIT[] = "heal cluster unit::10,90";
 constexpr char MOST_CLUSTERED_ENEMY[] = "most clustered enemy::8";
 constexpr auto SINGLE = Action::ActionThreatType::Single;
 constexpr auto AOE = Action::ActionThreatType::Aoe;
@@ -47,7 +57,40 @@ Action* Cast(PlayerbotAI* botAI, char const* name, std::vector<uint32> ids, std:
     return new RowCheckedAction<ShamanCastAction>(botAI, name, std::move(ids), target, instantAuras, threat,
                                                   recordTarget);
 }
+
+// A Restoration heal by id on the unit a value picks; the qualifier comes from the row
+Action* HealOn(PlayerbotAI* botAI, char const* name, uint32 spellId, char const* targetValue)
+{
+    return new RowCheckedAction<ShamanCastOnValueAction>(botAI, name, std::vector<uint32>{spellId}, targetValue);
+}
+
+// A totem placed on the bot, or on the unit a value names (Earthen Wall on the tank)
+Action* PlaceTotem(PlayerbotAI* botAI, char const* name, uint32 spellId, uint8 slot,
+                   char const* target = SELF_TARGET)
+{
+    return new RowCheckedAction<ShamanTotemAction>(botAI, name, spellId, slot, target);
+}
+
+// Healing Rain dropped at the feet of the unit a value picks
+Action* RainAt(PlayerbotAI* botAI, char const* unitValue)
+{
+    return new RowCheckedAction<ShamanGroundCastAction>(botAI, "healing rain", SPELL_HEALING_RAIN, unitValue,
+                                                        RAIN_RANGE);
+}
+
+// A stock cure under a Restoration name, for ShamanHealerCureMultiplier
+template <typename StockCure>
+Action* HealerCure(PlayerbotAI* botAI)
+{
+    return new RowCheckedAction<ShamanHealerCureAction<StockCure>>(botAI);
+}
 }  // namespace
+
+Value<Unit*>* ShamanCastOnValueAction::GetTargetValue()
+{
+    return qualifier.empty() ? context->GetValue<Unit*>(GetTargetName())
+                             : context->GetValue<Unit*>(GetTargetName(), qualifier);
+}
 
 bool ShamanCastAction::isUseful()
 {
@@ -302,6 +345,110 @@ ShamanReworkActionFactory::ShamanReworkActionFactory()
                                                        SUMMON_SLOT_TOTEM_EARTH, MAIN_TANK);
     };
 
+    // ---- Restoration ----
+    // Heals on the unit a value picks; the qualifier is the row's ("shaman riptide::30,30")
+    creators["shaman riptide"] = [](PlayerbotAI* botAI) -> Action*
+    { return HealOn(botAI, "riptide", SPELL_RIPTIDE, TANK_FIRST_HEAL_TARGET); };
+    creators["shaman riptide rain"] = [](PlayerbotAI* botAI) -> Action*
+    { return HealOn(botAI, "riptide", SPELL_RIPTIDE, RAIN_TARGET); };
+    creators["shaman riptide tank"] = [](PlayerbotAI* botAI) -> Action*
+    { return HealOn(botAI, "riptide", SPELL_RIPTIDE, EFFECTIVE_TANK); };
+    creators["shaman pull riptide"] = [](PlayerbotAI* botAI) -> Action*
+    { return HealOn(botAI, "riptide", SPELL_RIPTIDE, EFFECTIVE_TANK); };
+    creators["shaman lesser healing wave"] = [](PlayerbotAI* botAI) -> Action*
+    { return HealOn(botAI, "lesser healing wave", SPELL_LESSER_HEALING_WAVE, TANK_FIRST_HEAL_TARGET); };
+    creators["shaman lhw tank"] = [](PlayerbotAI* botAI) -> Action*
+    { return HealOn(botAI, "lesser healing wave", SPELL_LESSER_HEALING_WAVE, EFFECTIVE_TANK); };
+    creators["shaman healing wave"] = [](PlayerbotAI* botAI) -> Action*
+    { return HealOn(botAI, "healing wave", SPELL_HEALING_WAVE, TANK_FIRST_HEAL_TARGET); };
+    creators["shaman hw tank charged"] = [](PlayerbotAI* botAI) -> Action*
+    { return HealOn(botAI, "healing wave", SPELL_HEALING_WAVE, EFFECTIVE_TANK); };
+    creators["shaman hw tank"] = [](PlayerbotAI* botAI) -> Action*
+    { return HealOn(botAI, "healing wave", SPELL_HEALING_WAVE, EFFECTIVE_TANK); };
+    creators["shaman hw tank leveling"] = [](PlayerbotAI* botAI) -> Action*
+    { return HealOn(botAI, "healing wave", SPELL_HEALING_WAVE, EFFECTIVE_TANK); };
+    creators["shaman chain heal"] = [](PlayerbotAI* botAI) -> Action*
+    { return HealOn(botAI, "chain heal", SPELL_CHAIN_HEAL, CHAIN_HEAL_TARGET); };
+    creators["shaman earth shield tank"] = [](PlayerbotAI* botAI) -> Action*
+    { return HealOn(botAI, "earth shield", SPELL_EARTH_SHIELD, EARTH_SHIELD_TARGET); };
+
+    // Totems: one name per row that can fire together with another row of the same totem
+    creators["shaman open healing stream totem"] = [](PlayerbotAI* botAI) -> Action*
+    { return PlaceTotem(botAI, "healing stream totem", SPELL_HEALING_STREAM_TOTEM, SUMMON_SLOT_TOTEM_WATER); };
+    creators["shaman pull healing stream totem"] = [](PlayerbotAI* botAI) -> Action*
+    { return PlaceTotem(botAI, "healing stream totem", SPELL_HEALING_STREAM_TOTEM, SUMMON_SLOT_TOTEM_WATER); };
+    creators["shaman undulating currents totem"] = [](PlayerbotAI* botAI) -> Action*
+    {
+        return PlaceTotem(botAI, "undulating currents totem", SPELL_UNDULATING_CURRENTS_TOTEM, SUMMON_SLOT_TOTEM_FIRE);
+    };
+    creators["shaman open undulating currents totem"] = [](PlayerbotAI* botAI) -> Action*
+    {
+        return PlaceTotem(botAI, "undulating currents totem", SPELL_UNDULATING_CURRENTS_TOTEM, SUMMON_SLOT_TOTEM_FIRE);
+    };
+    creators["shaman critical earthen wall"] = [](PlayerbotAI* botAI) -> Action*
+    {
+        return PlaceTotem(botAI, "earthen wall totem", SPELL_EARTHEN_WALL_TOTEM, SUMMON_SLOT_TOTEM_EARTH,
+                          EFFECTIVE_TANK);
+    };
+    creators["shaman open earthen wall"] = [](PlayerbotAI* botAI) -> Action*
+    {
+        return PlaceTotem(botAI, "earthen wall totem", SPELL_EARTHEN_WALL_TOTEM, SUMMON_SLOT_TOTEM_EARTH,
+                          EFFECTIVE_TANK);
+    };
+    creators["shaman tank earthen wall"] = [](PlayerbotAI* botAI) -> Action*
+    {
+        return PlaceTotem(botAI, "earthen wall totem", SPELL_EARTHEN_WALL_TOTEM, SUMMON_SLOT_TOTEM_EARTH,
+                          EFFECTIVE_TANK);
+    };
+    creators["shaman pull earthen wall"] = [](PlayerbotAI* botAI) -> Action*
+    {
+        return PlaceTotem(botAI, "earthen wall totem", SPELL_EARTHEN_WALL_TOTEM, SUMMON_SLOT_TOTEM_EARTH,
+                          EFFECTIVE_TANK);
+    };
+    // Cloudburst: placed, and cast again to recall it (the core releases the store on the second cast)
+    creators["shaman cloudburst totem"] = [](PlayerbotAI* botAI) -> Action*
+    { return PlaceTotem(botAI, "cloudburst totem", SPELL_CLOUDBURST_TOTEM, SUMMON_SLOT_TOTEM_AIR); };
+    creators["shaman cloudburst recall"] = [](PlayerbotAI* botAI) -> Action*
+    { return PlaceTotem(botAI, "cloudburst totem", SPELL_CLOUDBURST_TOTEM, SUMMON_SLOT_TOTEM_AIR); };
+    creators["shaman spirit link totem"] = [](PlayerbotAI* botAI) -> Action*
+    { return PlaceTotem(botAI, "spirit link totem", SPELL_SPIRIT_LINK_TOTEM, SUMMON_SLOT_TOTEM_AIR); };
+    creators["shaman water elemental totem"] = [](PlayerbotAI* botAI) -> Action*
+    { return PlaceTotem(botAI, "water elemental totem", SPELL_WATER_ELEMENTAL_TOTEM, SUMMON_SLOT_TOTEM_WATER); };
+    creators["shaman mana tide totem"] = [](PlayerbotAI* botAI) -> Action*
+    { return PlaceTotem(botAI, "mana tide totem", SPELL_MANA_TIDE_TOTEM, SUMMON_SLOT_TOTEM_WATER); };
+
+    // Healing Rain on the stack's center, and under the tank on the pull
+    creators["shaman open healing rain"] = [](PlayerbotAI* botAI) -> Action*
+    { return RainAt(botAI, HEAL_CLUSTER_UNIT); };
+    creators["shaman healing rain"] = [](PlayerbotAI* botAI) -> Action*
+    { return RainAt(botAI, HEAL_CLUSTER_UNIT); };
+    creators["shaman pull healing rain"] = [](PlayerbotAI* botAI) -> Action*
+    { return RainAt(botAI, EFFECTIVE_TANK); };
+
+    // The idle Lightning Bolt of a healer, on the current target
+    creators["shaman healer lightning bolt"] = [](PlayerbotAI* botAI) -> Action*
+    { return Cast(botAI, "lightning bolt", {SPELL_LIGHTNING_BOLT}); };
+
+    creators["shaman healer flame shock"] = [](PlayerbotAI* botAI) -> Action*
+    { return Cast(botAI, "flame shock", {SPELL_FLAME_SHOCK}); };
+
+    // Off the global cooldown
+    creators["shaman tidal force"] = [](PlayerbotAI* botAI) -> Action*
+    { return Cast(botAI, "tidal force", {SPELL_TIDAL_FORCE_CASTABLE}, SELF_TARGET); };
+
+    // The cures of the Restoration rotation: poison and curse only (Cleanse Spirit lost disease; the Cleansing Totem
+    // owns it)
+    creators["shaman resto cleanse poison on party"] = &HealerCure<CastCleanseSpiritPoisonOnPartyAction>;
+    creators["shaman resto cleanse curse on party"] = &HealerCure<CastCleanseSpiritCurseOnPartyAction>;
+    creators["shaman resto cleanse self poison"] = &HealerCure<CastCleanseSpiritAction>;
+    creators["shaman resto cleanse self curse"] = &HealerCure<CastCleanseSpiritAction>;
+
     // Out of combat
+    creators["shaman nc riptide"] = [](PlayerbotAI* botAI) -> Action*
+    { return HealOn(botAI, "riptide", SPELL_RIPTIDE, WITHOUT_OWN_AURA); };
+    creators["shaman nc healing wave"] = [](PlayerbotAI* botAI) -> Action*
+    { return HealOn(botAI, "healing wave", SPELL_HEALING_WAVE, TANK_FIRST_HEAL_TARGET); };
+    creators["shaman nc earth shield"] = [](PlayerbotAI* botAI) -> Action*
+    { return HealOn(botAI, "earth shield", SPELL_EARTH_SHIELD, EARTH_SHIELD_TARGET); };
     creators["shaman attunement"] = [](PlayerbotAI* botAI) -> Action* { return new ShamanAttunementAction(botAI); };
 }

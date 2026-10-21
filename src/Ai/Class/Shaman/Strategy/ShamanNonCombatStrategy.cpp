@@ -8,6 +8,7 @@
 #include "AiFactory.h"
 #include "Playerbots.h"
 #include "Strategy.h"
+#include "StrategyData.h"
 
 class ShamanNonCombatStrategyActionNodeFactory : public NamedObjectFactory<ActionNode>
 {
@@ -87,32 +88,42 @@ void ShamanNonCombatStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     // Totemic Recall
     triggers.push_back(new TriggerNode("totemic recall", { NextAction("totemic recall", 60.0f) }));
 
+    Player* bot = botAI->GetBot();
+    int tab = AiFactory::GetPlayerSpecTab(bot);
+
     // Healing/Resurrect Triggers
     triggers.push_back(new TriggerNode("party member dead", { NextAction("ancestral spirit", ACTION_CRITICAL_HEAL + 10) }));
-    triggers.push_back(new TriggerNode("party member critical health", { NextAction("riptide on party", 31.0f),
-                                                                         NextAction("healing wave on party", 30.0f) }));
-    triggers.push_back(new TriggerNode("party member low health", { NextAction("riptide on party", 29.0f),
-                                                                    NextAction("healing wave on party", 28.0f) }));
-    triggers.push_back(new TriggerNode("party member medium health", { NextAction("riptide on party", 27.0f),
-                                                                       NextAction("healing wave on party", 26.0f) }));
-    triggers.push_back(new TriggerNode("party member almost full health", { NextAction("riptide on party", 25.0f),
-                                                                            NextAction("lesser healing wave on party", 24.0f) }));
-    triggers.push_back(new TriggerNode("group heal setting", { NextAction("chain heal on party", 27.0f) }));
+    if (tab == SHAMAN_TAB_RESTORATION)
+    {
+        // Rework: a Restoration bot heals with mana floors from "shaman/nc-resto" (Riptide, then Healing Wave, Earth
+        // Shield on the tank), never with Chain Heal, a totem or Healing Rain out of combat
+        ai::data::AppendRows("shaman/nc-resto", triggers);
+    }
+    else
+    {
+        triggers.push_back(new TriggerNode("party member critical health",
+                                           { NextAction("riptide on party", 31.0f),
+                                             NextAction("healing wave on party", 30.0f) }));
+        triggers.push_back(new TriggerNode("party member low health", { NextAction("riptide on party", 29.0f),
+                                                                        NextAction("healing wave on party", 28.0f) }));
+        triggers.push_back(new TriggerNode("party member medium health",
+                                           { NextAction("riptide on party", 27.0f),
+                                             NextAction("healing wave on party", 26.0f) }));
+        triggers.push_back(new TriggerNode("party member almost full health",
+                                           { NextAction("riptide on party", 25.0f),
+                                             NextAction("lesser healing wave on party", 24.0f) }));
+        triggers.push_back(new TriggerNode("group heal setting", { NextAction("chain heal on party", 27.0f) }));
+    }
 
-    // Cure Triggers
+    // Cure Triggers (Cleanse Spirit lost disease: no disease rows for any spec, the Cleansing Totem owns it)
     triggers.push_back(new TriggerNode("cleanse spirit poison", { NextAction("cleanse spirit", 24.0f) }));
     triggers.push_back(new TriggerNode("party member cleanse spirit poison", { NextAction("cleanse spirit poison on party", 23.0f) }));
-    triggers.push_back(new TriggerNode("cleanse spirit disease", { NextAction("cleanse spirit", 24.0f) }));
-    triggers.push_back(new TriggerNode("party member cleanse spirit disease", { NextAction("cleanse spirit disease on party", 23.0f) }));
     triggers.push_back(new TriggerNode("cleanse spirit curse", { NextAction("cleanse spirit", 24.0f) }));
     triggers.push_back(new TriggerNode("party member cleanse spirit curse", { NextAction("cleanse spirit curse on party", 23.0f) }));
 
     // Out of Combat Buff Triggers
     // Rework: one Elemental Attunement per shaman, picked from the group makeup (never swapped in combat)
     triggers.push_back(new TriggerNode("shaman attunement missing", { NextAction("shaman attunement", 21.5f), }));
-
-    Player* bot = botAI->GetBot();
-    int tab = AiFactory::GetPlayerSpecTab(bot);
 
     if (tab == SHAMAN_TAB_ELEMENTAL)
     {

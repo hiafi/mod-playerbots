@@ -1,11 +1,14 @@
-# The reworked shaman's utility totems: "shaman/totems" (every spec) and "shaman/totems-fire" (the damage specs),
-# appended to the "shaman totems" strategy by ShamanReworkTotemsStrategy::InitTriggers. That strategy stands for the
-# stock totem strategies AiFactory adds ("stoneskin", "strength of earth"): the stock totems are retired (SH0b). Source:
-# the Totems section of docs/reworks/bot-strategy/shaman-elemental-bot-guide.md. A totem is never placed in an element
-# whose elemental is out (it would replace the elemental): every totem action checks the slot. Every action is a
-# RowCheckedAction. The totems are cast by id (the rework keeps the stock names on the new spells).
-# Not implemented (listed in the stage report): Grounding (no detector for a dangerous single target cast), Windwalk
-# (no "group is moving" test), Earthbind to kite a pack, Capacitor (it is placed at the bot's feet, not at the pack).
+# The reworked shaman's utility totems: "shaman/totems" (every spec: Tremor), "shaman/totems-support" (the damage specs:
+# Healing Stream, Cleansing, Earthen Wall) and "shaman/totems-fire" (the damage specs), appended to the "shaman totems"
+# strategy by ShamanReworkTotemsStrategy::InitTriggers. The Restoration document (resto.yaml) owns the healing and
+# cleansing totems of a Restoration bot, so it does not append "shaman/totems-support": no totem decision has two
+# owners. That strategy stands for the stock totem strategies AiFactory adds ("stoneskin", "strength of earth"): the
+# stock totems are retired (SH0b). Source: the Totems section of
+# docs/reworks/bot-strategy/shaman-elemental-bot-guide.md. A totem is never placed in an element whose elemental is out
+# (it would replace the elemental): every totem action checks the slot. Every action is a RowCheckedAction. The totems
+# are cast by id (the rework keeps the stock names on the new spells). Not implemented (listed in the stage report):
+# Grounding (no detector for a dangerous single target cast), Windwalk (no "group is moving" test), Earthbind to kite a
+# pack, Capacitor (it is placed at the bot's feet, not at the pack).
 # Spell ids (DBC names): Tremor Totem 8143, Healing Stream Totem 5394, Cleansing Totem 8170, Earthen Wall Totem 202261,
 # Searing Totem 3599, Magma Totem 202268 (ground summon; 8190 stays for the NPC casters).
 strategy: shaman/totems
@@ -16,7 +19,12 @@ rows:
   - do: shaman tremor totem
     when: known(8143) and cooldown(8143) == 0 and value("shaman party fear count") >= 1
     relevance: high + 9
-
+---
+# The damage specs' support totems (the Restoration bot's are in shaman/resto): Healing Stream when 2 or more allies are
+# below 80%; Cleansing when 2 or more have a poison or a disease; Earthen Wall on the tank below 50%
+strategy: shaman/totems-support
+class: shaman
+rows:
   # Water: Healing Stream when 2 or more allies are below 80%; Cleansing when 2 or more have a poison or a disease
   - do: shaman healing stream totem
     when: known(5394) and cooldown(5394) == 0 and value("party members below::80") >= 2

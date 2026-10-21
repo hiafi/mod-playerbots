@@ -7,7 +7,9 @@
 #ifndef PLAYERBOTS_SHAMANREWORKSTRATEGIES_H
 #define PLAYERBOTS_SHAMANREWORKSTRATEGIES_H
 
+#include "CombatStrategy.h"
 #include "GenericShamanStrategy.h"
+#include "Multiplier.h"
 #include "Strategy.h"
 #include <string>
 
@@ -28,7 +30,45 @@ public:
     uint32 GetType() const override { return STRATEGY_TYPE_COMBAT | STRATEGY_TYPE_DPS | STRATEGY_TYPE_RANGED; }
 };
 
-// The utility totems of every shaman spec ("shaman/totems", and for the damage specs "shaman/totems-fire"). Stands for
+// The Restoration heal rotation: CombatStrategy's rows plus those of "shaman/resto"
+// (data/strategies/shaman/resto.yaml), the no-reach and cure multipliers, and no default action (an idle healer with
+// nobody hurt holds its mana). Registered as "resto" and "heal". It derives from no stock shaman strategy, whose heal
+// tiers, Mana Tide and retired-totem rows would stack on the rework's.
+class ShamanReworkRestoStrategy : public CombatStrategy
+{
+public:
+    ShamanReworkRestoStrategy(PlayerbotAI* botAI) : CombatStrategy(botAI) {}
+
+    void InitTriggers(std::vector<TriggerNode*>& triggers) override;
+    void InitMultipliers(std::vector<Multiplier*>& multipliers) override;
+    std::vector<NextAction> getDefaultActions() override;
+    std::string const getName() override { return "resto"; }
+    uint32 GetType() const override { return STRATEGY_TYPE_RANGED | STRATEGY_TYPE_HEAL; }
+};
+
+// Registered as "healer dps" for every shaman: the rows of "shaman/healer-dps", the idle Lightning Bolt of a healer
+// (acts while the bot is alone, or while the group is healthy and the mana is high). Grouped and busy it does nothing.
+class ShamanReworkHealerDpsStrategy : public Strategy
+{
+public:
+    ShamanReworkHealerDpsStrategy(PlayerbotAI* botAI) : Strategy(botAI) {}
+
+    void InitTriggers(std::vector<TriggerNode*>& triggers) override;
+    std::string const getName() override { return "healer dps"; }
+};
+
+// Moves cure to the rotation: drops the cure strategy's stock cures (their relevance would outrank every heal), and
+// lets the tagged "shaman resto cleanse ..." copies through only while the cure strategy is on and nobody is below 50%.
+class ShamanHealerCureMultiplier : public Multiplier
+{
+public:
+    ShamanHealerCureMultiplier(PlayerbotAI* botAI) : Multiplier(botAI, "shaman healer cure") {}
+
+    float GetValue(Action* action) override;
+};
+
+// The utility totems of every shaman spec ("shaman/totems": Tremor; and for the damage specs "shaman/totems-support"
+// and "shaman/totems-fire": the Restoration document owns Healing Stream, Earthen Wall and Cleansing). Stands for
 // the stock totem strategy AiFactory adds to the Earth slot and keeps its name ("stoneskin", "strength of earth"), so
 // `co -stoneskin` and the sibling swap of the Earth slot still find it: the stock totems are retired. A totem is
 // never cast over an active elemental (the actions check).

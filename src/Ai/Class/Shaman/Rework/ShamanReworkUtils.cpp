@@ -13,6 +13,7 @@
 #include "Player.h"
 #include "PlayerbotAI.h"
 #include "ShamanReworkIds.h"
+#include "Timer.h"
 #include "Totem.h"
 #include <algorithm>
 #include <vector>
@@ -291,6 +292,76 @@ uint32 ChooseAttunement(Player* bot, int tab)
             ++shamanIndex;
 
     return candidates[shamanIndex % candidates.size()];
+}
+
+bool ParseTotemSlot(std::string const& name, uint8& slot)
+{
+    if (name == "air")
+    {
+        slot = SUMMON_SLOT_TOTEM_AIR;
+        return true;
+    }
+
+    Element element;
+    if (!ParseElement(name, element))
+        return false;
+
+    slot = ELEMENTALS[element].slot;
+    return true;
+}
+
+uint32 SlotTotemTimeLeftMs(Player* bot, uint8 slot)
+{
+    Totem* totem = GetSlotTotem(bot, slot);
+    return totem ? totem->GetTotemDuration() : 0;
+}
+
+uint32 SlotTotemEntry(Player* bot, uint8 slot)
+{
+    Totem* totem = GetSlotTotem(bot, slot);
+    return totem ? totem->GetEntry() : 0;
+}
+
+void HealthHistory::Add(uint32 nowMs, uint64 health)
+{
+    // Within the gap of the last sample the older one stays: a peak is never overwritten by a lower reading
+    if (_count && getMSTimeDiff(_ring[uint8((_head + CAPACITY - 1) % CAPACITY)].stamp, nowMs) < SAMPLE_GAP_MS)
+        return;
+
+    _ring[_head] = {nowMs, health};
+    _head = uint8((_head + 1) % CAPACITY);
+    if (_count < CAPACITY)
+        ++_count;
+}
+
+uint64 HealthHistory::PeakWithin(uint32 nowMs, uint32 windowMs) const
+{
+    uint64 peak = 0;
+    for (uint8 i = 0; i < _count; ++i)
+    {
+        Sample const& sample = _ring[(_head + CAPACITY - 1 - i) % CAPACITY];
+        if (getMSTimeDiff(sample.stamp, nowMs) > windowMs)
+            break;
+
+        peak = std::max(peak, sample.health);
+    }
+
+    return peak;
+}
+
+uint64 HealthHistory::OldestWithin(uint32 nowMs, uint32 windowMs) const
+{
+    uint64 oldest = 0;
+    for (uint8 i = 0; i < _count; ++i)
+    {
+        Sample const& sample = _ring[(_head + CAPACITY - 1 - i) % CAPACITY];
+        if (getMSTimeDiff(sample.stamp, nowMs) > windowMs)
+            break;
+
+        oldest = sample.health;
+    }
+
+    return oldest;
 }
 
 }  // namespace ai::shaman_rework

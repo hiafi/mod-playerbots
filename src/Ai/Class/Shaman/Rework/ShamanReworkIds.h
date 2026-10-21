@@ -64,8 +64,25 @@ constexpr uint32 SPELL_CLEANSING_TOTEM = 8170;
 constexpr uint32 SPELL_EARTHEN_WALL_TOTEM = 202261;
 constexpr uint32 SPELL_MAGMA_TOTEM_GROUND = 202268;
 
+// Restoration: the heals and the totems the healer's rows cast by id (the rework reuses names)
+constexpr uint32 SPELL_HEALING_WAVE = 331;
+constexpr uint32 SPELL_LESSER_HEALING_WAVE = 8004;
+constexpr uint32 SPELL_CHAIN_HEAL = 1064;
+constexpr uint32 SPELL_RIPTIDE = 61295;
+constexpr uint32 SPELL_EARTH_SHIELD = 974;
+constexpr uint32 SPELL_HEALING_RAIN = 202283;
+constexpr uint32 SPELL_MANA_TIDE_TOTEM = 16190;
+constexpr uint32 SPELL_SPIRIT_LINK_TOTEM = 202645;
+constexpr uint32 SPELL_UNDULATING_CURRENTS_TOTEM = 202647;
+constexpr uint32 SPELL_CLOUDBURST_TOTEM = 202652;  // placed, and cast again to recall it while it stands
+constexpr uint32 SPELL_TIDAL_FORCE_CASTABLE = 202654;  // off the global cooldown
+
 // Auras the actions let a cast-time spell go instant on
 constexpr uint32 SPELL_LAVA_SURGE_BUFF = 202569;  // the next Lava Burst is instant
+constexpr uint32 SPELL_RAINFALL_BUFF = 202668;  // the next Healing Rain is instant
+
+// Restoration auras the strategy shells and the values read
+constexpr uint32 SPELL_CLOUDBURST_STORE = 202665;  // on the shaman while its Cloudburst Totem stands (permanent)
 
 // Talents the strategy shells read
 constexpr uint32 SPELL_POWER_OF_THE_ELEMENTS = 202526;  // removes the Earth Elemental's taunt

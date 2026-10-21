@@ -5,6 +5,7 @@
  */
 
 #include "ShamanAiObjectContext.h"
+#include "AiFactory.h"
 #include "ElementalShamanStrategy.h"
 #include "EnhancementShamanStrategy.h"
 #include "GenericShamanStrategy.h"
@@ -35,7 +36,8 @@ private:
     // Rework: the Elemental pack rows are in its YAML; the other specs keep the stock rows
     static Strategy* aoe(PlayerbotAI* botAI) { return new ShamanReworkAoeStrategy(botAI); }
     static Strategy* cure(PlayerbotAI* botAI) { return new ShamanCureStrategy(botAI); }
-    static Strategy* healer_dps(PlayerbotAI* botAI) { return new ShamanHealerDpsStrategy(botAI); }
+    // Rework: the idle Lightning Bolt of a healer (the stock Flame Shock and Lava Burst rows are retired)
+    static Strategy* healer_dps(PlayerbotAI* botAI) { return new ShamanReworkHealerDpsStrategy(botAI); }
     static Strategy* boost(PlayerbotAI* botAI) { return new ShamanReworkBoostStrategy(botAI); }
 };
 
@@ -47,7 +49,7 @@ public:
         creators["heal"] = &ShamanCombatStrategyFactoryInternal::resto;
         creators["melee"] = &ShamanCombatStrategyFactoryInternal::enh;
         creators["dps"] = &ShamanCombatStrategyFactoryInternal::enh;
-        creators["caster"] = &ShamanCombatStrategyFactoryInternal::ele;
+        creators["caster"] = &ShamanCombatStrategyFactoryInternal::caster;
         //creators["offheal"] = &ShamanCombatStrategyFactoryInternal::offheal;
         creators["resto"] = &ShamanCombatStrategyFactoryInternal::resto;
         creators["enh"] = &ShamanCombatStrategyFactoryInternal::enh;
@@ -55,9 +57,19 @@ public:
     }
 
 private:
-    static Strategy* resto(PlayerbotAI* botAI) { return new RestoShamanStrategy(botAI); }
+    // Rework: "resto" and "heal" build the Restoration rotation (the stock RestoShamanStrategy is kept, unregistered)
+    static Strategy* resto(PlayerbotAI* botAI) { return new ShamanReworkRestoStrategy(botAI); }
     static Strategy* enh(PlayerbotAI* botAI) { return new EnhancementShamanStrategy(botAI); }
     static Strategy* ele(PlayerbotAI* botAI) { return new ShamanReworkEleStrategy(botAI); }
+    // Rework: AiFactory gives a solo Restoration bot "caster"; it keeps its heal rows (the bot is its own group) and
+    // the solo damage comes from "healer dps"
+    static Strategy* caster(PlayerbotAI* botAI)
+    {
+        if (AiFactory::GetPlayerSpecTab(botAI->GetBot()) == SHAMAN_TAB_RESTORATION)
+            return new ShamanReworkRestoStrategy(botAI);
+
+        return new ShamanReworkEleStrategy(botAI);
+    }
 };
 
 class ShamanEarthTotemStrategyFactoryInternal : public NamedObjectContext<Strategy>

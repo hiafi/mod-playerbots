@@ -36,7 +36,8 @@ public:
 
 // The stock Totemic Recall, except that it never fires while an elemental is out: the recall would dismiss the Earth,
 // Water and Storm elementals (the stock trigger only spares Mana Tide and the Fire Elemental) and their cooldowns keep
-// running. Registered as "totemic recall".
+// running, nor while a Cloudburst Totem is storing (the recall would release the store). Registered as
+// "totemic recall".
 class ShamanTotemicRecallTrigger : public TotemicRecallTrigger
 {
 public:

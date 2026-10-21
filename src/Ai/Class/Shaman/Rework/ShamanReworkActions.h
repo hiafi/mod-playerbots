@@ -54,6 +54,21 @@ private:
     bool _recordTarget;
 };
 
+// A spell cast by id on the unit a value picks (the Restoration heals): the value's qualifier is the one the row's
+// `do:` name carries ("shaman riptide::30,30" reads "tank first heal target::30,30"), so the row and the action pick
+// the same unit. Distinct qualifiers are distinct queue baskets.
+class ShamanCastOnValueAction : public ShamanCastAction, public Qualified
+{
+public:
+    ShamanCastOnValueAction(PlayerbotAI* botAI, std::string const name, std::vector<uint32> spellIds,
+                            std::string const targetValue)
+        : ShamanCastAction(botAI, name, std::move(spellIds), targetValue)
+    {
+    }
+
+    Value<Unit*>* GetTargetValue() override;
+};
+
 // The default action: a cast that waits while the bot pools mana for the next elemental ("shaman summon pooling").
 class ShamanFillerAction : public ShamanCastAction
 {
@@ -154,6 +169,21 @@ public:
     bool isUseful() override;
     bool isPossible() override;
     bool Execute(Event event) override;
+};
+
+// Marks the healer re-registrations of the stock cures for ShamanHealerCureMultiplier.
+class ShamanHealerCureTag
+{
+};
+
+// A stock cure under a "shaman resto ..." name: the queue merges baskets by name, so the cure strategy's push of the
+// stock name would otherwise lift this cure above every heal. The tag lets the multiplier tell the copy from the stock
+// action, which reports the same name.
+template <typename StockCure>
+class ShamanHealerCureAction : public StockCure, public ShamanHealerCureTag
+{
+public:
+    ShamanHealerCureAction(PlayerbotAI* botAI) : StockCure(botAI) {}
 };
 
 class ShamanReworkActionFactory : public NamedObjectContext<Action>

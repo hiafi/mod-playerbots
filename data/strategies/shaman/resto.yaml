@@ -1,0 +1,376 @@
+# The reworked Restoration shaman, three documents. "shaman/resto" is the heal rotation, appended to the "resto" combat
+# strategy by ShamanReworkRestoStrategy::InitTriggers. "shaman/nc-resto" is its out-of-combat heals, appended to the
+# "nc" strategy by ShamanNonCombatStrategy::InitTriggers. "shaman/healer-dps" is the "healer dps" strategy. Source: the
+# Restoration bot guide (docs/reworks/bot-strategy/shaman-restoration-bot-guide.md; the rework doc wins). Each row
+# queues its action at the relevance when its condition holds (`when`, the expression language of StrategyExpression.h)
+# or when an existing C++ trigger fires (`trigger`). Execution order is by relevance, not by position in this file.
+# Every action is a RowCheckedAction (it re-checks its own row before casting) except the stock keeps (water shield,
+# reach party member to heal, flee, the cures). A value-target action takes its value's qualifier from its `do:` name,
+# so the `do:` qualifier and the unit qualifier in `when:` are always the same literal ("shaman riptide::30,30" with
+# health_pct("tank first heal target::30,30")). Rows that can fire together never share an action name and qualifier
+# (they would merge into one basket, and only the first row would be re-checked): every totem and every Riptide, Healing
+# Wave and Healing Rain row has its own name.
+#
+# The relevance bands follow druid/resto.yaml: the critical rows and the burst window's opening sequence in `emergency`,
+# the off-the-global-cooldown Tidal Force in `high`, the rest in `normal`; nothing at or above the pull sequence (105).
+#
+# Spell ids (DBC names): Healing Wave 331, Lesser Healing Wave 8004, Chain Heal 1064, Riptide 61295, Earth Shield 974,
+# Healing Rain 202283 (the dynamic object carries the same id), Healing Stream Totem 5394, Earthen Wall Totem 202261,
+# Undulating Currents Totem 202647, Cloudburst Totem 202652, Spirit Link Totem 202645, Mana Tide Totem 16190, Water
+# Elemental Totem 202272, Cleansing Totem 8170, Tidal Force 202654 (the castable; 55198 is retired), Lightning Bolt 403.
+# Auras on the bot (ShamanData.h names): Cloudburst store 202665 (permanent while the totem stands), Rainfall buff
+# 202668 (the next Healing Rain is instant), Tidal Waves buff 202669 (stacks 1-3). On a Player: Riptide 61295, Earth
+# Shield 974 (charges). Talents are read through `known()` of the castable they grant; the passive ones are not needed.
+# Every row for a spell learned after level 1 is `known()`-gated, so a bot below 60 plays the guide's leveling table.
+#
+# Players only (S2-NOTES S1-L5): every count and pick below is over the group's Players (the party values, and the
+# `shaman ...` values built on ai::group::GetGroupPlayers): a pet, a totem, a guardian or a healing dummy is never
+# counted or healed.
+#
+# Differences from the guide, each marked "DEV" at its row:
+#  - the recall tests ms_since_cast(202652), not elapsed(): the store aura is permanent, so elapsed() reads 0;
+#  - "losing health" and the pack lines use `shaman tank losing` and `shaman near tank` (C++ values);
+#  - one single-target fallback row (the guide's list has no line for an ally between critical and the AoE lines);
+#  - Grounding, Windwalk, Capacitor, the encounter flags (guide Q3) and "move the rain after 6 s" are not built (no
+#    dangerous-cast detector, no group-moving test, no spot tracker).
+strategy: shaman/resto
+class: shaman
+conditions:
+  # The effective tank (the main tank within 100 yd, else the most attacked member) is in reach of a 40 yd heal
+  tank_ok: >-
+    alive("effective tank") and in_range("effective tank", 40) and not is_self("effective tank")
+  # Definitions. The spike value samples its history whenever it is read, so every row that uses it puts it first
+  spike: value("shaman resto spike")
+  crit1: value("party members below::30") >= 1
+  low3: value("party members below::50") >= 3
+  hurt1: value("party members below::90") >= 1
+  # Pack lines. A pack of 4 or more enemies (or an elite, for the pull's Healing Rain) near the tank. A heavy pull is
+  # the guide's "5 or more enemies, or the group's average under 60%", and a boss (dungeon trash is elite and dies fast,
+  # so an elite alone is not heavy)
+  elite_pack: value("shaman near tank::elites,12") >= 1
+  pack4: value("shaman near tank::enemies,12") >= 4
+  heavy: >-
+    value("shaman near tank::bosses,12") >= 1 or value("shaman near tank::enemies,12") >= 5
+    or value("shaman group health") < 60
+  # In a window: Cloudburst stands, or Healing Stream / the Undulating Currents Totem went down within 15 s while a
+  # spike still holds
+  in_window: >-
+    aura(self, 202665) or ((ms_since_cast(5394) < 15000 or ms_since_cast(202647) < 15000) and spike)
+  cb_ready: known(202652) and cooldown(202652) == 0 and not aura(self, 202665)
+  # A fresh Mana Tide (creature 10467) or Cleansing Totem (5924) in the Water slot is not replaced by Healing Stream
+  water_utility: >-
+    (value("shaman totem entry::water") == 10467 or value("shaman totem entry::water") == 5924)
+    and value("shaman totem time left::water") > 2000
+  hst_ready: known(5394) and cooldown(5394) == 0 and not water_utility
+  # Earth Shield: its target sticks to the holder; any caster's shield counts as present, the charges are read only on
+  # the bot's own, and a tank that carries another elemental shield (Lightning 324, Water 52127) is left alone.
+  # Elemental shields exclude each other whoever cast them: a second shaman's cast would remove the first's
+  es_target: >-
+    alive("shaman earth shield target") and in_range("shaman earth shield target", 40)
+    and not is_self("shaman earth shield target")
+  es_wanted: >-
+    known(974) and es_target and not aura("shaman earth shield target", "324,52127")
+    and (not aura("shaman earth shield target", 974)
+    or (aura("shaman earth shield target", 974, own) and charges("shaman earth shield target", 974, own) <= 2))
+  # The opening sequence runs while a spike holds and Cloudburst (on a heavy pull) or Healing Stream is ready, or the
+  # window it started is open
+  opening: spike and ((cb_ready and heavy) or hst_ready or in_window)
+  # Healing Rain: none down, or 2 s or less left; a cast-time spell goes out on the move only with the Rainfall buff
+  rain_needed: not dynobj(202283) or value("shaman rain time left") <= 2000
+  rain_go: not moving(self) or aura(self, 202668)
+  # The Water slot is empty or its totem is about to end: a utility totem never cuts a healing totem short
+  water_free: value("shaman totem time left::water") <= 3000
+  hst_cooling: not known(5394) or cooldown(5394) > 0
+  # The first 10 s of the fight: the pull lines
+  on_pull: combat_time() < 10000
+rows:
+  # Setup: Water Shield (stock trigger and action)
+  - do: water shield
+    trigger: water shield
+    relevance: normal + 9.97
+
+  # ---- Off the global cooldown ----
+  # 2: Tidal Force in a window with 4 or more allies under 60%, or when an ally is critical and Riptide is on
+  # cooldown. It is off the global cooldown, so it can sit under the heals and still go out the same tick
+  - do: shaman tidal force
+    when: >-
+      known(202654) and cooldown(202654) == 0
+      and ((in_window and value("party members below::60") >= 4) or (crit1 and known(61295) and cooldown(61295) > 0))
+    relevance: high + 9
+
+  # 1: Cloudburst recall (cast the totem again) with 3 or more allies low, or one critical and the totem up 3 s or more.
+  # DEV: the totem's castable is on the global cooldown (S2a-REPORT M1), so this is a normal cast. ms_since_cast stands
+  # in for elapsed(): the store aura is permanent. Never in the first 3 s unless an ally is critical (crit with 3 low)
+  - do: shaman cloudburst recall
+    when: >-
+      aura(self, 202665) and (low3 or crit1) and (ms_since_cast(202652) >= 3000 or (low3 and crit1))
+    relevance: emergency + 9
+
+  # ---- 1: critical ally ----
+  # Earthen Wall first when the tank is the critical one
+  - do: shaman critical earthen wall
+    when: >-
+      known(202261) and cooldown(202261) == 0 and tank_ok and health_pct("effective tank") < 30
+    relevance: emergency + 8
+  # Riptide if ready, else Lesser Healing Wave (Healing Wave before level 20)
+  - do: shaman riptide::30,30
+    when: >-
+      known(61295) and cooldown(61295) == 0 and alive("tank first heal target::30,30")
+      and health_pct("tank first heal target::30,30") < 30
+    relevance: emergency + 7
+  - do: shaman lesser healing wave::30,30
+    when: >-
+      known(8004) and alive("tank first heal target::30,30") and health_pct("tank first heal target::30,30") < 30
+      and not moving(self)
+    relevance: emergency + 6.5
+  - do: shaman healing wave::30,30
+    when: >-
+      not known(8004) and alive("tank first heal target::30,30") and health_pct("tank first heal target::30,30") < 30
+      and not moving(self)
+    relevance: emergency + 6.4
+
+  # ---- 2: spike, the opening sequence (one row each, descending) ----
+  # Cloudburst first, so everything after it is stored (only on a heavy pull: 5+ enemies, a boss, group under 60%)
+  - do: shaman cloudburst totem
+    when: spike and cb_ready and heavy
+    relevance: emergency + 5
+  # Earthen Wall on the tank (its pulses spill to injured allies while the tank's shield is full)
+  - do: shaman open earthen wall
+    when: >-
+      opening and tank_ok and known(202261) and cooldown(202261) == 0 and (heavy or pack4)
+    relevance: emergency + 4.9
+  - do: shaman open healing stream totem
+    when: opening and hst_ready and hurt1
+    relevance: emergency + 4.8
+  - do: shaman open undulating currents totem
+    when: >-
+      opening and known(202647) and cooldown(202647) == 0 and value("party members below::85") >= 1
+    relevance: emergency + 4.7
+  # Healing Rain at the stack's center if none is down
+  - do: shaman open healing rain
+    when: >-
+      opening and known(202283) and not dynobj(202283) and value("heal cluster count::10,90") >= 2 and rain_go
+    relevance: emergency + 4.6
+
+  # 3: tank spike: Earthen Wall on the tank alone, not the full window
+  - do: shaman tank earthen wall
+    when: >-
+      value("shaman tank spike") and tank_ok and known(202261) and cooldown(202261) == 0
+    relevance: emergency + 4
+
+  # Walk into range of a hurt member
+  - do: reach party member to heal
+    trigger: party member to heal out of spell range
+    relevance: emergency + 3
+
+  # Stock keep: step away from a melee enemy
+  - do: flee
+    trigger: enemy too close for spell
+    relevance: move + 9
+
+  # ---- Packs and dungeons: the pull lines (the first 10 s) ----
+  # Riptide on the tank, Earthen Wall on the tank with 4 or more enemies, Healing Rain under the stacked group only with
+  # 4 or more enemies or an elite, Healing Stream
+  - do: shaman pull riptide
+    when: >-
+      on_pull and tank_ok and known(61295) and cooldown(61295) == 0 and not aura("effective tank", 61295, own)
+    relevance: normal + 9.93
+  - do: shaman pull earthen wall
+    when: >-
+      on_pull and pack4 and tank_ok and known(202261) and cooldown(202261) == 0
+    relevance: normal + 9.92
+  - do: shaman pull healing rain
+    when: >-
+      on_pull and (pack4 or elite_pack) and tank_ok and known(202283) and not dynobj(202283)
+      and value("shaman near tank::allies,10") >= 3 and rain_go
+    relevance: normal + 9.91
+  - do: shaman pull healing stream totem
+    when: on_pull and hst_ready
+    relevance: normal + 9.9
+
+  # ---- The healing priority ----
+  # 4: Healing Rain when none is down or it has 2 s or less left, and 2 or more allies are injured and stacked: at their
+  # center. With the Rainfall buff up it goes out on the move too. On the pull it waits for 4 enemies or an elite
+  - do: shaman healing rain
+    when: >-
+      known(202283) and rain_needed and value("heal cluster count::10,90") >= 2 and rain_go
+      and (not on_pull or pack4 or elite_pack)
+    relevance: normal + 9.8
+
+  # 5: Riptide on cooldown: on the most injured ally standing in this bot's Healing Rain (releases the torrent); with no
+  # rain, or nobody injured inside it, on the tank
+  - do: shaman riptide rain::100
+    when: known(61295) and cooldown(61295) == 0 and alive("shaman rain target::100")
+    relevance: normal + 9.6
+  - do: shaman riptide tank
+    when: >-
+      known(61295) and cooldown(61295) == 0 and tank_ok and hurt1
+      and (not dynobj(202283) or not alive("shaman rain target::100"))
+    relevance: normal + 9.55
+
+  # 6 / 7: Healing Stream Totem on cooldown when any ally is injured, the Undulating Currents Totem with 2 or more under
+  # 85%. A totem never goes into an Earth, Water or Air slot an elemental holds (the action checks)
+  - do: shaman healing stream totem
+    when: hst_ready and hurt1
+    relevance: normal + 9.4
+  - do: shaman undulating currents totem
+    when: >-
+      known(202647) and cooldown(202647) == 0 and value("party members below::85") >= 2
+    relevance: normal + 9.2
+
+  # 8: Chain Heal on a chain group (2 or more allies under 80% within 12 yd of each other), starting on the Player with
+  # this bot's Riptide when one is in the best group. Never with one injured
+  - do: shaman chain heal::12,80
+    when: >-
+      known(1064) and value("heal cluster count::12,80") >= 2 and alive("shaman chain heal target::12,80")
+      and not moving(self)
+    relevance: normal + 9.0
+
+  # 8b: spend Tidal Waves on the tank (user 2026-10-21): with 2 or more charges (1 when the tank is under 40%) and the
+  # tank under 70%, a Healing Wave on the tank goes above Chain Heal, so the Riptide / Chain Heal -> Tidal Waves ->
+  # Healing Wave loop runs in a constantly hurt group too (S2b-2 F2: 0 Healing Wave casts in the pin50 sims; with 1
+  # charge Chain Heal fell to ~5 casts per 120 s)
+  - do: shaman hw tank charged
+    when: >-
+      tank_ok and health_pct("effective tank") < 70 and not moving(self)
+      and (stacks(self, 202669) >= 2 or (stacks(self, 202669) >= 1 and health_pct("effective tank") < 40))
+    relevance: normal + 9.05
+
+  # 9: Water Elemental between windows, with Healing Stream's cooldown over 10 s away and 2 or more allies injured
+  - do: shaman water elemental totem
+    when: >-
+      known(202272) and cooldown(202272) == 0 and not in_window and cooldown(5394) > 10000
+      and value("party members below::90") >= 2 and water_free
+    relevance: normal + 8.8
+
+  # 10: Spirit Link with 2 or more allies under 35% while 2 or more others are over 70%, and no Cloudburst
+  - do: shaman spirit link totem
+    when: >-
+      known(202645) and cooldown(202645) == 0 and value("party members below::35") >= 2
+      and value("shaman party members above::70") >= 2 and not aura(self, 202665)
+    relevance: normal + 8.6
+
+  # 11: tank healing. Tank under 60% and losing health: Lesser Healing Wave (Healing Wave before level 20; the history
+  # value goes first so it samples every tick, not only below 60%). Tank under
+  # 80% with 2 or more Tidal Waves charges (a Healing Wave reads every charge held), or under 70% with none: Healing
+  # Wave
+  - do: shaman lhw tank
+    when: >-
+      value("shaman tank losing") and known(8004) and tank_ok and health_pct("effective tank") < 60
+      and not moving(self)
+    relevance: normal + 8.4
+  - do: shaman hw tank leveling
+    when: >-
+      value("shaman tank losing") and not known(8004) and tank_ok and health_pct("effective tank") < 60
+      and not moving(self)
+    relevance: normal + 8.39
+  - do: shaman hw tank charged
+    when: >-
+      tank_ok and health_pct("effective tank") < 80 and stacks(self, 202669) >= 2 and not moving(self)
+    relevance: normal + 8.3
+  - do: shaman hw tank
+    when: tank_ok and health_pct("effective tank") < 70 and not moving(self)
+    relevance: normal + 8.2
+
+  # 12: Mana Tide Totem under 60% mana with Healing Stream on cooldown, not in a window. The Water slot must be free.
+  # Under 20% mana the window rule is waived and the row goes near the top (user 2026-10-21, S2b-2 F3: in a constantly
+  # hurt group a window was almost always open and Mana Tide waited until ~54 s, well after the bot ran dry)
+  - do: shaman mana tide totem
+    when: >-
+      known(16190) and cooldown(16190) == 0 and mana(self) < 20 and hst_cooling and water_free
+    relevance: normal + 9.95
+  - do: shaman mana tide totem
+    when: >-
+      known(16190) and cooldown(16190) == 0 and mana(self) < 60 and hst_cooling and not in_window and water_free
+    relevance: normal + 8.0
+
+  # 13: Earth Shield on the tank when missing or at 2 charges or fewer
+  - do: shaman earth shield tank
+    when: es_wanted
+    relevance: normal + 7.5
+
+  # Cleansing Totem (poison and disease are the totem's, Cleanse Spirit has no disease) when 2 or more allies carry one
+  # and Healing Stream is on cooldown, not in a window
+  - do: shaman cleansing totem
+    when: >-
+      known(8170) and cooldown(8170) == 0 and value("shaman party cure count") >= 2 and hst_cooling
+      and not in_window and water_free
+    relevance: normal + 7.2
+
+  # 14: Cleanse Spirit on a curse or a poison (the stock triggers; the disease row is gone). The copies are tagged for
+  # ShamanHealerCureMultiplier, which lets them through only while nobody is under 50%
+  - do: shaman resto cleanse poison on party
+    trigger: party member cleanse spirit poison
+    relevance: normal + 7.0
+  - do: shaman resto cleanse curse on party
+    trigger: party member cleanse spirit curse
+    relevance: normal + 6.9
+  - do: shaman resto cleanse self poison
+    trigger: cleanse spirit poison
+    relevance: normal + 6.8
+  - do: shaman resto cleanse self curse
+    trigger: cleanse spirit curse
+    relevance: normal + 6.7
+
+  # DEV (not a guide line): an ally under 70% that none of the lines above reaches (a single hurt non-tank) gets one
+  # heal. The tank-first target picks the tank under 50%, else the lowest other member
+  - do: shaman lesser healing wave::50,70
+    when: >-
+      known(8004) and mana(self) > 20 and alive("tank first heal target::50,70")
+      and health_pct("tank first heal target::50,70") < 70 and not moving(self)
+    relevance: normal + 5.0
+  - do: shaman healing wave::50,70
+    when: >-
+      not known(8004) and mana(self) > 20 and alive("tank first heal target::50,70")
+      and health_pct("tank first heal target::50,70") < 70 and not moving(self)
+    relevance: normal + 4.9
+---
+# Out of combat: heal injured members only, with mana floors (Riptide, then Healing Wave), and keep Earth Shield on the
+# tank. No totem, no Healing Rain and no Chain Heal out of combat: the stock heal tiers of the non-combat strategy are
+# not added for a Restoration bot.
+strategy: shaman/nc-resto
+class: shaman
+conditions:
+  # Earth Shield as in shaman/resto: the target sticks to the holder, any caster's shield counts, another elemental
+  # shield on the tank is left alone
+  es_target: >-
+    alive("shaman earth shield target") and in_range("shaman earth shield target", 40)
+    and not is_self("shaman earth shield target")
+  es_wanted: >-
+    known(974) and es_target and not aura("shaman earth shield target", "324,52127")
+    and (not aura("shaman earth shield target", 974)
+    or (aura("shaman earth shield target", 974, own) and charges("shaman earth shield target", 974, own) <= 2))
+rows:
+  - do: shaman nc earth shield
+    when: mana(self) > 30 and es_wanted
+    relevance: high + 3
+  - do: shaman nc riptide::90;61295
+    when: >-
+      known(61295) and cooldown(61295) == 0 and mana(self) > 40
+      and alive("party member without own aura::90;61295")
+    relevance: high + 8
+  - do: shaman nc healing wave::70,70
+    when: >-
+      mana(self) > 30 and alive("tank first heal target::70,70") and health_pct("tank first heal target::70,70") < 70
+      and not moving(self)
+    relevance: high + 7
+---
+# "healer dps": the idle damage of a healer, on the tank's target (the bot assists). Lightning Bolt only while the bot
+# is alone, or every ally is above 90% and the mana is above 80%, Flame Shock only alone; a grouped healer with work to
+# do never casts them
+strategy: shaman/healer-dps
+class: shaman
+conditions:
+  # Only the bot is within 40 yd and in sight: the count includes the bot
+  alone: value("party members below::101") <= 1
+  calm: value("party members below::90") == 0 and mana(self) > 80
+rows:
+  # Alone: Flame Shock when missing on a target that lives, then Lightning Bolt (the analogue of the druid's Moonfire)
+  - do: shaman healer flame shock
+    when: >-
+      alone and alive(target) and known(8050) and cooldown(8050) == 0 and not aura(target, 8050, own)
+      and (boss(target) or elite(target) or lifetime(target) > 8)
+    relevance: normal + 1.5
+  - do: shaman healer lightning bolt
+    when: (alone or calm) and alive(target) and known(403) and not moving(self)
+    relevance: normal + 1

@@ -7,6 +7,7 @@
 #include "ShamanReworkTriggers.h"
 #include "AiFactory.h"
 #include "Playerbots.h"
+#include "ShamanReworkIds.h"
 #include "ShamanReworkUtils.h"
 
 using namespace ai::shaman_rework;
@@ -20,7 +21,10 @@ bool ShamanAttunementMissingTrigger::IsActive()
 
 bool ShamanTotemicRecallTrigger::IsActive()
 {
-    return ActiveElementalMask(bot) == 0 && TotemicRecallTrigger::IsActive();
+    // The recall also releases a storing Cloudburst Totem at once (the guide's Never): the store is spent only by the
+    // Restoration rows
+    return ActiveElementalMask(bot) == 0 && !bot->HasAura(SPELL_CLOUDBURST_STORE) &&
+           TotemicRecallTrigger::IsActive();
 }
 
 ShamanReworkTriggerFactory::ShamanReworkTriggerFactory()

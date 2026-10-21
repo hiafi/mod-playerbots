@@ -9,6 +9,7 @@
 
 #include "NamedObjectContext.h"
 #include "ObjectGuid.h"
+#include "PartyRoleValues.h"
 #include "ShamanReworkUtils.h"
 #include "Value.h"
 
@@ -185,6 +186,160 @@ public:
     }
 
     uint32 Calculate() override;
+};
+
+// ---- Restoration: the group and tank state the healer's rows read. Every count and pick below is over group Players
+// only (ai::group::GetGroupPlayers): a pet, a totem or a guardian is never counted or chosen, like the party values
+// the stock healers use. ----
+
+// The average health percent of the group's Players in heal range (the bot included), 100 with none.
+class ShamanGroupHealthValue : public Uint8CalculatedValue
+{
+public:
+    ShamanGroupHealthValue(PlayerbotAI* botAI) : Uint8CalculatedValue(botAI, "shaman group health", 200) {}
+
+    uint8 Calculate() override;
+};
+
+// The guide's Spike: three or more Players within 40 yd below 70%, or an average below 75%, or the group lost 25% of
+// its total health in the last 4 s (a ring of samples of the group's summed health on the getMSTime() clock, so the sim
+// drives it). A group of one never spikes. The history is sampled whenever the value is read: the rows that depend on
+// it put it first in their condition. The history restarts whenever the set of Players it sums changes (a member
+// leaves heal range, dies, returns, joins), so a roster change is never read as a loss of health.
+class ShamanRestoSpikeValue : public BoolCalculatedValue
+{
+public:
+    ShamanRestoSpikeValue(PlayerbotAI* botAI) : BoolCalculatedValue(botAI, "shaman resto spike", 200) {}
+
+    bool Calculate() override;
+
+private:
+    ai::shaman_rework::HealthHistory _history;
+    uint64 _roster = 0;
+};
+
+// The effective tank's health samples, reset when the tank changes or leaves heal range.
+class ShamanTankHistoryValue : public BoolCalculatedValue
+{
+protected:
+    ShamanTankHistoryValue(PlayerbotAI* botAI, std::string const name) : BoolCalculatedValue(botAI, name, 200) {}
+
+    // Takes a sample of the tank and returns it, null when there is no tank Player in heal range
+    Player* SampleTank();
+
+    ai::shaman_rework::HealthHistory _history;
+
+private:
+    ObjectGuid _guid;
+};
+
+// The guide's Tank spike: the tank is below 40% and lost 30% or more of its health in the last 4 s.
+class ShamanTankSpikeValue : public ShamanTankHistoryValue
+{
+public:
+    ShamanTankSpikeValue(PlayerbotAI* botAI) : ShamanTankHistoryValue(botAI, "shaman tank spike") {}
+
+    bool Calculate() override;
+};
+
+// The tank lost at least 2% of its health over the last 2.5 s: the guide's "losing health".
+class ShamanTankLosingValue : public ShamanTankHistoryValue
+{
+public:
+    ShamanTankLosingValue(PlayerbotAI* botAI) : ShamanTankHistoryValue(botAI, "shaman tank losing") {}
+
+    bool Calculate() override;
+};
+
+// The lowest-health Player standing inside the bot's own Healing Rain (its dynamic object's radius) and below the
+// qualifier's health percent; a missing unit when the rain is down or nobody qualifies. Riptide on this Player releases
+// the torrent. Qualifier: pct.
+class ShamanRainTargetValue : public GuidCachedUnitValue, public Qualified
+{
+public:
+    ShamanRainTargetValue(PlayerbotAI* botAI) : GuidCachedUnitValue(botAI, "shaman rain target", 500) {}
+
+protected:
+    ObjectGuid CalculateGuid() override;
+};
+
+// Milliseconds left on the bot's own Healing Rain, 0 when none is down.
+class ShamanRainTimeLeftValue : public Uint32CalculatedValue
+{
+public:
+    ShamanRainTimeLeftValue(PlayerbotAI* botAI) : Uint32CalculatedValue(botAI, "shaman rain time left", 200) {}
+
+    uint32 Calculate() override;
+};
+
+// Milliseconds left on whatever totem holds the qualifier's slot ("earth", "fire", "water", "air"; "storm" is the Air
+// slot), 0 when the slot is empty: the generalization of "shaman elemental time left" to any totem.
+class ShamanTotemTimeLeftValue : public Uint32CalculatedValue, public Qualified
+{
+public:
+    ShamanTotemTimeLeftValue(PlayerbotAI* botAI) : Uint32CalculatedValue(botAI, "shaman totem time left", 200) {}
+
+    uint32 Calculate() override;
+};
+
+// Group Players in heal range and sight whose health is above the qualifier's percent: the guide's "2 or more others
+// above 70%" (the party counts only know "below"). Qualifier: pct.
+class ShamanPartyAboveValue : public CalculatedValue<uint8>, public Qualified
+{
+public:
+    ShamanPartyAboveValue(PlayerbotAI* botAI)
+        : CalculatedValue<uint8>(botAI, "shaman party members above", IN_MILLISECONDS)
+    {
+    }
+
+    uint8 Calculate() override;
+};
+
+// What stands around the effective tank: "enemies" (attackers), "elites" (attackers that are elite or a boss), "bosses"
+// (attackers that are a dungeon or world boss) or "allies" (group Players, the tank included) within the radius of the
+// tank; 0 with no tank. The pack lines of the guide. Qualifier: "kind,yards".
+class ShamanNearTankValue : public CalculatedValue<uint8>, public Qualified
+{
+public:
+    ShamanNearTankValue(PlayerbotAI* botAI) : CalculatedValue<uint8>(botAI, "shaman near tank", IN_MILLISECONDS) {}
+
+    uint8 Calculate() override;
+};
+
+// The Player a Chain Heal should start on: the one with the most injured Players (below the percent, in sight) within
+// the radius of it, itself included; of those with the most, one carrying the bot's Riptide when there is one, else
+// the lowest. Null when no start reaches two injured Players (a Chain Heal on one is never worth it). Qualifier:
+// "yards,pct".
+class ShamanChainHealTargetValue : public GuidCachedUnitValue, public Qualified
+{
+public:
+    ShamanChainHealTargetValue(PlayerbotAI* botAI) : GuidCachedUnitValue(botAI, "shaman chain heal target", 500) {}
+
+protected:
+    ObjectGuid CalculateGuid() override;
+};
+
+// The creature entry of the totem in the qualifier's slot ("earth", "fire", "water", "air"; "storm" is the Air slot), 0
+// when the slot is empty: lets a row tell a utility totem from a healing one.
+class ShamanTotemEntryValue : public Uint32CalculatedValue, public Qualified
+{
+public:
+    ShamanTotemEntryValue(PlayerbotAI* botAI) : Uint32CalculatedValue(botAI, "shaman totem entry", 200) {}
+
+    uint32 Calculate() override;
+};
+
+// Who the bot's Earth Shield belongs on. It is single-target per caster and a recast resets the charges, so the shield
+// sticks to its holder: the Player carrying the bot's shield stays the target while it is a tank, or while the group
+// has no living main tank (a most-attacked member that flips every few seconds is no reason to move it). Otherwise
+// the effective tank. A missing unit when there is none.
+class ShamanEarthShieldTargetValue : public GuidCachedUnitValue
+{
+public:
+    ShamanEarthShieldTargetValue(PlayerbotAI* botAI) : GuidCachedUnitValue(botAI, "shaman earth shield target", 1000) {}
+
+protected:
+    ObjectGuid CalculateGuid() override;
 };
 
 class ShamanReworkValueFactory : public NamedObjectContext<UntypedValue>
