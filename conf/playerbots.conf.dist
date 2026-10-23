@@ -2071,10 +2071,16 @@ AiPlayerbot.PremadeSpecLink.6.6.80 = -320050410002-23013233010021522301012031331
 # the Storm instead of Raze, Wind Rush and Elemental Reach. The guide's 7.3 string is not legal as written
 # (Reverberation and the row below it need 10 points above them, the string spends 9): Raze 1 and Reverberation 1
 # instead of Raze 0 and Reverberation 2, the same 21 points.
-# The stock Enhancement links (7.1, 7.4) decoded wrong after the shaman rework retired Dual Wield Specialization. They
-# are remapped talent by talent: the retired digit is gone from its tab, and the points it freed go to talents already
-# in the build (7.1 Static Shock 2 to 3, 7.4 Ancestral Knowledge 3 to 4), so each is legal at 51 points. Their .80
-# repeats .60 too. The Enhancement rework replaces these.
+# Reworked Enhancement (docs/reworks/bot-strategy/shaman-enhancement-bot-guide.md,
+# docs/reworks/shaman-enhancement-rework.md).
+# The Enhancement tab has 34 talents (the digit order is the guide's table, row by row, left to right) and no talent
+# arrows. 7.1 "enh pve" is the single target DPS, 7.4 "enh aoe" the trash-heavy one (Molten Fury 3 instead of Dual Wield
+# Specialization 3), 7.6 "enh tank" the Rockbiter tank (7.5 is "resto tank heal"). The guide's DPS strings are legal as
+# written. The tank build takes Maelstrom Weapon 3 and Elemental Spirits 1 (its rows press both) at the cost of Spirit
+# Weapons 3 and Ancestral Knowledge 1, and keeps Earthen Power 2 and Spirit Guard 3; its 45 link buys Weapon Mastery 3
+# where the old one had Spirit Weapons. Each link contains the one before it; .80 repeats .60. 7.6 is chosen by
+# `talents spec` only (RandomClassSpecProb 0); a bot is the tank build when it knows Living Earth, or
+# while it has not bought it yet (level 30) and follows slot 6 (ai::shaman_rework::IsTankBuild).
 # Reworked Restoration (docs/reworks/bot-strategy/shaman-restoration-bot-guide.md,
 # docs/reworks/shaman-restoration-rework.md).
 # The Restoration tab has 31 talents; the digit order is the guide's table (row by row, left to right). 7.2 "resto pve"
@@ -2084,6 +2090,9 @@ AiPlayerbot.PremadeSpecLink.6.6.80 = -320050410002-23013233010021522301012031331
 # row 7 needs 30, it spends 29): 7.2 takes Ancestral Healing 2 from 30 (Healing Way 2 moves to the 45 link), Nature's
 # Guardian 2 comes at 60, Ancestral Awakening 1 and Tidecaller 1 instead of 2 each, the same 21 / 36 / 51 points. 7.5 is
 # the guide's string. Each link contains the one before it. The old 7.5 name was "resto pvp".
+# 2026-10-22 playtest fix pass: Mana Tide Totem moved (6,1) -> (5,1), Tidal Force (2,2) -> (3,1) and Spirit Link Totem
+# (6,2) -> (6,1), so both links were re-encoded (same talents bought, same 21 / 36 / 51 points, same nesting; Tidal Force
+# at row 3 needs 15 points above it and has 16, Mana Tide at row 5 needs 25 and has 26: no build changed).
 AiPlayerbot.PremadeSpecName.7.0 = ele pve
 AiPlayerbot.PremadeSpecGlyph.7.0 = 41536,43385,41532,43386,44923,45776
 AiPlayerbot.PremadeSpecLink.7.0.30 = 333030031310001
@@ -2092,30 +2101,39 @@ AiPlayerbot.PremadeSpecLink.7.0.60 = 3330300313200013333103130013131
 AiPlayerbot.PremadeSpecLink.7.0.80 = 3330300313200013333103130013131
 AiPlayerbot.PremadeSpecName.7.1 = enh pve
 AiPlayerbot.PremadeSpecGlyph.7.1 = 41542,43385,41539,43386,43725,45771
-AiPlayerbot.PremadeSpecLink.7.1.60 = -3030500310502133303131131051
-AiPlayerbot.PremadeSpecLink.7.1.80 = -3030500310502133303131131051
+AiPlayerbot.PremadeSpecLink.7.1.30 = -3021103333010001
+AiPlayerbot.PremadeSpecLink.7.1.45 = -30211033330330210003200110001
+AiPlayerbot.PremadeSpecLink.7.1.60 = -3021103333033021300320311000231031
+AiPlayerbot.PremadeSpecLink.7.1.80 = -3021103333033021300320311000231031
 AiPlayerbot.PremadeSpecName.7.2 = resto pve
 AiPlayerbot.PremadeSpecGlyph.7.2 = 41527,43385,41517,43386,43725,45775
-AiPlayerbot.PremadeSpecLink.7.2.30 = --3020323112301
-AiPlayerbot.PremadeSpecLink.7.2.45 = --3020323112331223011201
-AiPlayerbot.PremadeSpecLink.7.2.60 = --3020323112331223211221021101321
-AiPlayerbot.PremadeSpecLink.7.2.80 = --3020323112331223211221021101321
+AiPlayerbot.PremadeSpecLink.7.2.30 = --3020323121301
+AiPlayerbot.PremadeSpecLink.7.2.45 = --3020323121331221301201
+AiPlayerbot.PremadeSpecLink.7.2.60 = --3020323121331221321221021101321
+AiPlayerbot.PremadeSpecLink.7.2.80 = --3020323121331221321221021101321
 AiPlayerbot.PremadeSpecName.7.3 = ele aoe
 AiPlayerbot.PremadeSpecGlyph.7.3 = 45778,43388,45770,43725,43386,41524
 AiPlayerbot.PremadeSpecLink.7.3.30 = 133030011312201
 AiPlayerbot.PremadeSpecLink.7.3.45 = 13303001132220133031301
 AiPlayerbot.PremadeSpecLink.7.3.60 = 1330300113222013303133130013131
 AiPlayerbot.PremadeSpecLink.7.3.80 = 1330300113222013303133130013131
-AiPlayerbot.PremadeSpecName.7.4 = enh pvp
+AiPlayerbot.PremadeSpecName.7.4 = enh aoe
 AiPlayerbot.PremadeSpecGlyph.7.4 = 45778,43388,41526,43725,43344,45771
-AiPlayerbot.PremadeSpecLink.7.4.60 = -0240520310500133320131131151
-AiPlayerbot.PremadeSpecLink.7.4.80 = -0240520310500133320131131151
+AiPlayerbot.PremadeSpecLink.7.4.30 = -3021103333010001
+AiPlayerbot.PremadeSpecLink.7.4.45 = -30211033330330210003200110001
+AiPlayerbot.PremadeSpecLink.7.4.60 = -3021103333033021300320011300231031
+AiPlayerbot.PremadeSpecLink.7.4.80 = -3021103333033021300320011300231031
 AiPlayerbot.PremadeSpecName.7.5 = resto tank heal
 AiPlayerbot.PremadeSpecGlyph.7.5 = 45778,43388,45775,43725,43344,41535
-AiPlayerbot.PremadeSpecLink.7.5.30 = --3020323113201
-AiPlayerbot.PremadeSpecLink.7.5.45 = --3020323113331223210001
-AiPlayerbot.PremadeSpecLink.7.5.60 = --3020323113331223210021021130321
-AiPlayerbot.PremadeSpecLink.7.5.80 = --3020323113331223210021021130321
+AiPlayerbot.PremadeSpecLink.7.5.30 = --3020323131201
+AiPlayerbot.PremadeSpecLink.7.5.45 = --3020323131331221320001
+AiPlayerbot.PremadeSpecLink.7.5.60 = --3020323131331221320021021130321
+AiPlayerbot.PremadeSpecLink.7.5.80 = --3020323131331221320021021130321
+AiPlayerbot.PremadeSpecName.7.6 = enh tank
+AiPlayerbot.PremadeSpecLink.7.6.30 = -320210303330000001
+AiPlayerbot.PremadeSpecLink.7.6.45 = -3202103033333301210000011001
+AiPlayerbot.PremadeSpecLink.7.6.60 = -3202103033333301310000011033201231
+AiPlayerbot.PremadeSpecLink.7.6.80 = -3202103033333301310000011033201231
 
 #
 #
@@ -2483,12 +2501,15 @@ AiPlayerbot.RandomClassSpecIndex.7.2 = 2
 # ele pvp
 AiPlayerbot.RandomClassSpecProb.7.3 = 0
 AiPlayerbot.RandomClassSpecIndex.7.3 = 3
-# enh pvp
+# enh aoe
 AiPlayerbot.RandomClassSpecProb.7.4 = 0
 AiPlayerbot.RandomClassSpecIndex.7.4 = 4
 # resto tank heal
 AiPlayerbot.RandomClassSpecProb.7.5 = 0
 AiPlayerbot.RandomClassSpecIndex.7.5 = 5
+# enh tank
+AiPlayerbot.RandomClassSpecProb.7.6 = 0
+AiPlayerbot.RandomClassSpecIndex.7.6 = 6
 
 #
 #
