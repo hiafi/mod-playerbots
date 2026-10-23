@@ -1,0 +1,210 @@
+# The reworked Enhancement shaman's tank rotation (the Rockbiter build): "shaman/enh-tank", appended (after the
+# interrupt and dispel rows) to the "enh" combat strategy by ShamanReworkEnhTankStrategy::InitTriggers when
+# ai::shaman_rework::IsTankBuild holds, and the out-of-combat rows "shaman/nc-enh-tank" appended to the shaman
+# non-combat strategy. Source: the Tank and Pulling lists of the Enhancement bot guide
+# (docs/reworks/bot-strategy/shaman-enhancement-bot-guide.md; the rework doc wins). Each row queues its action at the
+# relevance when its condition holds (`when`, the expression language of StrategyExpression.h). Execution order is by
+# relevance, not by position in this file. Every action is a RowCheckedAction. The pull itself (the first cast at a
+# target) is the stock pull strategy with "earth shock" as its action (it taunts under Rockbiter).
+#
+# Bands: Living Earth's Earthen Ascendance, Shamanistic Rage and the absorb press (emergency + 3 .. 1) > the taunts of
+# a loose enemy, Rockbiter back up, the capped Earthen Ascendance, Earthen Wall on self, `reach melee` (high) > the
+# pull and threat rotation (normal + 9.x, Elemental Spirits first) > shield upkeep, Flame Shock, filler. Execution
+# order for the bot's own GCDs follows the guide's Tank list. Every spell a bot may not know yet carries `known()` (the
+# build is held from level 30, the premade link buys Living Earth then; Maelstrom Weapon and Elemental Spirits come
+# with level 60).
+#
+# Rules this file keeps:
+# - Rockbiter is never swapped while tanking (no swap row; the one imbue row only puts Rockbiter back).
+# - The shield: Earth Shield on self by default, Lightning Shield when 3 or more enemies attack the bot; the shield the
+#   bot has is kept up (<= 2 charges). The healer's Earth Shield wins (user ruling 2026-10-21, S3b-1 review M2): while
+#   another shaman's Earth Shield is on the bot, or a Restoration shaman is grouped and in range, the bot casts no
+#   shield of its own at all. The two elemental shields exclude each other on one unit whoever cast them, so a Lightning
+#   Shield or a self Earth Shield would strip or lock out the healer's (S2b-1 M1: the casters would ping-pong). The two
+#   shields are never cast over each other either.
+# - Taunt rows use "shaman loose enemy": an attacker of a group member that is not another tank, within 30 yd, and not
+#   taunt-immune (ShamanReworkValues.cpp). Chain Lightning takes the loose enemy as its primary when Earth Shock is on
+#   cooldown.
+# - "Dangerous window" is `shaman self danger` (own health lost 40% in 5 s, 4+ attackers on the bot, or a boss on the
+#   bot): there are no encounter flags.
+# Spell ids (DBC names): Lightning Bolt 403, Chain Lightning 421, Earth Shock 8042, Flame Shock 8050, Stormstrike
+# 17364, Lava Lash 60103, Shamanistic Rage 30823, Elemental Spirits 51533, Earth Shield 974, Lightning Shield 324,
+# Rockbiter Weapon 8017, Living Earth 202361 (the castable of the talent), Earthen Wall Totem 202261, Magma Totem
+# 202268, Searing Totem creature 300278.
+# Auras on the bot (ShamanData.h names): Stoneskin 202206 (stacks), Earth Charge 202383 (stacks), Earthen Ascendance
+# 202393, Maelstrom Weapon 53817 (stacks), Rockbiter 8017. Talent ids (known()): Ascendance 202364 (Living Earth's
+# Earthen Ascendance needs it).
+strategy: shaman/enh-tank
+class: shaman
+conditions:
+  target_alive: alive(target)
+  danger: value("shaman self danger")
+  # The ascension's triggers: a dangerous window (first, so its history is sampled each tick), Stoneskin below 20, or
+  # health below 50%
+  danger_or_low: danger or stacks(self, 202206) < 20 or health_pct(self) < 50
+  ascended: aura(self, 202393)
+  ascension_known: known(202364)
+  # Past melee reach: the filler Lightning Bolt at range
+  out_of_melee: alive(target) and not in_range(target, 7)
+  # A pack or boss worth the Elemental Spirits cooldown and the pack totems
+  pack3: enemies_within(10) >= 3
+  # The shield state: the bot's own Earth Shield or Lightning Shield, or another shaman's Earth Shield
+  mine_es: aura(self, 974, own)
+  mine_ls: aura(self, 324)
+  other_es: aura(self, 974) and not aura(self, 974, own)
+  worth_fs: boss(target) or elite(target) or lifetime(target) > 8
+  # Living Earth ready; it is on the global cooldown, 10 s cooldown
+  le_ready: known(202361) and cooldown(202361) == 0
+  # The Fire slot is empty or holds a Searing Totem (Magma replaces it)
+  # A Restoration shaman in range: its Earth Shield goes on the tank, which therefore casts no shield of its own
+  resto_around: value("shaman resto shaman in group")
+  fire_slot_ok: not value("shaman totem active::fire") or value("shaman totem entry::fire") == 300278
+rows:
+  # The out-of-melee move
+  - do: reach melee
+    trigger: enemy out of melee
+    relevance: high + 1
+
+  # 1: Living Earth with 30 Earth Charge or more ascends (Earthen Ascendance: no Stoneskin erosion for 10 s, Earth Shock
+  # shocks and taunts every enemy in reach): on a dangerous window, below 20 Stoneskin, or below 50% health. The
+  # danger value goes first so its history is sampled every tick
+  - do: shaman earthen ascendance
+    when: >-
+      danger_or_low and le_ready and ascension_known and stacks(self, 202383) >= 30 and not ascended
+    relevance: emergency + 3
+  # With 60 banked (the cap) the ascension is spent whatever the Stoneskin (user ruling 2026-10-21): every further
+  # charge would be lost, and 30 stay for the next window
+  - do: shaman living earth capped
+    when: le_ready and ascension_known and stacks(self, 202383) >= 60 and not ascended
+    relevance: high + 9
+
+  # SR (on the global cooldown): below 40% health, on a dangerous window, or Living Earth cooling with Stoneskin below
+  # 20
+  - do: shaman tank shamanistic rage
+    when: >-
+      known(30823) and cooldown(30823) == 0
+      and (danger or health_pct(self) < 40 or (known(202361) and cooldown(202361) > 0 and stacks(self, 202206) < 20))
+    relevance: emergency + 2
+
+  # 3: the absorb press (absorbed damage does not erode Stoneskin): below 30 Earth Charge (or without Ascendance) when
+  # Stoneskin is below 35 or a dangerous window starts
+  - do: shaman living earth absorb
+    when: le_ready and (stacks(self, 202383) < 30 or not ascension_known) and (danger or stacks(self, 202206) < 35)
+    relevance: emergency + 1
+
+  # Earthen Wall on self before a dangerous window, or on the pull of 4 or more enemies
+  - do: shaman self earthen wall
+    when: >-
+      known(202261) and cooldown(202261) == 0
+      and (danger or (combat_time() <= 10000 and enemies_within(15) >= 4))
+    relevance: high + 9.4
+
+  # Rockbiter back up if it fell off (a death, a dispel): the build never swaps off it
+  - do: shaman swap imbue
+    when: known(8017) and not aura(self, 8017) and value("shaman next imbue") != 0
+    relevance: high + 9.3
+
+  # Pulling 5: a loose enemy (attacking a party member, not another tank): Earth Shock it (it taunts under Rockbiter);
+  # when that is on cooldown or out of its 25 yd, Chain Lightning with it as the primary target
+  - do: shaman taunt earth shock
+    when: >-
+      known(8042) and cooldown(8042) == 0 and alive("shaman loose enemy") and in_range("shaman loose enemy", 25)
+    relevance: high + 8.5
+  - do: shaman loose chain lightning
+    when: >-
+      known(421) and cooldown(421) == 0 and alive("shaman loose enemy") and in_range("shaman loose enemy", 28)
+      and (cooldown(8042) > 0 or not in_range("shaman loose enemy", 25))
+    relevance: high + 8.4
+
+  # 6 / Pulling 3: Elemental Spirits on the pull of a boss or a pack (the Rock Spirit taunts on summon)
+  - do: shaman elemental spirits
+    when: >-
+      known(51533) and cooldown(51533) == 0 and target_alive and (boss(target) or pack3 or elite(target))
+    relevance: normal + 9.9
+
+  # 5: Chain Lightning at once with 5 Maelstrom Weapon stacks (instant) on 2 or more enemies within 10 yd
+  - do: shaman tank mw chain lightning
+    when: known(421) and cooldown(421) == 0 and target_alive and stacks(self, 53817) >= 5 and enemies_within(10) >= 2
+    relevance: normal + 9.85
+
+  # 2: Earth Shock on cooldown (15 Stoneskin, high threat, taunts its target)
+  - do: shaman tank earth shock
+    when: known(8042) and cooldown(8042) == 0 and target_alive
+    relevance: normal + 9.8
+
+  # 4: Stormstrike, then Lava Lash, on cooldown (5 Stoneskin each)
+  - do: shaman tank stormstrike
+    when: known(17364) and cooldown(17364) == 0 and target_alive
+    relevance: normal + 9.7
+  - do: shaman tank lava lash
+    when: known(60103) and cooldown(60103) == 0 and target_alive
+    relevance: normal + 9.6
+
+  # Pulling 2 / 4: Chain Lightning on the next global cooldown for 2 or more enemies (1 Stoneskin per target), Magma
+  # Totem
+  # at the bot's feet on a pack for threat. Above the pack totem row of "shaman/totems-fire" (normal + 9.55), which
+  # drops it at the pack's center
+  - do: shaman tank magma totem
+    when: >-
+      pack3 and known(202268) and cooldown(202268) == 0 and mana(self) >= 30 and fire_slot_ok
+    relevance: normal + 9.56
+  - do: shaman tank chain lightning
+    when: known(421) and cooldown(421) == 0 and target_alive and enemies_within(10) >= 2
+    relevance: normal + 9.5
+
+  # 8: Flame Shock when missing on the target
+  - do: shaman tank flame shock
+    when: known(8050) and cooldown(8050) == 0 and target_alive and worth_fs and not aura(target, 8050, own)
+    relevance: normal + 9.3
+
+  # 5 (single target): the instant Lightning Bolt at 5 Maelstrom Weapon stacks, for threat at range or in melee
+  - do: shaman tank lightning bolt
+    when: known(403) and target_alive and stacks(self, 53817) >= 5
+    relevance: normal + 9.2
+
+  # 7: shield upkeep. The shield the bot has is kept at 3 charges or more; with none, Earth Shield on self (Lightning
+  # Shield with 3+ attackers on the bot, or without Earth Shield); never over another shield, and none at all while
+  # another shaman's Earth Shield is on the bot or a Restoration shaman is grouped (its Earth Shield wins)
+  - do: shaman tank earth shield self
+    when: >-
+      known(974) and not other_es and not mine_ls and not resto_around
+      and ((mine_es and charges(self, 974, own) <= 2)
+      or (not mine_es and value("my attacker count") < 3))
+    relevance: normal + 8.9
+  - do: shaman tank lightning shield
+    when: >-
+      known(324) and not aura(self, 974) and not resto_around
+      and ((mine_ls and charges(self, 324) <= 2)
+      or (not mine_ls and (value("my attacker count") >= 3 or not known(974))))
+    relevance: normal + 8.8
+
+  # 9: Lightning Bolt as filler at range
+  - do: shaman tank filler lightning bolt
+    when: target_alive and known(403) and out_of_melee and (not moving(self) or stacks(self, 53817) >= 5)
+    relevance: normal + 1
+---
+# Out of combat (appended to the shaman non-combat strategy of an Enhancement tank bot): Rockbiter and the shield. The
+# attunement is the stock C++ row ("shaman attunement missing"; the tank takes Earth with nothing else to choose).
+strategy: shaman/nc-enh-tank
+class: shaman
+conditions:
+  other_es: aura(self, 974) and not aura(self, 974, own)
+rows:
+  # Rockbiter Weapon, from level 1 (the value gives Rockbiter for a tank build and 0 while it is up)
+  - do: shaman nc imbue
+    when: value("shaman next imbue") != 0
+    relevance: high + 2
+
+  # Earth Shield on self by default, and kept at 3 charges or more; no shield at all while another shaman's Earth Shield
+  # is on the bot or a Restoration shaman is grouped (the healer's wins), never over a Lightning Shield. Lightning
+  # Shield only before Earth Shield is learned (level 25)
+  - do: shaman tank earth shield self
+    when: >-
+      known(974) and not other_es and not aura(self, 324) and not value("shaman resto shaman in group")
+      and (not aura(self, 974, own) or charges(self, 974, own) <= 2)
+    relevance: high
+  - do: shaman tank lightning shield
+    when: >-
+      known(324) and not aura(self, 974) and not known(974) and not value("shaman resto shaman in group")
+      and (not aura(self, 324) or charges(self, 324) <= 2)
+    relevance: high - 0.1

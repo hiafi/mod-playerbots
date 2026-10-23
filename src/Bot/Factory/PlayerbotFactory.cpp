@@ -35,6 +35,8 @@
 #include "RandomItemMgr.h"
 #include "RandomPlayerbotFactory.h"
 #include "ReputationMgr.h"
+#include "ShamanReworkIds.h"
+#include "ShamanReworkUtils.h"
 #include "SharedDefines.h"
 #include "StatsWeightCalculator.h"
 #include "SpellMgr.h"
@@ -1750,8 +1752,11 @@ uint32 PlayerbotFactory::InitTalentsTree(bool increment /*false*/, bool use_temp
         /// @todo: match current talent with template
         specTab = AiFactory::GetPlayerSpecTab(bot);
         /// @todo: fix cat druid hardcode
+        // Rework: the Enhancement tank keeps its link (slot 6) at any level
+        if (ai::shaman_rework::IsTankBuild(bot))
+            specTab = ai::shaman_rework::ENH_TANK_SPEC_SLOT;
         // Rework: Bestial Fury keeps the bear DPS link (slot 7) at any level
-        if (bot->getClass() == CLASS_DRUID && specTab == DRUID_TAB_FERAL && ai::druid_rework::IsBearDpsBuild(bot))
+        else if (bot->getClass() == CLASS_DRUID && specTab == DRUID_TAB_FERAL && ai::druid_rework::IsBearDpsBuild(bot))
             specTab = 7;
         else if (bot->getClass() == CLASS_DRUID && specTab == DRUID_TAB_FERAL && bot->GetLevel() >= 20)
         {
@@ -1811,7 +1816,8 @@ uint32 PlayerbotFactory::InitTalentsTree(bool increment /*false*/, bool use_temp
     if (bot->GetFreeTalentPoints())
         InitTalents((specTab + 2) % 3);
 
-    if (bot->getClass() == CLASS_SHAMAN && bot->HasSpell(SPELL_SHAMAN_DUAL_WIELD))
+    // Rework: Dual Wield is baseline (674); the talent spell is retired
+    if (bot->getClass() == CLASS_SHAMAN && ai::shaman_rework::KnowsDualWield(bot))
     {
         bot->SetSkill(SKILL_DUAL_WIELD, 0, 1, 1);
         bot->SetCanDualWield(true);
@@ -1897,7 +1903,8 @@ void PlayerbotFactory::InitTalentsBySpecNo(Player* bot, int specNo, bool reset)
         }
     }
 
-    if (bot->getClass() == CLASS_SHAMAN && bot->HasSpell(SPELL_SHAMAN_DUAL_WIELD))
+    // Rework: Dual Wield is baseline (674); the talent spell is retired
+    if (bot->getClass() == CLASS_SHAMAN && ai::shaman_rework::KnowsDualWield(bot))
     {
         bot->SetSkill(SKILL_DUAL_WIELD, 0, 1, 1);
         bot->SetCanDualWield(true);

@@ -26,23 +26,8 @@ void ElementalShamanStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
     GenericShamanStrategy::InitTriggers(triggers);
 
-    // Totem Triggers
-    triggers.push_back(
-        new TriggerNode(
-            "call of the elements",
-            {
-                NextAction("call of the elements", 60.0f)
-            }
-        )
-    );
-    triggers.push_back(
-        new TriggerNode(
-            "low health",
-            {
-                NextAction("stoneclaw totem", 40.0f)
-            }
-        )
-    );
+    // Rework: the stock Call of the Elements (66842-66844) and Stoneclaw Totem (5730) rows are gone, both spells are
+    // retired. The creators "ele" and "caster" build ShamanReworkEleStrategy now; this class is kept, unregistered.
 
     // Cooldown Trigger
     triggers.push_back(

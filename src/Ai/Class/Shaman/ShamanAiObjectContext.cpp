@@ -5,12 +5,16 @@
  */
 
 #include "ShamanAiObjectContext.h"
+#include "AiFactory.h"
 #include "ElementalShamanStrategy.h"
 #include "EnhancementShamanStrategy.h"
 #include "GenericShamanStrategy.h"
 #include "NamedObjectContext.h"
 #include "Playerbots.h"
+#include "PullStrategy.h"
 #include "RestoShamanStrategy.h"
+#include "ShamanReworkContext.h"
+#include "ShamanReworkIds.h"
 #include "ShamanActions.h"
 #include "ShamanNonCombatStrategy.h"
 #include "ShamanTriggers.h"
@@ -26,14 +30,19 @@ public:
         creators["cure"] = &ShamanStrategyFactoryInternal::cure;
         creators["healer dps"] = &ShamanStrategyFactoryInternal::healer_dps;
         creators["boost"] = &ShamanStrategyFactoryInternal::boost;
+        creators["pull"] = &ShamanStrategyFactoryInternal::pull;
     }
 
 private:
     static Strategy* nc(PlayerbotAI* botAI) { return new ShamanNonCombatStrategy(botAI); }
-    static Strategy* aoe(PlayerbotAI* botAI) { return new ShamanAoeStrategy(botAI); }
+    // Rework: the Elemental pack rows are in its YAML; the other specs keep the stock rows
+    static Strategy* aoe(PlayerbotAI* botAI) { return new ShamanReworkAoeStrategy(botAI); }
     static Strategy* cure(PlayerbotAI* botAI) { return new ShamanCureStrategy(botAI); }
-    static Strategy* healer_dps(PlayerbotAI* botAI) { return new ShamanHealerDpsStrategy(botAI); }
-    static Strategy* boost(PlayerbotAI* botAI) { return new ShamanBoostStrategy(botAI); }
+    // Rework: the idle Lightning Bolt of a healer (the stock Flame Shock and Lava Burst rows are retired)
+    static Strategy* healer_dps(PlayerbotAI* botAI) { return new ShamanReworkHealerDpsStrategy(botAI); }
+    static Strategy* boost(PlayerbotAI* botAI) { return new ShamanReworkBoostStrategy(botAI); }
+    // Rework: the Enhancement tank pulls with Earth Shock (it taunts under Rockbiter); no other shaman is a tank
+    static Strategy* pull(PlayerbotAI* botAI) { return new PullStrategy(botAI, "earth shock"); }
 };
 
 class ShamanCombatStrategyFactoryInternal : public NamedObjectContext<Strategy>
@@ -44,7 +53,7 @@ public:
         creators["heal"] = &ShamanCombatStrategyFactoryInternal::resto;
         creators["melee"] = &ShamanCombatStrategyFactoryInternal::enh;
         creators["dps"] = &ShamanCombatStrategyFactoryInternal::enh;
-        creators["caster"] = &ShamanCombatStrategyFactoryInternal::ele;
+        creators["caster"] = &ShamanCombatStrategyFactoryInternal::caster;
         //creators["offheal"] = &ShamanCombatStrategyFactoryInternal::offheal;
         creators["resto"] = &ShamanCombatStrategyFactoryInternal::resto;
         creators["enh"] = &ShamanCombatStrategyFactoryInternal::enh;
@@ -52,9 +61,27 @@ public:
     }
 
 private:
-    static Strategy* resto(PlayerbotAI* botAI) { return new RestoShamanStrategy(botAI); }
-    static Strategy* enh(PlayerbotAI* botAI) { return new EnhancementShamanStrategy(botAI); }
-    static Strategy* ele(PlayerbotAI* botAI) { return new ElementalShamanStrategy(botAI); }
+    // Rework: "resto" and "heal" build the Restoration rotation (the stock RestoShamanStrategy is kept, unregistered)
+    static Strategy* resto(PlayerbotAI* botAI) { return new ShamanReworkRestoStrategy(botAI); }
+    // Rework: "enh", "melee" and "dps" build the Enhancement rotation, the tank's for the Rockbiter build (the stock
+    // EnhancementShamanStrategy is kept, unregistered)
+    static Strategy* enh(PlayerbotAI* botAI)
+    {
+        if (ai::shaman_rework::IsTankBuild(botAI->GetBot()))
+            return new ShamanReworkEnhTankStrategy(botAI);
+
+        return new ShamanReworkEnhStrategy(botAI);
+    }
+    static Strategy* ele(PlayerbotAI* botAI) { return new ShamanReworkEleStrategy(botAI); }
+    // Rework: AiFactory gives a solo Restoration bot "caster"; it keeps its heal rows (the bot is its own group) and
+    // the solo damage comes from "healer dps"
+    static Strategy* caster(PlayerbotAI* botAI)
+    {
+        if (AiFactory::GetPlayerSpecTab(botAI->GetBot()) == SHAMAN_TAB_RESTORATION)
+            return new ShamanReworkRestoStrategy(botAI);
+
+        return new ShamanReworkEleStrategy(botAI);
+    }
 };
 
 class ShamanEarthTotemStrategyFactoryInternal : public NamedObjectContext<Strategy>
@@ -69,8 +96,13 @@ public:
     }
 
 private:
-    static Strategy* strength_of_earth_totem(PlayerbotAI* botAI) { return new StrengthOfEarthTotemStrategy(botAI); }
-    static Strategy* stoneskin_totem(PlayerbotAI* botAI) { return new StoneskinTotemStrategy(botAI); }
+    // Rework: the stock totem strategies AiFactory adds name retired totems. "stoneskin" and "strength of earth" stand
+    // for the shaman rework's utility totems (one strategy), the other names AiFactory adds for an element are empty
+    static Strategy* strength_of_earth_totem(PlayerbotAI* botAI)
+    {
+        return new ShamanReworkTotemsStrategy(botAI, "strength of earth");
+    }
+    static Strategy* stoneskin_totem(PlayerbotAI* botAI) { return new ShamanReworkTotemsStrategy(botAI, "stoneskin"); }
     static Strategy* earth_totem(PlayerbotAI* botAI) { return new EarthTotemStrategy(botAI); }
     static Strategy* earthbind_totem(PlayerbotAI* botAI) { return new EarthbindTotemStrategy(botAI); }
 };
@@ -89,9 +121,18 @@ public:
 
 private:
     static Strategy* searing_totem(PlayerbotAI* botAI) { return new SearingTotemStrategy(botAI); }
-    static Strategy* magma_totem(PlayerbotAI* botAI) { return new MagmaTotemStrategy(botAI); }
-    static Strategy* flametongue_totem(PlayerbotAI* botAI) { return new FlametongueTotemStrategy(botAI); }
-    static Strategy* totem_of_wrath(PlayerbotAI* botAI) { return new TotemOfWrathStrategy(botAI); }
+    static Strategy* magma_totem(PlayerbotAI* botAI)
+    {
+        return new ShamanReworkNoTotemStrategy(botAI, "magma");
+    }
+    static Strategy* flametongue_totem(PlayerbotAI* botAI)
+    {
+        return new ShamanReworkNoTotemStrategy(botAI, "flametongue");
+    }
+    static Strategy* totem_of_wrath(PlayerbotAI* botAI)
+    {
+        return new ShamanReworkNoTotemStrategy(botAI, "wrath");
+    }
     static Strategy* frost_resistance_totem(PlayerbotAI* botAI) { return new FrostResistanceTotemStrategy(botAI); }
 };
 
@@ -107,8 +148,14 @@ public:
     }
 
 private:
-    static Strategy* healing_stream_totem(PlayerbotAI* botAI) { return new HealingStreamTotemStrategy(botAI); }
-    static Strategy* mana_spring_totem(PlayerbotAI* botAI) { return new ManaSpringTotemStrategy(botAI); }
+    static Strategy* healing_stream_totem(PlayerbotAI* botAI)
+    {
+        return new ShamanReworkNoTotemStrategy(botAI, "healing stream");
+    }
+    static Strategy* mana_spring_totem(PlayerbotAI* botAI)
+    {
+        return new ShamanReworkNoTotemStrategy(botAI, "mana spring");
+    }
     static Strategy* cleansing_totem(PlayerbotAI* botAI) { return new CleansingTotemStrategy(botAI); }
     static Strategy* fire_resistance_totem(PlayerbotAI* botAI) { return new FireResistanceTotemStrategy(botAI); }
 };
@@ -125,8 +172,14 @@ public:
     }
 
 private:
-    static Strategy* wrath_of_air_totem(PlayerbotAI* botAI) { return new WrathOfAirTotemStrategy(botAI); }
-    static Strategy* windfury_totem(PlayerbotAI* botAI) { return new WindfuryTotemStrategy(botAI); }
+    static Strategy* wrath_of_air_totem(PlayerbotAI* botAI)
+    {
+        return new ShamanReworkNoTotemStrategy(botAI, "wrath of air");
+    }
+    static Strategy* windfury_totem(PlayerbotAI* botAI)
+    {
+        return new ShamanReworkNoTotemStrategy(botAI, "windfury");
+    }
     static Strategy* nature_resistance_totem(PlayerbotAI* botAI) { return new NatureResistanceTotemStrategy(botAI); }
     static Strategy* grounding_totem(PlayerbotAI* botAI) { return new GroundingTotemStrategy(botAI); }
 };
@@ -214,8 +267,15 @@ private:
     static Trigger* water_walking_on_party(PlayerbotAI* botAI) { return new WaterWalkingOnPartyTrigger(botAI); }
     static Trigger* wind_shear(PlayerbotAI* botAI) { return new WindShearInterruptSpellTrigger(botAI); }
     static Trigger* purge(PlayerbotAI* botAI) { return new PurgeTrigger(botAI); }
-    static Trigger* main_hand_weapon_no_imbue(PlayerbotAI* botAI) { return new MainHandWeaponNoImbueTrigger(botAI); }
-    static Trigger* off_hand_weapon_no_imbue(PlayerbotAI* botAI) { return new OffHandWeaponNoImbueTrigger(botAI); }
+    // Rework: the imbues are auras, so the stock weapon-enchant tests are always true
+    static Trigger* main_hand_weapon_no_imbue(PlayerbotAI* botAI)
+    {
+        return new ShamanImbueMissingTrigger(botAI, "main hand weapon no imbue");
+    }
+    static Trigger* off_hand_weapon_no_imbue(PlayerbotAI* botAI)
+    {
+        return new ShamanImbueMissingTrigger(botAI, "off hand weapon no imbue");
+    }
     static Trigger* water_shield(PlayerbotAI* botAI) { return new WaterShieldTrigger(botAI); }
     static Trigger* lightning_shield(PlayerbotAI* botAI) { return new LightningShieldTrigger(botAI); }
     static Trigger* shock(PlayerbotAI* botAI) { return new ShockTrigger(botAI); }
@@ -231,7 +291,8 @@ private:
     static Trigger* maelstrom_weapon_5_and_medium_aoe(PlayerbotAI* botAI) { return new MaelstromWeapon5AndMediumAoeTrigger(botAI); }
     static Trigger* maelstrom_weapon_4_and_medium_aoe(PlayerbotAI* botAI) { return new MaelstromWeapon4AndMediumAoeTrigger(botAI); }
     static Trigger* call_of_the_elements(PlayerbotAI* botAI) { return new CallOfTheElementsTrigger(botAI); }
-    static Trigger* totemic_recall(PlayerbotAI* botAI) { return new TotemicRecallTrigger(botAI); }
+    // Rework: never recall while an elemental is out
+    static Trigger* totemic_recall(PlayerbotAI* botAI) { return new ShamanTotemicRecallTrigger(botAI); }
     static Trigger* no_earth_totem(PlayerbotAI* botAI) { return new NoEarthTotemTrigger(botAI); }
     static Trigger* no_fire_totem(PlayerbotAI* botAI) { return new NoFireTotemTrigger(botAI); }
     static Trigger* no_water_totem(PlayerbotAI* botAI) { return new NoWaterTotemTrigger(botAI); }
@@ -372,12 +433,31 @@ private:
     static Action* lightning_shield(PlayerbotAI* botAI) { return new CastLightningShieldAction(botAI); }
     static Action* fire_nova(PlayerbotAI* botAI) { return new CastFireNovaAction(botAI); }
     static Action* wind_shear(PlayerbotAI* botAI) { return new CastWindShearAction(botAI); }
-    static Action* rockbiter_weapon_main_hand(PlayerbotAI* botAI) { return new CastRockbiterWeaponMainHandAction(botAI); }
-    static Action* flametongue_weapon_main_hand(PlayerbotAI* botAI) { return new CastFlametongueWeaponMainHandAction(botAI); }
-    static Action* flametongue_weapon_off_hand(PlayerbotAI* botAI) { return new CastFlametongueWeaponOffHandAction(botAI); }
+    // Rework: the imbues are self auras cast by id (the stock actions enchant an item)
+    static Action* rockbiter_weapon_main_hand(PlayerbotAI* botAI)
+    {
+        return new ShamanImbueAction(botAI, "rockbiter weapon main hand", ai::shaman_rework::SPELL_ROCKBITER_WEAPON);
+    }
+    static Action* flametongue_weapon_main_hand(PlayerbotAI* botAI)
+    {
+        return new ShamanImbueAction(botAI, "flametongue weapon main hand",
+                                     ai::shaman_rework::SPELL_FLAMETONGUE_WEAPON);
+    }
+    static Action* flametongue_weapon_off_hand(PlayerbotAI* botAI)
+    {
+        return new ShamanImbueAction(botAI, "flametongue weapon off hand",
+                                     ai::shaman_rework::SPELL_FLAMETONGUE_WEAPON);
+    }
     // static Action* frostbrand_weapon_off_hand(PlayerbotAI* botAI) { return new CastFrostbrandWeaponOffHandAction(botAI); }
-    static Action* earthliving_weapon_main_hand(PlayerbotAI* botAI) { return new CastEarthlivingWeaponMainHandAction(botAI); }
-    static Action* windfury_weapon_main_hand(PlayerbotAI* botAI) { return new CastWindfuryWeaponMainHandAction(botAI); }
+    static Action* earthliving_weapon_main_hand(PlayerbotAI* botAI)
+    {
+        return new ShamanImbueAction(botAI, "earthliving weapon main hand",
+                                     ai::shaman_rework::SPELL_EARTHLIVING_WEAPON);
+    }
+    static Action* windfury_weapon_main_hand(PlayerbotAI* botAI)
+    {
+        return new ShamanImbueAction(botAI, "windfury weapon main hand", ai::shaman_rework::SPELL_WINDFURY_WEAPON);
+    }
     static Action* purge(PlayerbotAI* botAI) { return new CastPurgeAction(botAI); }
     static Action* healing_wave(PlayerbotAI* botAI) { return new CastHealingWaveAction(botAI); }
     static Action* lesser_healing_wave(PlayerbotAI* botAI) { return new CastLesserHealingWaveAction(botAI); }
@@ -474,15 +554,18 @@ void ShamanAiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextLi
 {
     AiObjectContext::BuildSharedActionContexts(actionContexts);
     actionContexts.Add(new ShamanAiObjectContextInternal());
+    actionContexts.Add(new ShamanReworkActionFactory());
 }
 
 void ShamanAiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextList<Trigger>& triggerContexts)
 {
     AiObjectContext::BuildSharedTriggerContexts(triggerContexts);
     triggerContexts.Add(new ShamanATriggerFactoryInternal());
+    triggerContexts.Add(new ShamanReworkTriggerFactory());
 }
 
 void ShamanAiObjectContext::BuildSharedValueContexts(SharedNamedObjectContextList<UntypedValue>& valueContexts)
 {
     AiObjectContext::BuildSharedValueContexts(valueContexts);
+    valueContexts.Add(new ShamanReworkValueFactory());
 }

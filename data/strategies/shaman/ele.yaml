@@ -1,0 +1,215 @@
+# The reworked Elemental shaman's rotation: "shaman/ele", appended (after the interrupt and dispel rows) to the "ele"
+# combat strategy by ShamanReworkEleStrategy::InitTriggers. Source: the Elemental bot guide
+# (docs/reworks/bot-strategy/shaman-elemental-bot-guide.md; the rework doc wins).
+# Each row queues its action at the relevance when its condition holds (`when`, the expression language of
+# StrategyExpression.h) or when an existing C++ trigger fires (`trigger`). Execution order is by relevance, not by
+# position in this file. Every action is a RowCheckedAction (it re-checks its own row before casting) except the stock
+# Water Shield. The rotation sits below 20, so Wind Shear (23, stock) and the reach-spell move (20) stay above it.
+# Single target and pack are two mutually exclusive row sets: `single` and `pack` (the guide's Packs list needs the
+# "aoe" strategy on; `co -aoe` turns it off). Rows that can fire together never share an action name (they would
+# merge into one basket and only the first row would be re-checked): each pack row has its own "shaman pack ..." name.
+# While the next elemental is ready but unaffordable (`pooling`), the rows that spend mana wait for the summon;
+# Icefury's Frost Shock refunds mana and Thunderstorm makes it, so they keep running.
+# Every row is `known()`-gated, so a bot below 60 plays the guide's leveling table with what it has learned.
+# Spell ids (DBC names): Lightning Bolt 403, Chain Lightning 421, Fire Nova 1535, Earth Shock 8042, Flame Shock 8050
+# (the DoT carries the same id), Frost Shock 8056, Lava Burst 51505, Thunderstorm 51490, Elemental
+# Mastery 16166, Bloodlust 2825, Heroism 32182, Call of the Elements 202531, Earthquake 202280, Elemental Blast 202282,
+# Water / Storm Elemental totems 202272 / 202273.
+# Auras on the bot (ShamanData.h names): Gathering Flames 202564 (Fire window), Booming Echo 202565 (Echo, stacks),
+# Icefury 202566 (charges), Lava Surge 202569, Unrelenting Storm ready 202571 (3 stacks, Chain Lightning next), debuff
+# 202572 (on the target), Rising Flames 202583 (stacks to 5). Elemental Mastery's instant-and-free aura is 16166 itself.
+# Talent rank ids (known() on a passive talent): Booming Echoes capstone 202535, Icefury 202528, Rising Flames capstone
+# 16544.
+strategy: shaman/ele
+class: shaman
+conditions:
+  # Three or more enemies around the target and the "aoe" strategy on (the guide's Packs list)
+  pack: value("shaman aoe enabled") and alive(target) and enemies_near_target(8) >= 3
+  single: alive(target) and not pack
+  target_alive: alive(target)
+  # The windows: the active elemental's totem is out
+  storm_window: value("shaman elemental time left::storm") > 0
+  earth_window: value("shaman elemental time left::earth") > 0
+  # The Earth window is about to end: 3 s or less on the Earth Elemental's totem. The Earth Empowerment aura 202560
+  # cannot tell (it is permanent while the totem stands), the totem's time left is the live clock.
+  earth_ending: >-
+    value("shaman elemental time left::earth") > 0 and value("shaman elemental time left::earth") <= 3000
+  # The next elemental is ready but the bar cannot pay for it: the mana-spending rows wait (the summon is above them)
+  pooling: value("shaman summon pooling")
+  # Fire refresh moment: the Fire Elemental has 3 s or less left and Gathering Flames is 4 or more
+  fire_refresh: >-
+    value("shaman elemental time left::fire") > 0 and value("shaman elemental time left::fire") <= 3000
+    and stacks(self, 202564) >= 4
+  # Lightning Bolt and Chain Lightning need a standing bot or Elemental Mastery's instant cast; Lava Burst also takes
+  # Lava Surge
+  lightning_ok: not moving(self) or aura(self, 16166)
+  lava_ok: not moving(self) or aura(self, "202569,16166")
+  # Thunderstorm's cooldown (one rank; Call of Thunder's capstone doubles its mana restore, 10% to 20%)
+  ts_ready: known(51490) and cooldown(51490) == 0
+  # Flame Shock is worth casting on a target that lives, and only when it is missing (or at the Fire refresh moment)
+  fs_wanted: >-
+    known(8050) and cooldown(8050) == 0 and (boss(target) or elite(target) or lifetime(target) > 8)
+    and (not aura(target, 8050, own) or fire_refresh)
+rows:
+  # Water Shield (stock trigger and action)
+  - do: water shield
+    trigger: water shield
+    relevance: normal + 9.95
+
+  # Guide off-GCD 2: Elemental Mastery when the Storm window is active, or when it will not start within 15 s (so it is
+  # held at most 15 s; open question 5). The instant cast goes to Lava Burst, or Lightning Bolt in the Storm window
+  - do: shaman elemental mastery
+    when: >-
+      known(16166) and cooldown(16166) == 0 and target_alive
+      and (storm_window or not value("shaman storm window soon"))
+    relevance: high + 1
+
+  # Single target 2: Call of the Elements with Bloodlust or Heroism, or within 5 s of pulling a boss. Above the
+  # summon, so a boss pull gets all four before the cycle starts (the call starts neither timer)
+  - do: shaman call of the elements
+    when: >-
+      known(202531) and cooldown(202531) == 0 and target_alive
+      and (aura(self, "2825,32182") or (boss(target) and combat_time() < 5000))
+    relevance: normal + 9.9
+
+  # Single target 1 / Packs 1: summon the next elemental (Water, Storm, Fire, Earth after the last one) when its own
+  # cooldown, the shared lockout included, is over. The value skips unknown elementals, and the Earth Elemental in a
+  # group with a tank (it taunts) unless Power of the Elements removes the taunt; it is not ready while its element
+  # is out
+  - do: shaman summon elemental
+    when: value("shaman elemental ready")
+    relevance: normal + 9.8
+
+  # ---- Single target ----
+  # 3: Flame Shock when missing on the target, or at the Fire refresh moment (never earlier in the Fire window)
+  - do: shaman flame shock
+    when: not pooling and single and fs_wanted
+    relevance: normal + 9.6
+
+  # Elemental Mastery's instant cast goes to Lightning Bolt in the Storm window (the empowered spell; RC-E 7.12), and
+  # whenever Lava Burst is on cooldown (or not learned yet), so the charge is not left to the filler at the bottom
+  - do: shaman mastery lightning bolt
+    when: >-
+      not pooling and single and known(403) and aura(self, 16166)
+      and (storm_window or not known(51505) or cooldown(51505) > 0)
+    relevance: normal + 9.5
+
+  # 4: Lava Burst on cooldown; at once with Lava Surge (the surge resets the cooldown), instant on the move
+  - do: shaman lava burst
+    when: not pooling and single and known(51505) and cooldown(51505) == 0 and lava_ok
+    relevance: normal + 9.4
+
+  # 5: Earthquake at the target on cooldown when it has not moved in the last 2 s. Its 1.5 s cast and ground target
+  # need a bot that stands; the ground action refuses it without the mana, so the rows below keep running
+  - do: shaman earthquake
+    when: >-
+      not pooling and single and known(202280) and cooldown(202280) == 0 and not moving(self)
+      and value("target stationary ms") >= 2000 and value("unsafe aoe units::8") == 0
+    relevance: normal + 9.3
+
+  # 6: Elemental Blast on cooldown (instant); Elemental Precision's reset shows as a ready cooldown
+  - do: shaman elemental blast
+    when: not pooling and single and known(202282) and cooldown(202282) == 0
+    relevance: normal + 9.2
+
+  # 7: Frost Shock while Icefury has a charge (instant). A cast with a charge starts no cooldown, but a cooldown that is
+  # already running still blocks it, so the row checks it
+  - do: shaman frost shock
+    when: single and known(8056) and cooldown(8056) == 0 and charges(self, 202566) >= 1
+    relevance: normal + 9.1
+
+  # 8: Earth Shock in the Earth window at 4 or more Echo (it spends half, and the summon grants 5), or in the window's
+  # last 3 s with at least 1 Echo; outside the window at 10 Echo, or at 5 Echo about to expire
+  - do: shaman earth shock
+    when: >-
+      not pooling and single and known(8042) and cooldown(8042) == 0
+      and ((earth_window and (stacks(self, 202565) >= 4 or (earth_ending and stacks(self, 202565) >= 1)))
+      or stacks(self, 202565) >= 10 or (stacks(self, 202565) >= 5 and remaining(self, 202565) <= 3000))
+    relevance: normal + 9.0
+
+  # 9: Chain Lightning at 3 Unrelenting Storm stacks when the target lacks my debuff or it has 2 s or less left
+  - do: shaman chain lightning
+    when: >-
+      not pooling and single and known(421) and cooldown(421) == 0 and aura(self, 202571) and lightning_ok
+      and (not aura(target, 202572, own) or remaining(target, 202572, own) <= 2000)
+    relevance: normal + 8.9
+
+  # Leveling (no Booming Echoes capstone, no Icefury): the shocks on cooldown, Lightning Bolt the filler
+  - do: shaman leveling earth shock
+    when: not pooling and target_alive and known(8042) and not known(202535) and cooldown(8042) == 0
+    relevance: normal + 7.6
+  - do: shaman leveling frost shock
+    when: not pooling and target_alive and known(8056) and not known(202528) and cooldown(8056) == 0
+    relevance: normal + 7.5
+
+  # 10: Thunderstorm for mana when it is below 80% and nothing it would knock back is within 10 yd of the bot (bosses,
+  # knockback-immune units, giants and rooted units stay where they are, so they do not hold it)
+  - do: shaman thunderstorm
+    when: >-
+      single and ts_ready and mana(self) < 80 and value("shaman knockable enemies within::10") == 0
+      and value("unsafe aoe units::10;self") == 0
+    relevance: normal + 7.0
+
+  # ---- Packs (3 or more enemies around the target) ----
+  # 2: Earthquake at the pack's center on cooldown when it has not moved in the last 2 s
+  - do: shaman pack earthquake
+    when: >-
+      not pooling and pack and known(202280) and cooldown(202280) == 0 and not moving(self)
+      and value("target stationary ms") >= 2000
+      and value("unsafe aoe units::8;cluster") == 0
+    relevance: normal + 9.7
+
+  # 3: Magma Totem at the pack's center is in "shaman/totems-fire" (it shares the Fire slot with the Fire Elemental)
+
+  # 4: Fire Nova from the Fire slot's totem or the Fire Elemental at 5 Rising Flames, or on cooldown without the
+  # capstone. The action wants the source within 8 yd of the target
+  - do: shaman fire nova
+    when: >-
+      not pooling and pack and known(1535) and cooldown(1535) == 0 and value("shaman totem active::fire")
+      and (not known(16544) or stacks(self, 202583) >= 5) and value("unsafe aoe units::8") == 0
+    relevance: normal + 9.5
+
+  # 5: Chain Lightning on cooldown (the Unrelenting Storm stacks come with it)
+  - do: shaman pack chain lightning
+    when: >-
+      not pooling and pack and known(421) and cooldown(421) == 0 and lightning_ok and value("unsafe aoe units::10") == 0
+    relevance: normal + 9.45
+
+  # 6: Flame Shock on the primary target when missing, then Lava Burst on cooldown
+  - do: shaman pack flame shock
+    when: not pooling and pack and fs_wanted
+    relevance: normal + 8.8
+  - do: shaman pack lava burst
+    when: not pooling and pack and known(51505) and cooldown(51505) == 0 and lava_ok
+    relevance: normal + 8.7
+
+  # 7: Elemental Blast on cooldown, then Frost Shock with Icefury on a different target than the last (or 4 s on)
+  - do: shaman pack elemental blast
+    when: not pooling and pack and known(202282) and cooldown(202282) == 0
+    relevance: normal + 8.6
+  - do: shaman pack frost shock
+    when: >-
+      pack and known(8056) and cooldown(8056) == 0 and charges(self, 202566) >= 1
+      and (not value("target is last target of::8056") or ms_since_cast(8056) > 4000)
+    relevance: normal + 8.5
+
+  # 8: Earth Shock at 10 Echo
+  - do: shaman pack earth shock
+    when: not pooling and pack and known(8042) and cooldown(8042) == 0 and stacks(self, 202565) >= 10
+    relevance: normal + 8.4
+
+  # 9: Thunderstorm when stacked on the bot (a peel: 2 or more enemies within 10 yd and something attacking the bot), or
+  # for mana when no enemy is within 10 yd. Never when the tank holds the pack within 10 yd of the bot: "has aggro"
+  # reads true when a tank holds the target, so "something attacks the bot" stands in for "stacked on the bot"
+  - do: shaman pack thunderstorm
+    when: >-
+      pack and ts_ready and ((enemies_within(10) >= 2 and value("my attacker count") >= 1
+      and value("unsafe aoe units::10;self") == 0) or (mana(self) < 80
+      and value("shaman knockable enemies within::10") == 0 and value("unsafe aoe units::10;self") == 0))
+    relevance: normal + 8.3
+
+  # ---- Both ----
+  # 11 / 10: Lightning Bolt as the filler (the default action covers the rest)
+  - do: shaman lightning bolt
+    when: not pooling and target_alive and known(403) and lightning_ok
+    relevance: normal + 1
