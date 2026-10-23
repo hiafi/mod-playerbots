@@ -104,7 +104,7 @@ constexpr uint32 NPC_MAGMA_TOTEM = 300277;  // ... after Magma Totem
 constexpr uint32 SPELL_DUAL_WIELD_BASELINE = 674;
 constexpr uint32 SPELL_DUAL_WIELD_RETIRED_TALENT = 30798;
 
-// The premade spec slot of the Enhancement tank (AiPlayerbot.PremadeSpecLink.7.6): a bot that has not bought Living
+// The premade spec slot of the Enhancement tank (Playerbots.PremadeSpecLink.7.6): a bot that has not bought Living
 // Earth yet (it is the 21st point, bought at level 30) is marked by the slot. RandomPlayerbotMgr stores slot + 1 under
 // "specNo".
 constexpr uint32 ENH_TANK_SPEC_SLOT = 6;

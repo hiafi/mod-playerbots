@@ -199,7 +199,7 @@ bool CastSpellAction::isUseful()
         return false;
 
     // float combatReach = bot->GetCombatReach() + target->GetCombatReach();
-    // if (!botAI->IsRanged(bot))
+    // if (!PlayerbotAI::IsRanged(bot))
     //     combatReach += 4.0f / 3.0f;
 
     return AI_VALUE2(bool, "spell cast useful", spell);
@@ -210,7 +210,7 @@ bool CastSpellAction::isPossible()
 {
     if (botAI->IsInVehicle() && !botAI->IsInVehicle(false, false, true))
     {
-        if (!sPlayerbotAIConfig.logInGroupOnly || (bot->GetGroup() && botAI->HasGameClientMaster()))
+        if (!sPlayerbotAIConfig.LogInGroupOnly || (bot->GetGroup() && botAI->HasGameClientMaster()))
             LOG_DEBUG("playerbots", "Can cast spell failed. Vehicle. - bot name: {}", bot->GetName());
 
         return false;
@@ -221,7 +221,7 @@ bool CastSpellAction::isPossible()
 
     if (spell == "mount" && bot->IsInCombat())
     {
-        if (!sPlayerbotAIConfig.logInGroupOnly || (bot->GetGroup() && botAI->HasGameClientMaster()))
+        if (!sPlayerbotAIConfig.LogInGroupOnly || (bot->GetGroup() && botAI->HasGameClientMaster()))
             LOG_DEBUG("playerbots", "Can cast spell failed. Mount. - bot name: {}", bot->GetName());
 
         bot->Dismount();
@@ -525,8 +525,8 @@ bool UseTrinketAction::UseTrinket(Item* item)
     if (bot->CanUseItem(item) != EQUIP_ERR_OK || bot->IsNonMeleeSpellCast(true))
         return false;
 
-    // AiPlayerbot.BotGlyphs = 0: a glyph item would apply into slot 0 through the use packet
-    if (!sPlayerbotAIConfig.botGlyphs && item->GetTemplate()->Class == ITEM_CLASS_GLYPH)
+    // Playerbots.BotGlyphs = 0: a glyph item would apply into slot 0 through the use packet
+    if (!sPlayerbotAIConfig.BotGlyphs && item->GetTemplate()->Class == ITEM_CLASS_GLYPH)
         return false;
 
     uint8 bagIndex = item->GetBagSlot();
@@ -605,8 +605,8 @@ bool UseTrinketAction::UseTrinket(Item* item)
                     return false;
 
                 uint8 const manaPct = AI_VALUE2(uint8, "mana", "self target");
-                if ((restoresMana && manaPct >= sPlayerbotAIConfig.mediumMana) ||
-                    manaPct >= sPlayerbotAIConfig.highMana)
+                if ((restoresMana && manaPct >= sPlayerbotAIConfig.MediumMana) ||
+                    manaPct >= sPlayerbotAIConfig.HighMana)
                 {
                     return false;
                 }
@@ -615,7 +615,7 @@ bool UseTrinketAction::UseTrinket(Item* item)
             if (defensiveTankEffect)
             {
                 uint8 const healthPct = AI_VALUE2(uint8, "health", "self target");
-                if (healthPct > sPlayerbotAIConfig.lowHealth)
+                if (healthPct > sPlayerbotAIConfig.LowHealth)
                     return false;
             }
 
@@ -643,6 +643,8 @@ bool UseTrinketAction::UseTrinket(Item* item)
     targetFlag = TARGET_FLAG_NONE;
     packet << targetFlag << bot->GetPackGUID();
 
+    // HandleUseItemOpcode can destroy the trinket on its last charge.
+    uint32 const itemId = item->GetEntry();
     bot->GetSession()->HandleUseItemOpcode(packet);
 
     uint32 const now = getMSTime();
@@ -651,7 +653,7 @@ bool UseTrinketAction::UseTrinket(Item* item)
     {
         if (itemSpellCooldown > 0)
         {
-            uint64 const itemCooldownKey = (static_cast<uint64>(item->GetEntry()) << 32) | spellId;
+            uint64 const itemCooldownKey = (static_cast<uint64>(itemId) << 32) | spellId;
             trinketItemCooldownExpiries[itemCooldownKey] = now + static_cast<uint32>(itemSpellCooldown);
         }
 

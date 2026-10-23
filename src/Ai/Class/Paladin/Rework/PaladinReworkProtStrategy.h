@@ -11,7 +11,7 @@
 
 class PlayerbotAI;
 
-// The Protection rotation for the reworked paladin, registered as the "tank" combat strategy.
+// The Protection rotation for the reworked paladin, registered as the "prot" (alias "tank") combat strategy.
 class PaladinReworkProtStrategy : public CombatStrategy
 {
 public:
@@ -19,7 +19,7 @@ public:
 
     void InitTriggers(std::vector<TriggerNode*>& triggers) override;
     void InitMultipliers(std::vector<Multiplier*>& multipliers) override;
-    std::string const getName() override { return "tank"; }
+    std::string const getName() override { return "prot"; }
     std::vector<NextAction> getDefaultActions() override;
     uint32 GetType() const override { return STRATEGY_TYPE_TANK | STRATEGY_TYPE_MELEE; }
 };

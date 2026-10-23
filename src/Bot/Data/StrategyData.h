@@ -66,7 +66,7 @@ struct LoadResult
 // Parses and validates every *.yaml under path. No side effects: nothing is published.
 LoadResult LoadFromDisk(std::string const& path);
 
-// The configured data path, or the compiled-in default when AiPlayerbot.StrategyDataPath is empty.
+// The configured data path, or the compiled-in default when Playerbots.StrategyDataPath is empty.
 std::string ResolveDataPath();
 
 // Startup load: publishes whatever validated cleanly and logs the rest. Call after BuildAllSharedContexts.

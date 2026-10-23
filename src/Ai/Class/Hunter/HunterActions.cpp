@@ -51,7 +51,7 @@ Value<Unit*>* CastFreezingTrap::GetTargetValue()
 }
 
 // Hunter rework: the server pins happiness full, so there is nothing to feed
-bool FeedPetAction::isUseful() { return !sPlayerbotAIConfig.hunterRework; }
+bool FeedPetAction::isUseful() { return !sPlayerbotAIConfig.HunterRework; }
 
 std::string const CastKillCommandAction::GetTargetName()
 {
@@ -61,7 +61,7 @@ std::string const CastKillCommandAction::GetTargetName()
 bool CastKillCommandAction::isUseful()
 {
     // Hunter rework: outside Beast Mastery the bot skips Kill Command (B2 / B3 may revisit)
-    if (sPlayerbotAIConfig.hunterRework && !IsBeastMastery())
+    if (sPlayerbotAIConfig.HunterRework && !IsBeastMastery())
         return false;
 
     if (!ai::hunter_rework::IsKillCommandStrike())

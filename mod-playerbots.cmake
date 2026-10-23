@@ -20,7 +20,7 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/deps/fkYAML/fkYAML/node.hpp")
       PLAYERBOTS_HAS_FKYAML)
 endif()
 
-# Default location of the strategy data, used when AiPlayerbot.StrategyDataPath is empty.
+# Default location of the strategy data, used when Playerbots.StrategyDataPath is empty.
 target_compile_definitions(modules
   PRIVATE
     PLAYERBOTS_STRATEGY_DATA_DIR="${CMAKE_CURRENT_LIST_DIR}/data/strategies")

@@ -82,7 +82,7 @@ ObjectGuid AttackerWithoutAuraIdValue::CalculateGuid()
         return ObjectGuid::Empty;
 
     ObjectGuid const caster = query.owned ? bot->GetGUID() : ObjectGuid::Empty;
-    GuidSet const exclusions = GatherStrategyTargetExclusions(botAI, TargetValueExclusionType::Attacker);
+    GuidSet const exclusions = GatherStrategyTargetExclusions(botAI, TargetValueExclusionType::DebuffTarget);
     Unit* const target = query.skipTarget ? AI_VALUE(Unit*, "current target") : nullptr;
     ObjectGuid const currentTarget = target ? target->GetGUID() : ObjectGuid::Empty;
     Unit* best = nullptr;
@@ -138,7 +138,7 @@ ObjectGuid LowestHealthAttackerBelowValue::CalculateGuid()
     if (args.empty())
         return ObjectGuid::Empty;
 
-    GuidSet const exclusions = GatherStrategyTargetExclusions(botAI, TargetValueExclusionType::Attacker);
+    GuidSet const exclusions = GatherStrategyTargetExclusions(botAI, TargetValueExclusionType::DebuffTarget);
     Unit* lowest = nullptr;
     for (ObjectGuid const guid : AI_VALUE(GuidVector, "attackers"))
     {

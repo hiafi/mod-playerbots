@@ -732,8 +732,8 @@ std::string ConditionTriggerName(std::string const& key, size_t index)
 
 std::string ResolveDataPath()
 {
-    if (!sPlayerbotAIConfig.strategyDataPath.empty())
-        return sPlayerbotAIConfig.strategyDataPath;
+    if (!sPlayerbotAIConfig.StrategyDataPath.empty())
+        return sPlayerbotAIConfig.StrategyDataPath;
 
 #ifdef PLAYERBOTS_STRATEGY_DATA_DIR
     return PLAYERBOTS_STRATEGY_DATA_DIR;

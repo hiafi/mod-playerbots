@@ -105,6 +105,6 @@ void HunterCcStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 void HunterTrapWeaveStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
     // Hunter rework: Trap Launcher throws traps 30 yd, so walking into melee for one is wrong
-    if (!sPlayerbotAIConfig.hunterRework)
+    if (!sPlayerbotAIConfig.HunterRework)
         triggers.push_back(new TriggerNode("immolation trap no cd", { NextAction("reach melee", 23.0f) }));
 }

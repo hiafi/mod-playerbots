@@ -12,7 +12,7 @@
 class PlayerbotAI;
 
 // The Beast Mastery rotation for the reworked hunter: the generic hunter rows plus those of "hunter/bm"
-// (data/strategies/hunter/bm.yaml). Registered as "bm" when AiPlayerbot.HunterRework is on. No multipliers.
+// (data/strategies/hunter/bm.yaml). Registered as "bm" when Playerbots.HunterRework is on. No multipliers.
 class HunterReworkBmStrategy : public HunterReworkGenericStrategy
 {
 public:

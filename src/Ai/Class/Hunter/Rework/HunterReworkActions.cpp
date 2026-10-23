@@ -45,7 +45,7 @@ bool HunterStandOffAction::Execute(Event /*event*/)
 
 bool HunterPetAutocastAction::IsAutocastWanted(Pet* pet, SpellInfo const* spellInfo)
 {
-    if (!sPlayerbotAIConfig.hunterRework)
+    if (!sPlayerbotAIConfig.HunterRework)
         return TogglePetSpellAutoCastAction::IsAutocastWanted(pet, spellInfo);
 
     switch (spellInfo->Id)

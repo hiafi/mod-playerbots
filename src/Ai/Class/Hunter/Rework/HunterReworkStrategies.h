@@ -12,7 +12,7 @@
 
 class PlayerbotAI;
 
-// Registered as "bdps" when AiPlayerbot.HunterRework is on. A Beast Mastery bot gets the rows of "hunter/aspect-bm"
+// Registered as "bdps" when Playerbots.HunterRework is on. A Beast Mastery bot gets the rows of "hunter/aspect-bm"
 // (data/strategies/hunter/aspects.yaml), a Marksmanship bot those of "hunter/aspect-mm", a Survival bot those of
 // "hunter/aspect-sv"; a bot of no hunter spec keeps the stock strategy's own rows. The spec is read in InitTriggers so
 // a rebuilt strategy follows a respec. Runs in both engines.
@@ -24,7 +24,7 @@ public:
     void InitTriggers(std::vector<TriggerNode*>& triggers) override;
 };
 
-// Registered as "aoe" when AiPlayerbot.HunterRework is on. The reworked specs keep their pack rows in their own YAML
+// Registered as "aoe" when Playerbots.HunterRework is on. The reworked specs keep their pack rows in their own YAML
 // (a "pack" condition), so this adds nothing for Beast Mastery and Survival and only the stock Volley cancel for
 // Marksmanship; the stock Volley and Multi-Shot rows stay for a bot of no hunter spec. Still the toggle `co +aoe` /
 // `co -aoe`.

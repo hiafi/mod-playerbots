@@ -12,14 +12,15 @@
 class PlayerbotAI;
 
 // The Discipline heal rotation for the reworked priest: the healer base (movement, cure and no-reach multipliers, no
-// default action) plus the rows of "priest/disc" (data/strategies/priest/disc.yaml). Registered as "heal".
+// default action) plus the rows of "priest/disc" (data/strategies/priest/disc.yaml). Registered as "disc" (alias
+// "heal").
 class PriestReworkDiscStrategy : public PriestReworkHealerStrategy
 {
 public:
     PriestReworkDiscStrategy(PlayerbotAI* botAI) : PriestReworkHealerStrategy(botAI) {}
 
     void InitTriggers(std::vector<TriggerNode*>& triggers) override;
-    std::string const getName() override { return "heal"; }
+    std::string const getName() override { return "disc"; }
 };
 
 #endif
