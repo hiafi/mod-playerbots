@@ -29,7 +29,7 @@ void HunterPetStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("no pet", { NextAction("call pet", 60.0f) }));
     // Hunter rework: the pet autocast policy; the stock toggle otherwise
     triggers.push_back(new TriggerNode(
-        "has pet", { NextAction(sPlayerbotAIConfig.hunterRework ? "hunter toggle pet spell" : "toggle pet spell",
+        "has pet", { NextAction(sPlayerbotAIConfig.HunterRework ? "hunter toggle pet spell" : "toggle pet spell",
                                 60.0f) }));
     triggers.push_back(new TriggerNode("new pet", { NextAction("set pet stance", 60.0f) }));
     triggers.push_back(new TriggerNode("pet not happy", { NextAction("feed pet", 60.0f) }));

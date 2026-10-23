@@ -38,8 +38,8 @@ public:
         creators["surv"] = &HunterStrategyFactoryInternal::survival;
         creators["aoe"] = &HunterStrategyFactoryInternal::aoe;
 
-        // The reworked hunter's strategies replace the stock ones only with AiPlayerbot.HunterRework on
-        if (sPlayerbotAIConfig.hunterRework)
+        // The reworked hunter's strategies replace the stock ones only with Playerbots.HunterRework on
+        if (sPlayerbotAIConfig.HunterRework)
         {
             creators["bm"] = &HunterStrategyFactoryInternal::beast_mastery_rework;
             creators["mm"] = &HunterStrategyFactoryInternal::marksmanship_rework;
@@ -72,7 +72,7 @@ public:
         creators["bdps"] = &HunterBuffStrategyFactoryInternal::bdps;
         creators["rnature"] = &HunterBuffStrategyFactoryInternal::rnature;
 
-        if (sPlayerbotAIConfig.hunterRework)
+        if (sPlayerbotAIConfig.HunterRework)
             creators["bdps"] = &HunterBuffStrategyFactoryInternal::bdps_rework;
     }
 
@@ -109,8 +109,6 @@ public:
         creators["low ammo"] = &HunterTriggerFactoryInternal::low_ammo;
         creators["no ammo"] = &HunterTriggerFactoryInternal::no_ammo;
         creators["has ammo"] = &HunterTriggerFactoryInternal::has_ammo;
-        creators["switch to melee"] = &HunterTriggerFactoryInternal::switch_to_melee;
-        creators["switch to ranged"] = &HunterTriggerFactoryInternal::switch_to_ranged;
         creators["misdirection on main tank"] = &HunterTriggerFactoryInternal::misdirection_on_main_tank;
         creators["tranquilizing shot enrage"] = &HunterTriggerFactoryInternal::remove_enrage;
         creators["tranquilizing shot magic"] = &HunterTriggerFactoryInternal::remove_magic;
@@ -147,8 +145,6 @@ private:
     static Trigger* low_ammo(PlayerbotAI* botAI) { return new HunterLowAmmoTrigger(botAI); }
     static Trigger* no_ammo(PlayerbotAI* botAI) { return new HunterNoAmmoTrigger(botAI); }
     static Trigger* has_ammo(PlayerbotAI* botAI) { return new HunterHasAmmoTrigger(botAI); }
-    static Trigger* switch_to_melee(PlayerbotAI* botAI) { return new SwitchToMeleeTrigger(botAI); }
-    static Trigger* switch_to_ranged(PlayerbotAI* botAI) { return new SwitchToRangedTrigger(botAI); }
     static Trigger* misdirection_on_main_tank(PlayerbotAI* botAI) { return new MisdirectionOnMainTankTrigger(botAI); }
     static Trigger* remove_enrage(PlayerbotAI* botAI) { return new TargetRemoveEnrageTrigger(botAI); }
     static Trigger* remove_magic(PlayerbotAI* botAI) { return new TargetRemoveMagicTrigger(botAI); }

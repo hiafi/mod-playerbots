@@ -11,14 +11,14 @@
 
 class PlayerbotAI;
 
-// The Retribution rotation for the reworked paladin, registered as the "dps" combat strategy.
+// The Retribution rotation for the reworked paladin, registered as the "ret" (alias "dps") combat strategy.
 class PaladinReworkRetStrategy : public CombatStrategy
 {
 public:
     PaladinReworkRetStrategy(PlayerbotAI* botAI) : CombatStrategy(botAI) {}
 
     void InitTriggers(std::vector<TriggerNode*>& triggers) override;
-    std::string const getName() override { return "dps"; }
+    std::string const getName() override { return "ret"; }
     std::vector<NextAction> getDefaultActions() override;
     uint32 GetType() const override { return STRATEGY_TYPE_COMBAT | STRATEGY_TYPE_DPS | STRATEGY_TYPE_MELEE; }
 };

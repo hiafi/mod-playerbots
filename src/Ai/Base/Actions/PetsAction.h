@@ -28,7 +28,10 @@ private:
 class TogglePetSpellAutoCastAction : public Action
 {
 public:
-    TogglePetSpellAutoCastAction(PlayerbotAI* ai, std::string const name = "toggle pet spell") : Action(ai, name) {}
+    TogglePetSpellAutoCastAction(PlayerbotAI* botAI, std::string const name = "toggle pet spell")
+        : Action(botAI, name)
+    {
+    }
     virtual bool Execute(Event event) override;
 
 protected:
@@ -40,7 +43,7 @@ protected:
 class PetAttackAction : public Action
 {
 public:
-    PetAttackAction(PlayerbotAI* ai) : Action(ai, "pet attack") {}
+    PetAttackAction(PlayerbotAI* botAI) : Action(botAI, "pet attack") {}
     virtual bool Execute(Event event) override;
 };
 

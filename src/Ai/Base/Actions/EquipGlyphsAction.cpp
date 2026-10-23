@@ -97,10 +97,10 @@ bool EquipGlyphsAction::CollectGlyphs(std::vector<uint32> const& itemIds,
 /// -----------------------------------------------------------------
 bool EquipGlyphsAction::Execute(Event event)
 {
-    // AiPlayerbot.BotGlyphs = 0: bots carry no glyphs
-    if (!sPlayerbotAIConfig.botGlyphs)
+    // Playerbots.BotGlyphs = 0: bots carry no glyphs
+    if (!sPlayerbotAIConfig.BotGlyphs)
     {
-        botAI->TellMaster("Bot glyphs are disabled (AiPlayerbot.BotGlyphs = 0).");
+        botAI->TellMaster("Bot glyphs are disabled (Playerbots.BotGlyphs = 0).");
         return false;
     }
 

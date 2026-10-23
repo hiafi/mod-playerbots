@@ -13,7 +13,7 @@
 
 class PlayerbotAI;
 
-// The Holy healing rotation for the reworked paladin, registered as the "heal" combat strategy.
+// The Holy healing rotation for the reworked paladin, registered as the "holy" (alias "heal") combat strategy.
 class PaladinReworkHolyStrategy : public CombatStrategy
 {
 public:
@@ -21,7 +21,7 @@ public:
 
     void InitTriggers(std::vector<TriggerNode*>& triggers) override;
     void InitMultipliers(std::vector<Multiplier*>& multipliers) override;
-    std::string const getName() override { return "heal"; }
+    std::string const getName() override { return "holy"; }
     std::vector<NextAction> getDefaultActions() override;
     uint32 GetType() const override { return STRATEGY_TYPE_HEAL | STRATEGY_TYPE_RANGED; }
 };

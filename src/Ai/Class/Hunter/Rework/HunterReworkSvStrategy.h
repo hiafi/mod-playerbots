@@ -12,7 +12,7 @@
 class PlayerbotAI;
 
 // The Survival rotation for the reworked hunter: the generic hunter rows plus those of "hunter/sv"
-// (data/strategies/hunter/sv.yaml). Registered as "surv" when AiPlayerbot.HunterRework is on. No multipliers.
+// (data/strategies/hunter/sv.yaml). Registered as "surv" when Playerbots.HunterRework is on. No multipliers.
 class HunterReworkSvStrategy : public HunterReworkGenericStrategy
 {
 public:

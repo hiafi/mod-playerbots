@@ -106,19 +106,22 @@ class PaladinCombatStrategyFactoryInternal : public NamedObjectContext<Strategy>
 public:
     PaladinCombatStrategyFactoryInternal() : NamedObjectContext<Strategy>(false, true)
     {
-        creators["tank"] = &PaladinCombatStrategyFactoryInternal::tank;
-        creators["dps"] = &PaladinCombatStrategyFactoryInternal::dps;
-        creators["heal"] = &PaladinCombatStrategyFactoryInternal::heal;
+        creators["prot"] = &PaladinCombatStrategyFactoryInternal::prot;
+        creators["tank"] = &PaladinCombatStrategyFactoryInternal::prot;
+        creators["ret"] = &PaladinCombatStrategyFactoryInternal::ret;
+        creators["dps"] = &PaladinCombatStrategyFactoryInternal::ret;
+        creators["holy"] = &PaladinCombatStrategyFactoryInternal::holy;
+        creators["heal"] = &PaladinCombatStrategyFactoryInternal::holy;
         creators["offheal"] = &PaladinCombatStrategyFactoryInternal::offheal;
     }
 
 private:
     // The rework's Protection rotation replaces the stock TankPaladinStrategy under the same name
-    static Strategy* tank(PlayerbotAI* botAI) { return new PaladinReworkProtStrategy(botAI); }
+    static Strategy* prot(PlayerbotAI* botAI) { return new PaladinReworkProtStrategy(botAI); }
     // The rework's Retribution rotation replaces the stock DpsPaladinStrategy under the same name
-    static Strategy* dps(PlayerbotAI* botAI) { return new PaladinReworkRetStrategy(botAI); }
+    static Strategy* ret(PlayerbotAI* botAI) { return new PaladinReworkRetStrategy(botAI); }
     // The rework's Holy rotation replaces the stock HealPaladinStrategy under the same name
-    static Strategy* heal(PlayerbotAI* botAI) { return new PaladinReworkHolyStrategy(botAI); }
+    static Strategy* holy(PlayerbotAI* botAI) { return new PaladinReworkHolyStrategy(botAI); }
     // Stock offheal minus its name-based aura press, which the rework's aura cooldowns make unsafe
     static Strategy* offheal(PlayerbotAI* botAI) { return new PaladinReworkOffhealStrategy(botAI); }
 };

@@ -14,7 +14,7 @@ conditions:
   # Something is attacking the bot
   hit_me: value("my attacker count") >= 1
 rows:
-  # The stock no-ammo row; inert while AiPlayerbot.RequireAmmo is 0
+  # The stock no-ammo row; inert while Playerbots.RequireAmmo is 0
   - do: equip upgrades packet action
     trigger: no ammo
     relevance: move

@@ -1,4 +1,4 @@
-# Retribution paladin rows, appended to the "dps" combat strategy by PaladinReworkRetStrategy::InitTriggers.
+# Retribution paladin rows, appended to the "ret" combat strategy by PaladinReworkRetStrategy::InitTriggers.
 # Each row queues its actions at the relevance when its condition holds (`when`, the expression language of
 # StrategyExpression.h) or when an existing C++ trigger fires (`trigger`). Execution order is by relevance, not by
 # position in this file.

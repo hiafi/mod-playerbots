@@ -68,7 +68,7 @@ public:
     std::string const GetTargetName() override { return "self target"; }
 };
 
-// The pet autocast toggle under the rework policy (only active with AiPlayerbot.HunterRework): the basic attack and
+// The pet autocast toggle under the rework policy (only active with Playerbots.HunterRework): the basic attack and
 // the buff or debuff utility stay on as the base decides; Web Pull, Cower, Dash, Last Stand and Bullheaded are off;
 // Growl is on only while the bot is not grouped.
 class HunterPetAutocastAction : public TogglePetSpellAutoCastAction

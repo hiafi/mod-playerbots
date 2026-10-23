@@ -30,7 +30,7 @@ A new spec is a ~10-line shell plus a YAML file, plus the usual strategy-context
 `ai-engine.md`). Actions, values, triggers and multipliers stay C++; YAML only names them.
 
 **The file.** `data/strategies/<class>/<spec>.yaml`. The loader reads every `*.yaml` under the data path
-(`AiPlayerbot.StrategyDataPath`, empty = the module's `data/strategies`), in sorted path order. A file may hold several
+(`Playerbots.StrategyDataPath`, empty = the module's `data/strategies`), in sorted path order. A file may hold several
 YAML documents (`---`), one strategy key each.
 
 | Key | Meaning |

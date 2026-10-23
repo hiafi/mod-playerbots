@@ -13,11 +13,11 @@
 class PlayerbotAI;
 
 // The Protection tank rotation for the reworked warrior: CombatStrategy's rows plus those of "warrior/prot"
-// (data/strategies/warrior/prot.yaml). Registered as "tank". It derives from no stock warrior strategy, whose rows
-// (Heroic Strike at 60 rage, a Thunder Clap on medium rage, the Sunder and Rend rows) fight the rework's rotation: the
-// stance, the taunt and the walk to melee are explicit rows. The action nodes are the taunt chain of the stock tank
-// ("taunt" to Heroic Throw to Shield Slam), plus the "taunt spell" alias that raid code calls and Commanding Shout's
-// Battle Shout fallback. The default action is the generic melee swing. No multipliers.
+// (data/strategies/warrior/prot.yaml). Registered as "prot" (alias "tank"). It derives from no stock warrior strategy,
+// whose rows (Heroic Strike at 60 rage, a Thunder Clap on medium rage, the Sunder and Rend rows) fight the rework's
+// rotation: the stance, the taunt and the walk to melee are explicit rows. The action nodes are the taunt chain of the
+// stock tank ("taunt" to Heroic Throw to Shield Slam), plus the "taunt spell" alias that raid code calls and Commanding
+// Shout's Battle Shout fallback. The default action is the generic melee swing. No multipliers.
 class WarriorReworkProtStrategy : public CombatStrategy
 {
 public:
@@ -25,7 +25,7 @@ public:
 
     std::vector<NextAction> getDefaultActions() override;
     void InitTriggers(std::vector<TriggerNode*>& triggers) override;
-    std::string const getName() override { return "tank"; }
+    std::string const getName() override { return "prot"; }
     uint32 GetType() const override { return STRATEGY_TYPE_TANK | STRATEGY_TYPE_MELEE; }
 };
 

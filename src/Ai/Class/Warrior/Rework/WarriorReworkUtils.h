@@ -12,7 +12,7 @@ class Player;
 namespace ai::warrior_rework
 {
 
-// The bot is a Protection warrior: the spec AiFactory gives the "tank" strategy (the deepest talent tree, Arms below
+// The bot is a Protection warrior: the spec AiFactory gives the "prot" strategy (the deepest talent tree, Arms below
 // level 10 or with no points spent). Read when a strategy builds its rows, and strategies are rebuilt on a respec
 // (ChangeTalentsAction resets them), so the "aoe" strategy follows the spec.
 bool IsProtBuild(Player* bot);

@@ -10,6 +10,6 @@
 
 bool ai::warrior_rework::IsProtBuild(Player* bot)
 {
-    // The same test AiFactory makes to give a warrior the "tank" strategy
+    // The same test AiFactory makes to give a warrior the "prot" strategy
     return bot && AiFactory::GetPlayerSpecTab(bot) == WARRIOR_TAB_PROTECTION;
 }

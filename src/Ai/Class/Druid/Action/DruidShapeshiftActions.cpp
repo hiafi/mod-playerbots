@@ -44,7 +44,7 @@ bool CastCasterFormAction::isUseful()
     return (botAI->HasAnyAuraOf(GetTarget(), "dire bear form", "bear form", "cat form", "travel form", "aquatic form",
                                 "flight form", "swift flight form", "moonkin form", nullptr) ||
             GetTarget()->HasAura(ai::druid_rework::SPELL_BESTIAL_FURY)) &&
-           AI_VALUE2(uint8, "mana", "self target") > sPlayerbotAIConfig.mediumHealth;
+           AI_VALUE2(uint8, "mana", "self target") > sPlayerbotAIConfig.MediumHealth;
 }
 
 bool CastCancelDruidAction::Execute(Event /*event*/)

@@ -12,7 +12,7 @@
 class PlayerbotAI;
 
 // The Marksmanship rotation for the reworked hunter: the generic hunter rows plus those of "hunter/mm"
-// (data/strategies/hunter/mm.yaml). Registered as "mm" when AiPlayerbot.HunterRework is on. No multipliers.
+// (data/strategies/hunter/mm.yaml). Registered as "mm" when Playerbots.HunterRework is on. No multipliers.
 class HunterReworkMmStrategy : public HunterReworkGenericStrategy
 {
 public:

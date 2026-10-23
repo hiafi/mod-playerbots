@@ -72,7 +72,7 @@ bool CastPetSpellAction::isPossible()
         return false;
 
     if (!pet->HasSpell(_spellId) || pet->HasSpellCooldown(_spellId) || pet->HasUnitState(UNIT_STATE_CASTING) ||
-        pet->GetDistance(target) > sPlayerbotAIConfig.sightDistance)
+        pet->GetDistance(target) > sPlayerbotAIConfig.SightDistance)
         return false;
 
     Spell* spell = nullptr;
