@@ -50,7 +50,6 @@ constexpr uint32 SPELL_FLAME_SHOCK = 8050;
 constexpr uint32 SPELL_FROST_SHOCK = 8056;
 constexpr uint32 SPELL_LAVA_BURST = 51505;
 constexpr uint32 SPELL_THUNDERSTORM = 51490;
-constexpr uint32 SPELL_THUNDERSTORM_RANK2 = 202594;  // Call of Thunder's capstone: castable while stunned
 constexpr uint32 SPELL_ELEMENTAL_MASTERY = 16166;
 constexpr uint32 SPELL_CALL_OF_THE_ELEMENTS = 202531;
 constexpr uint32 SPELL_EARTHQUAKE = 202280;

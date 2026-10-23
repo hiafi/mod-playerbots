@@ -308,11 +308,11 @@ ShamanReworkActionFactory::ShamanReworkActionFactory()
         return new ShamanFillerAction(botAI, "lightning bolt", {SPELL_LIGHTNING_BOLT}, CURRENT_TARGET, MASTERY_AURA);
     };
 
-    // Thunderstorm: rank 2 (castable while stunned) once the bot has it
+    // Thunderstorm (one rank; Call of Thunder's capstone doubles its mana restore)
     creators["shaman thunderstorm"] = [](PlayerbotAI* botAI) -> Action*
-    { return Cast(botAI, "thunderstorm", {SPELL_THUNDERSTORM_RANK2, SPELL_THUNDERSTORM}, SELF_TARGET, {}, AOE); };
+    { return Cast(botAI, "thunderstorm", {SPELL_THUNDERSTORM}, SELF_TARGET, {}, AOE); };
     creators["shaman pack thunderstorm"] = [](PlayerbotAI* botAI) -> Action*
-    { return Cast(botAI, "thunderstorm", {SPELL_THUNDERSTORM_RANK2, SPELL_THUNDERSTORM}, SELF_TARGET, {}, AOE); };
+    { return Cast(botAI, "thunderstorm", {SPELL_THUNDERSTORM}, SELF_TARGET, {}, AOE); };
 
     // Ground spells
     creators["shaman earthquake"] = [](PlayerbotAI* botAI) -> Action*

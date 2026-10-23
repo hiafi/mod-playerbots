@@ -14,8 +14,8 @@
 
 class PlayerbotAI;
 
-// A spell cast by its id. CastSpellAction resolves a name through the spellbook, and the rework reuses names (two
-// Thunderstorm ranks, hidden spells and retired ranks that share a name), so the rows name the id; with several ids the
+// A spell cast by its id. CastSpellAction resolves a name through the spellbook, and the rework reuses names (hidden
+// spells and retired ranks that share a name), so the rows name the id; with several ids the
 // first one the bot knows is cast. Only the cast is by id: cooldown, range and line of sight are the core's checks.
 //
 // `target` is the name of the Unit* value the spell lands on. `instantAuras` lets a cast-time spell go out on the move

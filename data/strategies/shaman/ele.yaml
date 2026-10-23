@@ -12,7 +12,7 @@
 # Icefury's Frost Shock refunds mana and Thunderstorm makes it, so they keep running.
 # Every row is `known()`-gated, so a bot below 60 plays the guide's leveling table with what it has learned.
 # Spell ids (DBC names): Lightning Bolt 403, Chain Lightning 421, Fire Nova 1535, Earth Shock 8042, Flame Shock 8050
-# (the DoT carries the same id), Frost Shock 8056, Lava Burst 51505, Thunderstorm 51490 (rank 2 202594), Elemental
+# (the DoT carries the same id), Frost Shock 8056, Lava Burst 51505, Thunderstorm 51490, Elemental
 # Mastery 16166, Bloodlust 2825, Heroism 32182, Call of the Elements 202531, Earthquake 202280, Elemental Blast 202282,
 # Water / Storm Elemental totems 202272 / 202273.
 # Auras on the bot (ShamanData.h names): Gathering Flames 202564 (Fire window), Booming Echo 202565 (Echo, stacks),
@@ -44,10 +44,8 @@ conditions:
   # Lava Surge
   lightning_ok: not moving(self) or aura(self, 16166)
   lava_ok: not moving(self) or aura(self, "202569,16166")
-  # Thunderstorm's cooldown: rank 2 (Call of Thunder's capstone) replaces rank 1
-  ts_ready: >-
-    (known(202594) and cooldown(202594) == 0)
-    or (not known(202594) and known(51490) and cooldown(51490) == 0)
+  # Thunderstorm's cooldown (one rank; Call of Thunder's capstone doubles its mana restore, 10% to 20%)
+  ts_ready: known(51490) and cooldown(51490) == 0
   # Flame Shock is worth casting on a target that lives, and only when it is missing (or at the Fire refresh moment)
   fs_wanted: >-
     known(8050) and cooldown(8050) == 0 and (boss(target) or elite(target) or lifetime(target) > 8)
