@@ -1,0 +1,269 @@
+# The reworked Enhancement shaman's DPS rotation: "shaman/enh", appended (after the interrupt and dispel rows) to the
+# "enh" combat strategy by ShamanReworkEnhStrategy::InitTriggers, and the out-of-combat rows "shaman/nc-enh" appended
+# to the shaman non-combat strategy. Source: the Enhancement bot guide
+# (docs/reworks/bot-strategy/shaman-enhancement-bot-guide.md; the rework doc wins). Each row queues its action at the
+# relevance when its condition holds (`when`, the expression language of StrategyExpression.h). Execution order is by
+# relevance, not by position in this file. Every action is a RowCheckedAction (it re-checks its own row before
+# casting). The rotation sits below 20, so Wind Shear (23, stock) and the reach-melee move (high + 1) stay above it.
+# Rows that can fire together never share an action name (they would merge into one basket and only the first row
+# would be re-checked): Lava Lash, Flame Shock and the shocks have one name per row.
+# Every row is `known()`-gated, so a bot below 60 plays the guide's leveling table with what it has learned: Rockbiter
+# and Earth Shock below 10, Flametongue, Flame Shock and Searing Totem from 10, Frostbrand from 20 (the cycle skips the
+# imbues it has not learned), Windfury and Lava Lash from 30, Stormstrike and Ascendance by 45, Lava Burst from 42.
+# Shamanistic Rage is on the global cooldown (S3 notes, stock StartRecoveryCategory 133): it is a row here, and the
+# off-the-GCD list of the guide is Wind Shear only (the stock trigger rows). "No swap while casting" is the engine's: a
+# bot that casts does not tick.
+# Spell ids (DBC names): Rockbiter Weapon 8017, Flametongue Weapon 8024, Frostbrand Weapon 8033, Windfury Weapon 8232,
+# Earthliving Weapon 51730, Lightning Bolt 403, Chain Lightning 421, Fire Nova 1535, Earth Shock 8042, Flame Shock 8050
+# (the DoT carries the same id), Frost Shock 8056, Lava Burst 51505, Stormstrike 17364, Lava Lash 60103, Shamanistic
+# Rage 30823, Elemental Spirits 51533 (the stock Feral Spirit id), Elemental Blast 202282, Lightning Shield 324,
+# Searing Totem 3599 and Magma Totem 202268 (totems-fire), Earth Elemental Totem 2062, Fire Elemental Totem 2894.
+# Auras on the bot (ShamanData.h names): Fire / Frost / Wind / Earth Charge 202380-202383 (stacks, only the active
+# imbue's is up), Fire / Frost / Wind Ascendance 202387-202389 (the singles), Elemental Ascendance 202390, Volcanic
+# Eruption buff 202398 (the next Lava Lash is stronger and resets), Maelstrom Weapon 53817 (stacks). Talent ids
+# (known() on a passive talent): Elemental Charge 202360, Elemental Weapons capstone 29080 (the Flame Shock spread),
+# Ascendance 202364.
+strategy: shaman/enh
+class: shaman
+conditions:
+  target_alive: alive(target)
+  # Three or more enemies around the target and the "aoe" strategy on (the guide's Packs list)
+  pack: value("shaman aoe enabled") and alive(target) and enemies_near_target(8) >= 3
+  # The active imbue's charges; only one charge buff is up at a time (a swap transforms or resets the old one)
+  ascended: aura(self, 202390)
+  imbue_ft: aura(self, 8024)
+  imbue_fb: aura(self, 8033)
+  imbue_wf: aura(self, 8232)
+  # Past melee reach (Stormstrike and Lava Lash need 5 yd and the bot walks back with "reach melee")
+  out_of_melee: alive(target) and not in_range(target, 7)
+  # The Maelstrom Weapon spender: 5 stacks, or any stacks when the target is out of melee reach
+  spender_ok: stacks(self, 53817) >= 5 or (stacks(self, 53817) >= 1 and out_of_melee)
+  # Lava Burst is the spender in Flametongue while it is ready; Lightning Bolt otherwise
+  lava_spender: known(51505) and imbue_ft and cooldown(51505) == 0
+  # Flame Shock worth casting on a target that lives
+  worth_fs: boss(target) or elite(target) or lifetime(target) > 8
+  fs_missing: not aura(target, 8050, own)
+  fs_late: not aura(target, 8050, own) or remaining(target, 8050, own) <= 4000
+  # "Won't ascend within 20 s": at most one single held (two more transforms, over 20 s) and the active charge below 5
+  one_single_or_less: >-
+    (not aura(self, 202387) and not aura(self, 202388)) or (not aura(self, 202387) and not aura(self, 202389))
+    or (not aura(self, 202388) and not aura(self, 202389))
+  # A worthwhile enemy for a cooldown: a boss, an elite, or a pack
+  big: boss(target) or elite(target) or pack
+  # Safe to put an area spell on the pack (no crowd-controlled unit in it)
+  safe_target_8: value("unsafe aoe units::8") == 0
+  # Mana pooling for Stormstrike (S3-ENH-DPS-DIAG B2). Stormstrike is the only mana-positive button: it costs 8% of
+  # base mana (114 after Ancestral Knowledge = 4.5% of the 2,545 maximum on the sim sheet) and Improved Stormstrike
+  # gives back 20% of base (304), +190 net, while every shock and bolt only spends. Without a reserve the bar spirals:
+  # at 0-3% the bot casts the first thing it can afford, a shock (3.4%), before Stormstrike (4.5%) is reachable, so
+  # Stormstrike and its refund stop and the bar never recovers. So a mana-spending filler fires only if the bar would
+  # still hold Stormstrike's cost afterwards: reserve 5% (4.5% rounded up; mana() is a truncated percent) plus the
+  # row's own cost rounded up (shock 3.4% -> 4, Elemental Blast 4.5% -> 5, Lightning Bolt / Lava Burst 5.6% -> 6).
+  # When Stormstrike is more than 4 s from ready the bar regenerates before then (Shamanistic Rage's 110 per proc and
+  # Spirit, about 0.5% per second on the flat sheet, so about 2% in 4 s) and the threshold drops by 2. A bot with no
+  # Stormstrike (below 45) or out of melee reach (Stormstrike cannot be cast) is not pooling for anything. The off-leg
+  # shocks keep their own, higher gate (mana >= 25) and Lava Lash (2.4%) stays ungated: it is the cheapest button, the
+  # one left to press while the bar rebuilds. Thresholds are for the sim sheet's mana pool; re-tune them with the
+  # Enhancement sim's mana columns.
+  ss_far: known(17364) and cooldown(17364) > 4000
+  pool_shock: not known(17364) or out_of_melee or mana(self) >= 9 or (ss_far and mana(self) >= 7)
+  pool_blast: not known(17364) or out_of_melee or mana(self) >= 10 or (ss_far and mana(self) >= 8)
+  pool_spender: not known(17364) or out_of_melee or mana(self) >= 11 or (ss_far and mana(self) >= 9)
+  # Pack pooling (S3-ENH-TRIM-DIAG P1). In a 3-elite pack Stormstrike was off cooldown 61% of the fight and starved for
+  # 68% of that: 46 of 105 Lava Lashes fired under 9% mana, and Chain Lightning (26% base cost, 14.6% of the pool) and
+  # Fire Nova (22%, 12.3%) are ungated, so Stormstrike and its refund fell from about 19.6 to 8.8 casts per 180 s. The
+  # same reserve now covers them: 5 (Stormstrike) plus the row's cost rounded up (Lava Lash 2.2% -> 2 gives 7, Chain
+  # Lightning 14.6% -> 15 gives 20, Fire Nova 12.3% -> 12 gives 17); with Stormstrike far the threshold drops by 2
+  # (7 stays 7, 18, 15) as for the single-target rows. Lava Lash, once the cheap button left to press, now pools too:
+  # under 7% the bot waits for Stormstrike or regeneration. Chain Lightning and Fire Nova are delayed, not lost.
+  pool_lash: not known(17364) or out_of_melee or ss_far or mana(self) >= 7
+  pool_cl: not known(17364) or out_of_melee or mana(self) >= 20 or (ss_far and mana(self) >= 18)
+  pool_nova: not known(17364) or out_of_melee or mana(self) >= 17 or (ss_far and mana(self) >= 15)
+rows:
+  # The out-of-melee move, as the Retribution paladin's (CombatStrategy only closes to spell range)
+  - do: reach melee
+    trigger: enemy out of melee
+    relevance: high + 1
+
+  # A fight that starts with none of the three cycle imbues up (a death, Rockbiter or Earthliving left on): cast the
+  # first imbue of the cycle, or no charge ever builds and the swap row below never fires
+  - do: shaman first imbue
+    when: target_alive and not aura(self, "8024,8033,8232") and value("shaman next imbue") != 0
+    relevance: high + 2
+
+  # 1: swap to the next imbue of the cycle at 10 charges (the transform, a Burst on the pack). Never while ascended,
+  # never below 10 in combat. The value gives the single target cycle, or the pack one on 3+ enemies, and 0 when
+  # nothing is to swap to
+  - do: shaman swap imbue
+    when: >-
+      known(202360) and target_alive and not ascended and stacks(self, "202380,202381,202382") >= 10
+      and value("shaman next imbue") != 0
+    relevance: normal + 9.9
+
+  # Packs 2: Magma Totem at the pack when the Fire slot is empty or holds the Searing Totem (it replaces it); never over
+  # an elemental (the action checks the slot). Left up for its full duration (the slot then holds it)
+  - do: shaman enh magma totem
+    when: >-
+      pack and known(202268) and cooldown(202268) == 0 and mana(self) >= 30
+      and (not value("shaman totem active::fire") or value("shaman totem entry::fire") == 300278)
+      and value("unsafe aoe units::8;cluster") == 0
+    relevance: normal + 9.85
+
+  # 2: Elemental Spirits when Elemental Ascendance starts (or is up), or on cooldown while the bot will not ascend
+  # within 20 s (at most one single held and the charges below 5); only for a fight that is worth the 2 min cooldown
+  - do: shaman elemental spirits
+    when: >-
+      known(51533) and cooldown(51533) == 0 and target_alive and (boss(target) or elite(target) or pack)
+      and (ascended or (one_single_or_less and stacks(self, "202380,202381,202382") < 5))
+    relevance: normal + 9.8
+
+  # Cooldowns: the Earth Elemental only with no tank (it taunts), or a dead one; the Fire Elemental is the boost
+  # strategy's trigger (relevance 24)
+  - do: shaman earth elemental
+    when: >-
+      known(2062) and cooldown(2062) == 0 and target_alive and big and not alive("main tank")
+      and not value("shaman totem active::earth")
+    relevance: normal + 9.75
+
+  # 3: Flame Shock refresh in the last 4 s of Elemental Ascendance, to carry the bonus into the next window (the only
+  # early refresh the guide allows)
+  - do: shaman flame shock refresh
+    when: >-
+      known(8050) and cooldown(8050) == 0 and target_alive and ascended and remaining(self, 202390) <= 4000
+      and aura(target, 8050, own) and remaining(target, 8050, own) <= 4000
+    relevance: normal + 9.7
+
+  # SR: on cooldown (DPS). On the global cooldown, above Stormstrike
+  - do: shaman shamanistic rage
+    when: known(30823) and cooldown(30823) == 0 and target_alive
+    relevance: normal + 9.6
+
+  # 5: Lava Lash first when Volcanic Eruption is up
+  - do: shaman eruption lava lash
+    when: known(60103) and cooldown(60103) == 0 and target_alive and aura(self, 202398) and pool_lash
+    relevance: normal + 9.55
+
+  # Packs 4 (before 3): Flame Shock on the primary target when missing, without the lifetime gate: the server spreads
+  # only from a target that carries this bot's Flame Shock (S3b-1 review m3), so it goes ahead of the spread
+  - do: shaman pack flame shock
+    when: pack and known(8050) and cooldown(8050) == 0 and fs_missing
+    relevance: normal + 9.545
+
+  # Packs 3: Lava Lash spreads Flame Shock to up to 4 enemies (Elemental Weapons' capstone) while Flametongue or Fire
+  # Ascendance is up, when 2+ pack enemies within 10 yd of the target lack this bot's Flame Shock; the target carries
+  # one (the server spreads from it)
+  - do: shaman spread lava lash
+    when: >-
+      pack and known(60103) and cooldown(60103) == 0 and known(29080) and (imbue_ft or aura(self, 202387))
+      and aura(target, 8050, own) and value("shaman pack without flame shock::10") >= 2
+      and pool_lash
+    relevance: normal + 9.54
+
+  # Packs 5: Fire Nova on cooldown while a Fire totem is down (the action wants the source within 8 yd of the target)
+  - do: shaman fire nova
+    when: >-
+      pack and known(1535) and cooldown(1535) == 0 and value("shaman totem active::fire") and safe_target_8
+      and pool_nova
+    relevance: normal + 9.53
+
+  # Packs 6: Chain Lightning at 5 Maelstrom Weapon stacks (instant)
+  - do: shaman mw chain lightning
+    when: >-
+      pack and known(421) and cooldown(421) == 0 and stacks(self, 53817) >= 5 and value("unsafe aoe units::10") == 0
+      and pool_cl
+    relevance: normal + 9.52
+
+  # 4: Stormstrike on cooldown (cleaves under Frost and Elemental Ascendance)
+  - do: shaman stormstrike
+    when: known(17364) and cooldown(17364) == 0 and target_alive
+    relevance: normal + 9.5
+
+  # 5: Lava Lash on cooldown
+  - do: shaman lava lash
+    when: known(60103) and cooldown(60103) == 0 and target_alive and pool_lash
+    relevance: normal + 9.4
+
+  # 6: Flame Shock when missing on the target (never refreshed early; the Flametongue shock below is a late refresh)
+  - do: shaman flame shock
+    when: known(8050) and cooldown(8050) == 0 and target_alive and worth_fs and fs_missing
+    relevance: normal + 9.3
+
+  # 7: the shock matching the imbue, on cooldown: Frost Shock in Frostbrand, Earth Shock in Windfury, Flame Shock in
+  # Flametongue (only when the DoT is gone or in its last 4 s, outside the last 4 s of Elemental Ascendance it is
+  # never refreshed early). Pooled for Stormstrike at low mana (pool_shock)
+  - do: shaman frost shock
+    when: known(8056) and cooldown(8056) == 0 and target_alive and imbue_fb and pool_shock
+    relevance: normal + 9.2
+  - do: shaman earth shock
+    when: known(8042) and cooldown(8042) == 0 and target_alive and imbue_wf and pool_shock
+    relevance: normal + 9.2
+  - do: shaman matching flame shock
+    when: >-
+      known(8050) and cooldown(8050) == 0 and target_alive and imbue_ft and fs_late and not ascended and pool_shock
+    relevance: normal + 9.2
+
+  # 8: the spender at 5 Maelstrom Weapon stacks, or at any stacks when out of melee reach. Lava Burst in Flametongue
+  # (level 42 and up) while it is ready, Lightning Bolt otherwise; instant at 5 stacks, so it casts on the move
+  # (pooled for Stormstrike at low mana: pool_spender). Ranked above Lava Lash (user 2026-10-22): below it about 31%
+  # of the stacks landed at the 5-stack cap and were wasted (S3-RESIM2)
+  - do: shaman mw lava burst
+    when: target_alive and lava_spender and spender_ok and pool_spender
+    relevance: normal + 9.45
+  - do: shaman mw lightning bolt
+    when: target_alive and known(403) and spender_ok and not lava_spender and pool_spender
+    relevance: normal + 9.44
+
+  # 9: Elemental Blast (level 50 and up) on cooldown, pooled for Stormstrike at low mana (pool_blast). It sits below
+  # the off-leg Earth Shock (normal + 8.9) and above the off-leg Frost Shock (normal + 8.88): per press Elemental Blast
+  # is worth about 310 against about 610 for an Earth Shock and about 270 for a Frost Shock (S3-ENH-DPS-DIAG, Q20), so
+  # in Frostbrand, Flametongue and Rockbiter the bot presses the off-leg Earth Shock first and the Blast on the next
+  # global cooldown, and in Windfury (off-leg Frost Shock) the Blast still goes first
+  - do: shaman elemental blast
+    when: known(202282) and cooldown(202282) == 0 and target_alive and pool_blast
+    relevance: normal + 8.89
+
+  # 10: the off-leg shock on cooldown as filler: Earth Shock in Frostbrand, Flametongue, Rockbiter or no imbue (also the
+  # leveling shock below Flametongue), Frost Shock in Windfury. The three shocks have separate 6 s cooldowns, so this
+  # row fires alongside the matching shock. Under Flametongue it presses Earth Shock only (user ruling 2026-10-21: Frost
+  # Shock there would cost about 6% base mana more per 6 s)
+  - do: shaman offleg earth shock
+    when: known(8042) and cooldown(8042) == 0 and target_alive and not imbue_wf and mana(self) >= 25
+    relevance: normal + 8.9
+  - do: shaman offleg frost shock
+    when: known(8056) and cooldown(8056) == 0 and target_alive and imbue_wf and mana(self) >= 25
+    relevance: normal + 8.88
+
+  # 11: Lightning Shield at 2 charges or fewer (or gone)
+  - do: shaman lightning shield
+    when: known(324) and (not aura(self, 324) or charges(self, 324) <= 2)
+    relevance: normal + 8.5
+
+  # 12: the Searing Totem (single target) and the Magma Totem (packs, without the Searing exception) of the damage
+  # specs are the rows of "shaman/totems-fire"
+
+  # Lightning Bolt at range when nothing else is ready or the bot has no melee target to hit (the walk back is the
+  # reach-melee row above)
+  - do: shaman enh lightning bolt
+    when: target_alive and known(403) and out_of_melee and (not moving(self) or stacks(self, 53817) >= 5)
+    relevance: normal + 1
+---
+# Out of combat (appended to the shaman non-combat strategy of an Enhancement DPS bot): the first imbue of the cycle,
+# the swap at 10 charges and Lightning Shield. The attunement is the stock C++ row ("shaman attunement missing").
+strategy: shaman/nc-enh
+class: shaman
+rows:
+  # The first imbue of the cycle (Frostbrand, Flametongue below 20, Rockbiter below 10) when the bot has none of the
+  # three cycle imbues; Rockbiter or Earthliving up counts as none
+  - do: shaman nc imbue
+    when: not aura(self, "8024,8033,8232") and value("shaman next imbue") != 0
+    relevance: high + 2
+
+  # Out of combat the swap happens only at 10 charges: it is the transform (a plain swap would reset the charges, which
+  # persist 2 min out of combat)
+  - do: shaman nc swap imbue
+    when: known(202360) and stacks(self, "202380,202381,202382") >= 10 and value("shaman next imbue") != 0
+    relevance: high + 1.9
+
+  - do: shaman lightning shield
+    when: known(324) and (not aura(self, 324) or charges(self, 324) <= 2)
+    relevance: high

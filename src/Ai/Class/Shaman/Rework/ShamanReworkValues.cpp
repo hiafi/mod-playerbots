@@ -42,6 +42,14 @@ constexpr uint32 LOSING_WINDOW_MS = 2500;
 constexpr uint32 LOSING_LOSS_PCT = 2;
 // Mixes a guid counter into the roster signature of the spike history
 constexpr uint64 ROSTER_MIX = 0x9E3779B97F4A7C15ULL;
+// Enhancement: the dangerous window (S3-NOTES 8.2, bot guide Definitions)
+constexpr uint32 DANGER_WINDOW_MS = 5000;
+constexpr uint32 DANGER_LOSS_PCT = 40;
+constexpr uint32 DANGER_ATTACKERS = 4;
+// A jump this long between two samples is a teleport (a mount is 14 yd/s, a sample is at least 150 ms apart)
+constexpr float TELEPORT_DIST_SQ = 60.0f * 60.0f;
+// The loose enemy search radius (Earth Shock reaches 20-25 yd, Chain Lightning 30)
+constexpr float LOOSE_ENEMY_RANGE = 30.0f;
 }  // namespace
 
 uint8 ShamanActiveElementalValue::Calculate() { return ActiveElementalMask(bot); }
@@ -447,6 +455,107 @@ ObjectGuid ShamanEarthShieldTargetValue::CalculateGuid()
     return tank ? tank->GetGUID() : ObjectGuid::Empty;
 }
 
+uint32 ShamanNextImbueValue::Calculate()
+{
+    bool const pack = AI_VALUE(bool, "shaman aoe enabled") && AI_VALUE2(uint8, "enemies near target", "8") >= 3;
+    return NextImbue(bot, pack);
+}
+
+uint8 ShamanPackWithoutFlameShockValue::Calculate()
+{
+    float yards = 0.0f;
+    Unit* target = AI_VALUE(Unit*, "current target");
+    if (!target || !target->IsAlive() || !ai::qualifier::ParseNumber(getQualifier(), yards))
+        return 0;
+
+    uint32 count = 0;
+    for (ObjectGuid const guid : AI_VALUE(GuidVector, "attackers"))
+    {
+        Unit* unit = botAI->GetUnit(guid);
+        if (unit && unit != target && unit->IsAlive() && target->GetExactDist(unit) <= yards &&
+            !unit->HasAura(SPELL_FLAME_SHOCK, bot->GetGUID()))
+            ++count;
+    }
+
+    return ai::qualifier::ClampCount(count);
+}
+
+bool ShamanSelfDangerValue::Calculate()
+{
+    // Restart the history when the health it holds is no longer comparable with the next sample
+    bool const moved = _located && bot->GetExactDistSq(_x, _y, _z) > TELEPORT_DIST_SQ;
+    if (!bot->IsAlive() || !bot->IsInCombat() || bot->GetMapId() != _mapId || bot->GetMaxHealth() != _maxHealth ||
+        moved)
+        _history.Reset();
+
+    _mapId = bot->GetMapId();
+    _maxHealth = bot->GetMaxHealth();
+    _x = bot->GetPositionX();
+    _y = bot->GetPositionY();
+    _z = bot->GetPositionZ();
+    _located = true;
+    if (!bot->IsAlive() || !bot->IsInCombat() || !_maxHealth)
+        return false;
+
+    uint32 const now = getMSTime();
+    uint64 const health = bot->GetHealth();
+    _history.Add(now, health);
+    uint64 const peak = _history.PeakWithin(now, DANGER_WINDOW_MS);
+    if (peak > health && (peak - health) * 100 >= uint64(DANGER_LOSS_PCT) * _maxHealth)
+        return true;
+
+    uint32 attackers = 0;
+    for (ObjectGuid const guid : AI_VALUE(GuidVector, "attackers"))
+    {
+        Unit* unit = botAI->GetUnit(guid);
+        if (!unit || !unit->IsAlive() || unit->GetVictim() != bot)
+            continue;
+
+        if (ai::target::IsBoss(unit))
+            return true;
+
+        ++attackers;
+    }
+
+    return attackers >= DANGER_ATTACKERS;
+}
+
+ObjectGuid ShamanLooseEnemyValue::CalculateGuid()
+{
+    Unit* nearest = nullptr;
+    float nearestDistance = 0.0f;
+    for (ObjectGuid const guid : AI_VALUE(GuidVector, "attackers"))
+    {
+        Unit* unit = botAI->GetUnit(guid);
+        if (!unit || !unit->IsAlive())
+            continue;
+
+        Unit* victim = unit->GetVictim();
+        Player* player = victim ? victim->ToPlayer() : nullptr;
+        if (!player || player == bot || !bot->IsInSameRaidWith(player) || PlayerbotAI::IsTank(player))
+            continue;
+
+        float const distance = bot->GetDistance(unit);
+        if (distance > LOOSE_ENEMY_RANGE || (nearest && distance >= nearestDistance) || !CanTaunt(bot, unit))
+            continue;
+
+        nearest = unit;
+        nearestDistance = distance;
+    }
+
+    return nearest ? nearest->GetGUID() : ObjectGuid::Empty;
+}
+
+bool ShamanRestoShamanInGroupValue::Calculate()
+{
+    for (Player* member : ai::group::GetGroupPlayers(bot))
+        if (member != bot && member->getClass() == CLASS_SHAMAN && member->IsAlive() &&
+            ai::group::IsInHealRange(bot, member) && AiFactory::GetPlayerSpecTab(member) == SHAMAN_TAB_RESTORATION)
+            return true;
+
+    return false;
+}
+
 uint32 ShamanAttunementChoiceValue::Calculate() { return ChooseAttunement(bot, AiFactory::GetPlayerSpecTab(bot)); }
 
 ShamanReworkValueFactory::ShamanReworkValueFactory()
@@ -509,4 +618,16 @@ ShamanReworkValueFactory::ShamanReworkValueFactory()
     { return new ShamanEarthShieldTargetValue(botAI); };
     creators["shaman chain heal target"] = [](PlayerbotAI* botAI) -> UntypedValue*
     { return new ShamanChainHealTargetValue(botAI); };
+
+    // Enhancement
+    creators["shaman next imbue"] = [](PlayerbotAI* botAI) -> UntypedValue*
+    { return new ShamanNextImbueValue(botAI); };
+    creators["shaman pack without flame shock"] = [](PlayerbotAI* botAI) -> UntypedValue*
+    { return new ShamanPackWithoutFlameShockValue(botAI); };
+    creators["shaman self danger"] = [](PlayerbotAI* botAI) -> UntypedValue*
+    { return new ShamanSelfDangerValue(botAI); };
+    creators["shaman loose enemy"] = [](PlayerbotAI* botAI) -> UntypedValue*
+    { return new ShamanLooseEnemyValue(botAI); };
+    creators["shaman resto shaman in group"] = [](PlayerbotAI* botAI) -> UntypedValue*
+    { return new ShamanRestoShamanInGroupValue(botAI); };
 }

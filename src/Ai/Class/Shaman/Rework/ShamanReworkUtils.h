@@ -13,6 +13,7 @@
 
 class Player;
 class Totem;
+class Unit;
 
 namespace ai::shaman_rework
 {
@@ -90,6 +91,24 @@ uint32 SlotTotemTimeLeftMs(Player* bot, uint8 slot);
 
 // The creature entry of the totem in one of the bot's totem slots, 0 when it is empty
 uint32 SlotTotemEntry(Player* bot, uint8 slot);
+
+// ---- Enhancement ----
+
+// The Enhancement tank build: the bot knows Living Earth, or (until the talent is bought, at level 30) its premade spec
+// slot is the tank's (7.6). False for every other tab. The DPS links never take Living Earth.
+bool IsTankBuild(Player* bot);
+
+// The bot can dual wield: the baseline Dual Wield (learned from the trainer at 20) or the retired talent's spell
+bool KnowsDualWield(Player* bot);
+
+// The imbue "shaman next imbue" names, 0 for none: the guide's cycle after the imbue the bot carries (single target:
+// Frostbrand, Flametongue, Windfury; pack: Flametongue, Windfury, Frostbrand), skipping the imbues it has not learned;
+// Rockbiter for a tank build. 0 when the next imbue is the one already up (a bot that knows one imbue never swaps).
+uint32 NextImbue(Player* bot, bool pack);
+
+// Earth Shock's taunt would land on the unit: a living hostile creature that is not immune to the helper's ATTACK_ME or
+// MOD_TAUNT effect (the check spell_sha_earth_shock_rockbiter makes before it casts the helper).
+bool CanTaunt(Player* bot, Unit* target);
 
 // A bounded ring of health samples on the getMSTime() clock (the sim drives that clock; the wall clock does not follow
 // it). A value keeps one per bot and adds a sample each time it is read, at most one every SAMPLE_GAP_MS.

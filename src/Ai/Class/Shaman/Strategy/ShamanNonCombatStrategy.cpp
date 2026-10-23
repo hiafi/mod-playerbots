@@ -7,6 +7,7 @@
 #include "ShamanNonCombatStrategy.h"
 #include "AiFactory.h"
 #include "Playerbots.h"
+#include "ShamanReworkUtils.h"
 #include "Strategy.h"
 #include "StrategyData.h"
 
@@ -133,9 +134,9 @@ void ShamanNonCombatStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     else if (tab == SHAMAN_TAB_ENHANCEMENT)
     {
         // Rework: the imbues are auras and only one is up at a time (a second cast replaces the first), so there is
-        // no off-hand imbue
-        triggers.push_back(new TriggerNode("main hand weapon no imbue", { NextAction("windfury weapon main hand", 22.0f), }));
-        triggers.push_back(new TriggerNode("lightning shield", { NextAction("lightning shield", 20.0f), }));
+        // no off-hand imbue. The first imbue of the cycle (Rockbiter for the tank), the swap at 10 charges and the
+        // shield are the rows of "shaman/nc-enh" and "shaman/nc-enh-tank"
+        ai::data::AppendRows(ai::shaman_rework::IsTankBuild(bot) ? "shaman/nc-enh-tank" : "shaman/nc-enh", triggers);
     }
     else if (tab == SHAMAN_TAB_RESTORATION)
     {

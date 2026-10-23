@@ -159,6 +159,19 @@ private:
     uint32 _spellId;
 };
 
+// The imbue "shaman next imbue" names (the Enhancement cycle, or Rockbiter for the tank build): the swap and
+// first-imbue rows in combat and out of combat, each under its own action name. Cast by id; nothing if the value is 0.
+class ShamanNextImbueAction : public Action
+{
+public:
+    ShamanNextImbueAction(PlayerbotAI* botAI, std::string const name) : Action(botAI, name) {}
+
+    std::string const GetTargetName() override { return "self target"; }
+    bool isUseful() override;
+    bool isPossible() override;
+    bool Execute(Event event) override;
+};
+
 // The Elemental Attunement "shaman attunement choice" picks.
 class ShamanAttunementAction : public Action
 {

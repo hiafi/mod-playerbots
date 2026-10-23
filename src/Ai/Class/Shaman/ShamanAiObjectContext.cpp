@@ -11,6 +11,7 @@
 #include "GenericShamanStrategy.h"
 #include "NamedObjectContext.h"
 #include "Playerbots.h"
+#include "PullStrategy.h"
 #include "RestoShamanStrategy.h"
 #include "ShamanReworkContext.h"
 #include "ShamanReworkIds.h"
@@ -29,6 +30,7 @@ public:
         creators["cure"] = &ShamanStrategyFactoryInternal::cure;
         creators["healer dps"] = &ShamanStrategyFactoryInternal::healer_dps;
         creators["boost"] = &ShamanStrategyFactoryInternal::boost;
+        creators["pull"] = &ShamanStrategyFactoryInternal::pull;
     }
 
 private:
@@ -39,6 +41,8 @@ private:
     // Rework: the idle Lightning Bolt of a healer (the stock Flame Shock and Lava Burst rows are retired)
     static Strategy* healer_dps(PlayerbotAI* botAI) { return new ShamanReworkHealerDpsStrategy(botAI); }
     static Strategy* boost(PlayerbotAI* botAI) { return new ShamanReworkBoostStrategy(botAI); }
+    // Rework: the Enhancement tank pulls with Earth Shock (it taunts under Rockbiter); no other shaman is a tank
+    static Strategy* pull(PlayerbotAI* botAI) { return new PullStrategy(botAI, "earth shock"); }
 };
 
 class ShamanCombatStrategyFactoryInternal : public NamedObjectContext<Strategy>
@@ -59,7 +63,15 @@ public:
 private:
     // Rework: "resto" and "heal" build the Restoration rotation (the stock RestoShamanStrategy is kept, unregistered)
     static Strategy* resto(PlayerbotAI* botAI) { return new ShamanReworkRestoStrategy(botAI); }
-    static Strategy* enh(PlayerbotAI* botAI) { return new EnhancementShamanStrategy(botAI); }
+    // Rework: "enh", "melee" and "dps" build the Enhancement rotation, the tank's for the Rockbiter build (the stock
+    // EnhancementShamanStrategy is kept, unregistered)
+    static Strategy* enh(PlayerbotAI* botAI)
+    {
+        if (ai::shaman_rework::IsTankBuild(botAI->GetBot()))
+            return new ShamanReworkEnhTankStrategy(botAI);
+
+        return new ShamanReworkEnhStrategy(botAI);
+    }
     static Strategy* ele(PlayerbotAI* botAI) { return new ShamanReworkEleStrategy(botAI); }
     // Rework: AiFactory gives a solo Restoration bot "caster"; it keeps its heal rows (the bot is its own group) and
     // the solo damage comes from "healer dps"

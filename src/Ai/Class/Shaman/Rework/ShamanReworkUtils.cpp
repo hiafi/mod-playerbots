@@ -12,7 +12,10 @@
 #include "Map.h"
 #include "Player.h"
 #include "PlayerbotAI.h"
+#include "RandomPlayerbotMgr.h"
 #include "ShamanReworkIds.h"
+#include "SpellInfo.h"
+#include "SpellMgr.h"
 #include "Timer.h"
 #include "Totem.h"
 #include <algorithm>
@@ -34,19 +37,21 @@ constexpr std::array<ElementalInfo, ELEMENT_COUNT> ELEMENTALS = {{
 constexpr std::array<uint32, 5> IMBUES = {SPELL_ROCKBITER_WEAPON, SPELL_FLAMETONGUE_WEAPON, SPELL_FROSTBRAND_WEAPON,
                                           SPELL_WINDFURY_WEAPON, SPELL_EARTHLIVING_WEAPON};
 
-// The imbue a spec wants, best first. Rockbiter is the fallback of a bot that knows nothing better.
+// The imbue a spec wants, best first. Rockbiter is the fallback of a bot that knows nothing better. Enhancement has no
+// chain: its imbue is the cycle's ("shaman next imbue", NextImbue), so it falls back to the Elemental one here.
 std::vector<uint32> const& ImbueChain(int tab)
 {
     static std::vector<uint32> const elemental = {SPELL_FLAMETONGUE_WEAPON, SPELL_ROCKBITER_WEAPON};
-    static std::vector<uint32> const enhancement = {SPELL_WINDFURY_WEAPON, SPELL_FLAMETONGUE_WEAPON,
-                                                    SPELL_ROCKBITER_WEAPON};
     static std::vector<uint32> const restoration = {SPELL_EARTHLIVING_WEAPON, SPELL_FLAMETONGUE_WEAPON,
                                                     SPELL_ROCKBITER_WEAPON};
-    if (tab == SHAMAN_TAB_ENHANCEMENT)
-        return enhancement;
-
     return tab == SHAMAN_TAB_RESTORATION ? restoration : elemental;
 }
+
+// The imbue cycles of the guide (Definitions: Cycle), in order
+constexpr std::array<uint32, 3> SINGLE_CYCLE = {SPELL_FROSTBRAND_WEAPON, SPELL_FLAMETONGUE_WEAPON,
+                                                SPELL_WINDFURY_WEAPON};
+constexpr std::array<uint32, 3> PACK_CYCLE = {SPELL_FLAMETONGUE_WEAPON, SPELL_WINDFURY_WEAPON,
+                                              SPELL_FROSTBRAND_WEAPON};
 
 // The attunements in tie-break order
 constexpr std::array<uint32, 4> ATTUNEMENTS = {SPELL_EARTH_ATTUNEMENT, SPELL_FIRE_ATTUNEMENT, SPELL_AIR_ATTUNEMENT,
@@ -263,9 +268,10 @@ uint32 ChooseAttunement(Player* bot, int tab)
     // The candidates best first: score, then the spec's own attunement, then the fixed order. Several shamans in a
     // group spread over the list by GUID order (the bot is the Nth shaman, so it takes the Nth candidate), so two bots
     // that choose together do not both pick the same one.
-    uint32 const preferred = tab == SHAMAN_TAB_ENHANCEMENT   ? SPELL_AIR_ATTUNEMENT
-                             : tab == SHAMAN_TAB_RESTORATION ? SPELL_WATER_ATTUNEMENT
-                                                             : SPELL_FIRE_ATTUNEMENT;
+    // (the Enhancement tank takes Earth: it is its own tank, the group counts it as one)
+    uint32 const preferred = tab == SHAMAN_TAB_ENHANCEMENT
+                                 ? (IsTankBuild(bot) ? SPELL_EARTH_ATTUNEMENT : SPELL_AIR_ATTUNEMENT)
+                                 : tab == SHAMAN_TAB_RESTORATION ? SPELL_WATER_ATTUNEMENT : SPELL_FIRE_ATTUNEMENT;
     std::vector<uint32> candidates;
     for (uint32 const spellId : ATTUNEMENTS)
         if (score(spellId) >= 0)
@@ -292,6 +298,76 @@ uint32 ChooseAttunement(Player* bot, int tab)
             ++shamanIndex;
 
     return candidates[shamanIndex % candidates.size()];
+}
+
+bool IsTankBuild(Player* bot)
+{
+    if (!bot || bot->getClass() != CLASS_SHAMAN || AiFactory::GetPlayerSpecTab(bot) != SHAMAN_TAB_ENHANCEMENT)
+        return false;
+
+    // Living Earth is a talent whose castable is its only rank: HasSpell on the learned castable, HasTalent as the
+    // fallback while the spellbook catches up
+    if (bot->HasSpell(SPELL_LIVING_EARTH) || bot->HasTalent(SPELL_LIVING_EARTH, bot->GetActiveSpec()))
+        return true;
+
+    // Living Earth is the 21st point of the 7.6 link, so it is bought at level 30 only: until then (and in the tick
+    // of the level-up itself, when the talent code decides which link to top up) the premade slot says which build
+    // the bot follows. The slot is kept at every level: a level gate would turn the tank into the DPS link at 30
+    return sRandomPlayerbotMgr.GetValue(bot, "specNo") == ENH_TANK_SPEC_SLOT + 1;
+}
+
+bool KnowsDualWield(Player* bot)
+{
+    return bot && (bot->HasSpell(SPELL_DUAL_WIELD_BASELINE) || bot->HasSpell(SPELL_DUAL_WIELD_RETIRED_TALENT));
+}
+
+uint32 NextImbue(Player* bot, bool pack)
+{
+    uint32 const active = ActiveImbue(bot);
+    if (IsTankBuild(bot))
+        return bot->HasSpell(SPELL_ROCKBITER_WEAPON) && active != SPELL_ROCKBITER_WEAPON ? SPELL_ROCKBITER_WEAPON : 0;
+
+    std::array<uint32, 3> const& cycle = pack ? PACK_CYCLE : SINGLE_CYCLE;
+    // The imbue after the active one in the full cycle (the first when the active imbue is not in it), then the first
+    // the bot has learned from there on
+    size_t start = 0;
+    auto const found = std::find(cycle.begin(), cycle.end(), active);
+    if (found != cycle.end())
+        start = size_t(found - cycle.begin()) + 1;
+
+    for (size_t i = 0; i < cycle.size(); ++i)
+    {
+        uint32 const candidate = cycle[(start + i) % cycle.size()];
+        if (bot->HasSpell(candidate))
+            return candidate == active ? 0 : candidate;
+    }
+
+    // Below level 10 nothing in the cycle is learned: Rockbiter is the only imbue
+    return bot->HasSpell(SPELL_ROCKBITER_WEAPON) && active != SPELL_ROCKBITER_WEAPON ? SPELL_ROCKBITER_WEAPON : 0;
+}
+
+bool CanTaunt(Player* bot, Unit* target)
+{
+    if (!bot || !target || !target->IsAlive() || target->IsPlayer() || !target->IsInWorld())
+        return false;
+
+    SpellInfo const* taunt = sSpellMgr->GetSpellInfo(SPELL_EARTH_SHOCK_TAUNT);
+    if (!taunt || !bot->IsValidAttackTarget(target, taunt))
+        return false;
+
+    // The helper's ATTACK_ME effect or its MOD_TAUNT aura: an immune target ignores the taunt (raid bosses, the sim's
+    // Raid Boss), as the core's own pre-check sees it
+    for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+    {
+        SpellEffectInfo const& effect = taunt->Effects[i];
+        if (effect.Effect != SPELL_EFFECT_ATTACK_ME && effect.ApplyAuraName != SPELL_AURA_MOD_TAUNT)
+            continue;
+
+        if (target->IsImmunedToSpellEffect(taunt, i, bot))
+            return false;
+    }
+
+    return true;
 }
 
 bool ParseTotemSlot(std::string const& name, uint8& slot)

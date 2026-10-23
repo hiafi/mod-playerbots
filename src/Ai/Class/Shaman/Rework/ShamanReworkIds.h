@@ -87,6 +87,29 @@ constexpr uint32 SPELL_CLOUDBURST_STORE = 202665;  // on the shaman while its Cl
 // Talents the strategy shells read
 constexpr uint32 SPELL_POWER_OF_THE_ELEMENTS = 202526;  // removes the Earth Elemental's taunt
 
+// Enhancement: the spells the rows cast by id (Stormstrike and Lava Lash keep stock ids, the rest are the rework's)
+constexpr uint32 SPELL_LIGHTNING_SHIELD = 324;
+constexpr uint32 SPELL_STORMSTRIKE = 17364;
+constexpr uint32 SPELL_LAVA_LASH = 60103;
+constexpr uint32 SPELL_SHAMANISTIC_RAGE = 30823;
+constexpr uint32 SPELL_ELEMENTAL_SPIRITS = 51533;  // the stock Feral Spirit id, reworked in place
+constexpr uint32 SPELL_MAELSTROM_WEAPON_BUFF = 53817;  // the stacks the spenders consume
+constexpr uint32 SPELL_LIVING_EARTH = 202361;  // the castable of the Living Earth talent: the tank build's marker
+
+// Enhancement auras and creatures the values read (the charges and Ascendances are in the YAML rows)
+constexpr uint32 SPELL_EARTH_SHOCK_TAUNT = 202394;  // the taunt helper of Earth Shock under Rockbiter
+constexpr uint32 NPC_SEARING_TOTEM = 300278;  // the creature that holds the Fire slot after Searing Totem
+constexpr uint32 NPC_MAGMA_TOTEM = 300277;  // ... after Magma Totem
+
+// Dual Wield: baseline from the trainer at level 20 (the talent that used to give it is retired)
+constexpr uint32 SPELL_DUAL_WIELD_BASELINE = 674;
+constexpr uint32 SPELL_DUAL_WIELD_RETIRED_TALENT = 30798;
+
+// The premade spec slot of the Enhancement tank (AiPlayerbot.PremadeSpecLink.7.6): a bot that has not bought Living
+// Earth yet (it is the 21st point, bought at level 30) is marked by the slot. RandomPlayerbotMgr stores slot + 1 under
+// "specNo".
+constexpr uint32 ENH_TANK_SPEC_SLOT = 6;
+
 }  // namespace ai::shaman_rework
 
 #endif

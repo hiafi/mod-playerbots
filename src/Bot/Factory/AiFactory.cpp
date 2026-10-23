@@ -21,6 +21,7 @@
 #include "PriestAiObjectContext.h"
 #include "RogueAiObjectContext.h"
 #include "ShamanAiObjectContext.h"
+#include "ShamanReworkUtils.h"
 #include "SharedDefines.h"
 #include "SpellInfo.h"
 #include "SpellMgr.h"
@@ -154,6 +155,8 @@ BotRoles AiFactory::GetPlayerRoles(Player* player)
         case CLASS_SHAMAN:
             if (tab == SHAMAN_TAB_RESTORATION)
                 role = BOT_ROLE_HEALER;
+            else if (ai::shaman_rework::IsTankBuild(player))  // Rework: the Enhancement tank build
+                role = BOT_ROLE_TANK;
             else
                 role = BOT_ROLE_DPS;
             break;
@@ -335,7 +338,11 @@ void AiFactory::AddDefaultCombatStrategies(Player* player, PlayerbotAI* const fa
             else // if (tab == SHAMAN_TAB_ENHANCEMENT)
                 engine->addStrategiesNoInit("enh", "strength of earth", "magma", "healing stream", "windfury", nullptr);
 
-            engine->addStrategiesNoInit("dps assist", "cure", "aoe", nullptr);
+            // Rework: the Enhancement tank build (the "enh" creator builds its rotation) tanks like the other tanks
+            if (ai::shaman_rework::IsTankBuild(player))
+                engine->addStrategiesNoInit("tank assist", "pull", "pull back", "cure", "aoe", nullptr);
+            else
+                engine->addStrategiesNoInit("dps assist", "cure", "aoe", nullptr);
             break;
         case CLASS_PALADIN:
             if (tab == PALADIN_TAB_PROTECTION)
@@ -537,7 +544,11 @@ void AiFactory::AddDefaultNonCombatStrategies(Player* player, PlayerbotAI* const
             nonCombatEngine->addStrategiesNoInit("bdps", "dps assist", "pet", nullptr);
             break;
         case CLASS_SHAMAN:
-            nonCombatEngine->addStrategiesNoInit("dps assist", "cure", nullptr);
+            // Rework: the Enhancement tank build
+            if (ai::shaman_rework::IsTankBuild(player))
+                nonCombatEngine->addStrategiesNoInit("tank assist", "pull", "cure", nullptr);
+            else
+                nonCombatEngine->addStrategiesNoInit("dps assist", "cure", nullptr);
             break;
         case CLASS_MAGE:
             if (tab == MAGE_TAB_ARCANE || tab == MAGE_TAB_FIRE)

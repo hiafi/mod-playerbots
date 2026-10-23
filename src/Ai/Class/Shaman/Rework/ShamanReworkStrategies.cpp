@@ -9,6 +9,7 @@
 #include "NoReachSpellMultiplier.h"
 #include "Playerbots.h"
 #include "ShamanReworkActions.h"
+#include "ShamanReworkUtils.h"
 #include "StrategyData.h"
 
 namespace
@@ -31,6 +32,28 @@ std::vector<NextAction> ShamanReworkEleStrategy::getDefaultActions()
 {
     // Castable at any time but on the move, so a tick with no row still contributes
     return {NextAction("shaman default lightning bolt", ACTION_DEFAULT + 0.1f)};
+}
+
+void ShamanReworkEnhStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
+{
+    GenericShamanStrategy::InitTriggers(triggers);
+    ai::data::AppendRows("shaman/enh", triggers);
+}
+
+std::vector<NextAction> ShamanReworkEnhStrategy::getDefaultActions()
+{
+    return {NextAction("melee", ACTION_DEFAULT)};
+}
+
+void ShamanReworkEnhTankStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
+{
+    GenericShamanStrategy::InitTriggers(triggers);
+    ai::data::AppendRows("shaman/enh-tank", triggers);
+}
+
+std::vector<NextAction> ShamanReworkEnhTankStrategy::getDefaultActions()
+{
+    return {NextAction("melee", ACTION_DEFAULT)};
 }
 
 void ShamanReworkRestoStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
@@ -94,7 +117,8 @@ void ShamanReworkTotemsStrategy::InitTriggers(std::vector<TriggerNode*>& trigger
 
 void ShamanReworkAoeStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
-    if (AiFactory::GetPlayerSpecTab(botAI->GetBot()) == SHAMAN_TAB_ELEMENTAL)
+    int const tab = AiFactory::GetPlayerSpecTab(botAI->GetBot());
+    if (tab == SHAMAN_TAB_ELEMENTAL || tab == SHAMAN_TAB_ENHANCEMENT)
         return;
 
     ShamanAoeStrategy::InitTriggers(triggers);
@@ -102,7 +126,20 @@ void ShamanReworkAoeStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 
 void ShamanReworkBoostStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
-    if (AiFactory::GetPlayerSpecTab(botAI->GetBot()) != SHAMAN_TAB_ELEMENTAL)
+    int const tab = AiFactory::GetPlayerSpecTab(botAI->GetBot());
+    if (tab == SHAMAN_TAB_ENHANCEMENT)
+    {
+        // The stock rows of the Enhancement branch, with the Fire Elemental placed by id (the stock melee action
+        // resolves the spell by name and wants the bot in melee range of the target)
+        triggers.push_back(new TriggerNode("heroism", {NextAction("heroism", 30.0f)}));
+        triggers.push_back(new TriggerNode("bloodlust", {NextAction("bloodlust", 30.0f)}));
+        if (!ai::shaman_rework::IsTankBuild(botAI->GetBot()))
+            triggers.push_back(new TriggerNode("fire elemental totem", {NextAction("shaman fire elemental", 24.0f)}));
+
+        return;
+    }
+
+    if (tab != SHAMAN_TAB_ELEMENTAL)
     {
         ShamanBoostStrategy::InitTriggers(triggers);
         return;

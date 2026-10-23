@@ -47,6 +47,7 @@
 #include "SayAction.h"
 #include "ScriptMgr.h"
 #include "ServerFacade.h"
+#include "ShamanReworkUtils.h"
 #include "SharedDefines.h"
 #include "SocialMgr.h"
 #include "SpellAuraEffects.h"
@@ -2347,6 +2348,11 @@ bool PlayerbotAI::IsTank(Player* player, bool bySpec)
                 return true;
             }
             break;
+        case CLASS_SHAMAN:
+            // Rework: the Enhancement tank build (Living Earth, or the tank premade slot below level 30)
+            if (ai::shaman_rework::IsTankBuild(player))
+                return true;
+            break;
     }
     return false;
 }
@@ -2419,7 +2425,8 @@ bool PlayerbotAI::IsDps(Player* player, bool bySpec)
             }
             break;
         case CLASS_SHAMAN:
-            if (tab != SHAMAN_TAB_RESTORATION)
+            // Rework: the Enhancement tank build is not a DPS
+            if (tab != SHAMAN_TAB_RESTORATION && !ai::shaman_rework::IsTankBuild(player))
             {
                 return true;
             }

@@ -342,6 +342,79 @@ protected:
     ObjectGuid CalculateGuid() override;
 };
 
+// ---- Enhancement ----
+
+// The imbue id the swap rows cast (NextImbue: the guide's cycle after the imbue up, the pack cycle on a pack of 3 or
+// more enemies within 8 yd of the target with the "aoe" strategy on, Rockbiter for the tank build), 0 when there is
+// none to swap to.
+class ShamanNextImbueValue : public Uint32CalculatedValue
+{
+public:
+    ShamanNextImbueValue(PlayerbotAI* botAI) : Uint32CalculatedValue(botAI, "shaman next imbue") {}
+
+    uint32 Calculate() override;
+};
+
+// Enemies within the qualifier's yards of the current target (the target itself excluded) that attack the group and
+// lack this bot's Flame Shock: the Lava Lash spread line.
+class ShamanPackWithoutFlameShockValue : public Uint8CalculatedValue, public Qualified
+{
+public:
+    ShamanPackWithoutFlameShockValue(PlayerbotAI* botAI)
+        : Uint8CalculatedValue(botAI, "shaman pack without flame shock", 200)
+    {
+    }
+
+    uint8 Calculate() override;
+};
+
+// The guide's dangerous window, from state the bot has (no encounter flags): the bot lost 40% of its maximum health
+// within 5 s (a ring of its own health on the getMSTime() clock, restarted on death, leaving combat, a teleport and a
+// change of maximum health, so a buff expiring is not read as a loss), or 4 or more enemies attack it, or a boss
+// attacks it. The history is sampled whenever the value is read: the rows that depend on it put it first.
+class ShamanSelfDangerValue : public BoolCalculatedValue
+{
+public:
+    ShamanSelfDangerValue(PlayerbotAI* botAI) : BoolCalculatedValue(botAI, "shaman self danger", 200) {}
+
+    bool Calculate() override;
+
+private:
+    ai::shaman_rework::HealthHistory _history;
+    uint32 _mapId = 0;
+    uint32 _maxHealth = 0;
+    float _x = 0.0f;
+    float _y = 0.0f;
+    float _z = 0.0f;
+    bool _located = false;
+};
+
+// An enemy attacking a group Player other than the bot (and not another tank) within 30 yd, that Earth Shock's taunt
+// would land on (not taunt-immune): the nearest one. A missing unit when there is none. The stock "lose aggro" trigger
+// reads only the current target, and "tank assist" retargets by its own rules, so the taunt rows need this unit.
+class ShamanLooseEnemyValue : public GuidCachedUnitValue
+{
+public:
+    ShamanLooseEnemyValue(PlayerbotAI* botAI) : GuidCachedUnitValue(botAI, "shaman loose enemy", 500) {}
+
+protected:
+    ObjectGuid CalculateGuid() override;
+};
+
+// A Restoration shaman other than the bot is in the group, alive and in heal range. Its Earth Shield goes on the tank
+// (resto.yaml skips a target that already holds any elemental shield), so the Enhancement tank casts no shield of its
+// own while one is there: neither Lightning Shield nor Earth Shield may strip or lock out the healer's.
+class ShamanRestoShamanInGroupValue : public BoolCalculatedValue
+{
+public:
+    ShamanRestoShamanInGroupValue(PlayerbotAI* botAI)
+        : BoolCalculatedValue(botAI, "shaman resto shaman in group", IN_MILLISECONDS)
+    {
+    }
+
+    bool Calculate() override;
+};
+
 class ShamanReworkValueFactory : public NamedObjectContext<UntypedValue>
 {
 public:

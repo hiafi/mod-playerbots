@@ -42,6 +42,7 @@ constexpr char EARTH_SHIELD_TARGET[] = "shaman earth shield target";
 constexpr char WITHOUT_OWN_AURA[] = "party member without own aura";
 constexpr char HEAL_CLUSTER_UNIT[] = "heal cluster unit::10,90";
 constexpr char MOST_CLUSTERED_ENEMY[] = "most clustered enemy::8";
+constexpr char LOOSE_ENEMY_TARGET[] = "shaman loose enemy";
 constexpr auto SINGLE = Action::ActionThreatType::Single;
 constexpr auto AOE = Action::ActionThreatType::Aoe;
 
@@ -224,6 +225,20 @@ bool ShamanImbueAction::isUseful()
 bool ShamanImbueAction::isPossible() { return bot->HasSpell(_spellId) && botAI->CanCastSpell(_spellId, bot, true); }
 
 bool ShamanImbueAction::Execute(Event /*event*/) { return botAI->CastSpell(_spellId, bot); }
+
+bool ShamanNextImbueAction::isUseful() { return AI_VALUE(uint32, "shaman next imbue") != 0; }
+
+bool ShamanNextImbueAction::isPossible()
+{
+    uint32 const spellId = AI_VALUE(uint32, "shaman next imbue");
+    return spellId && botAI->CanCastSpell(spellId, bot, true);
+}
+
+bool ShamanNextImbueAction::Execute(Event /*event*/)
+{
+    uint32 const spellId = AI_VALUE(uint32, "shaman next imbue");
+    return spellId && botAI->CastSpell(spellId, bot);
+}
 
 bool ShamanAttunementAction::isUseful() { return AI_VALUE(uint32, "shaman attunement choice") != 0; }
 
@@ -451,4 +466,117 @@ ShamanReworkActionFactory::ShamanReworkActionFactory()
     creators["shaman nc earth shield"] = [](PlayerbotAI* botAI) -> Action*
     { return HealOn(botAI, "earth shield", SPELL_EARTH_SHIELD, EARTH_SHIELD_TARGET); };
     creators["shaman attunement"] = [](PlayerbotAI* botAI) -> Action* { return new ShamanAttunementAction(botAI); };
+
+    // ---- Enhancement ----
+    // The imbue swap: the transform at 10 charges in combat, the first imbue and the 10-charge swap out of combat
+    creators["shaman swap imbue"] = [](PlayerbotAI* botAI) -> Action*
+    { return new RowCheckedAction<ShamanNextImbueAction>(botAI, "shaman swap imbue"); };
+    creators["shaman first imbue"] = [](PlayerbotAI* botAI) -> Action*
+    { return new RowCheckedAction<ShamanNextImbueAction>(botAI, "shaman first imbue"); };
+    creators["shaman nc imbue"] = [](PlayerbotAI* botAI) -> Action*
+    { return new RowCheckedAction<ShamanNextImbueAction>(botAI, "shaman nc imbue"); };
+    creators["shaman nc swap imbue"] = [](PlayerbotAI* botAI) -> Action*
+    { return new RowCheckedAction<ShamanNextImbueAction>(botAI, "shaman nc swap imbue"); };
+
+    // The melee abilities: Lava Lash has one name per row that can fire together with another (the plain row, the
+    // Volcanic Eruption one, the Flame Shock spread)
+    creators["shaman stormstrike"] = [](PlayerbotAI* botAI) -> Action*
+    { return Cast(botAI, "stormstrike", {SPELL_STORMSTRIKE}); };
+    creators["shaman lava lash"] = [](PlayerbotAI* botAI) -> Action*
+    { return Cast(botAI, "lava lash", {SPELL_LAVA_LASH}); };
+    creators["shaman eruption lava lash"] = [](PlayerbotAI* botAI) -> Action*
+    { return Cast(botAI, "lava lash", {SPELL_LAVA_LASH}); };
+    creators["shaman spread lava lash"] = [](PlayerbotAI* botAI) -> Action*
+    { return Cast(botAI, "lava lash", {SPELL_LAVA_LASH}, CURRENT_TARGET, {}, AOE); };
+    creators["shaman shamanistic rage"] = [](PlayerbotAI* botAI) -> Action*
+    { return Cast(botAI, "shamanistic rage", {SPELL_SHAMANISTIC_RAGE}, SELF_TARGET); };
+    creators["shaman elemental spirits"] = [](PlayerbotAI* botAI) -> Action*
+    { return Cast(botAI, "elemental spirits", {SPELL_ELEMENTAL_SPIRITS}, SELF_TARGET); };
+
+    // Flame Shock: the missing DoT, the refresh in the last seconds of Elemental Ascendance, the imbue's late refresh
+    creators["shaman flame shock refresh"] = [](PlayerbotAI* botAI) -> Action*
+    { return Cast(botAI, "flame shock", {SPELL_FLAME_SHOCK}); };
+    creators["shaman matching flame shock"] = [](PlayerbotAI* botAI) -> Action*
+    { return Cast(botAI, "flame shock", {SPELL_FLAME_SHOCK}); };
+    // The shock that is not the imbue's own, as the filler behind Elemental Blast
+    creators["shaman offleg frost shock"] = [](PlayerbotAI* botAI) -> Action*
+    { return Cast(botAI, "frost shock", {SPELL_FROST_SHOCK}); };
+    creators["shaman offleg earth shock"] = [](PlayerbotAI* botAI) -> Action*
+    { return Cast(botAI, "earth shock", {SPELL_EARTH_SHOCK}); };
+
+    // The Maelstrom Weapon spenders
+    creators["shaman mw lava burst"] = [](PlayerbotAI* botAI) -> Action*
+    { return Cast(botAI, "lava burst", {SPELL_LAVA_BURST}, CURRENT_TARGET, {}); };
+    creators["shaman mw lightning bolt"] = [](PlayerbotAI* botAI) -> Action*
+    { return Cast(botAI, "lightning bolt", {SPELL_LIGHTNING_BOLT}, CURRENT_TARGET, {}); };
+    creators["shaman enh lightning bolt"] = [](PlayerbotAI* botAI) -> Action*
+    { return Cast(botAI, "lightning bolt", {SPELL_LIGHTNING_BOLT}, CURRENT_TARGET, {}); };
+    creators["shaman mw chain lightning"] = [](PlayerbotAI* botAI) -> Action*
+    { return Cast(botAI, "chain lightning", {SPELL_CHAIN_LIGHTNING}, CURRENT_TARGET, {}, AOE); };
+
+    // Shields on the bot
+    creators["shaman lightning shield"] = [](PlayerbotAI* botAI) -> Action*
+    { return Cast(botAI, "lightning shield", {SPELL_LIGHTNING_SHIELD}, SELF_TARGET); };
+
+    // Fire slot and elementals of the damage build. Magma replaces a Searing Totem still out (the slot check lets
+    // only an elemental hold it back); the Fire Elemental belongs to the boost strategy's trigger
+    creators["shaman enh magma totem"] = [](PlayerbotAI* botAI) -> Action*
+    {
+        return new RowCheckedAction<ShamanGroundCastAction>(botAI, "magma totem", SPELL_MAGMA_TOTEM_GROUND,
+                                                            MOST_CLUSTERED_ENEMY, MAGMA_RANGE, SUMMON_SLOT_TOTEM_FIRE);
+    };
+    creators["shaman fire elemental"] = [](PlayerbotAI* botAI) -> Action*
+    {
+        return new ShamanTotemAction(botAI, "fire elemental totem", SPELL_FIRE_ELEMENTAL_TOTEM,
+                                     SUMMON_SLOT_TOTEM_FIRE);
+    };
+    creators["shaman earth elemental"] = [](PlayerbotAI* botAI) -> Action*
+    { return PlaceTotem(botAI, "earth elemental totem", SPELL_EARTH_ELEMENTAL_TOTEM, SUMMON_SLOT_TOTEM_EARTH); };
+
+    // ---- The Enhancement tank ----
+    creators["shaman tank shamanistic rage"] = [](PlayerbotAI* botAI) -> Action*
+    { return Cast(botAI, "shamanistic rage", {SPELL_SHAMANISTIC_RAGE}, SELF_TARGET); };
+    creators["shaman earthen ascendance"] = [](PlayerbotAI* botAI) -> Action*
+    { return Cast(botAI, "living earth", {SPELL_LIVING_EARTH}, SELF_TARGET); };
+    creators["shaman living earth absorb"] = [](PlayerbotAI* botAI) -> Action*
+    { return Cast(botAI, "living earth", {SPELL_LIVING_EARTH}, SELF_TARGET); };
+    creators["shaman living earth capped"] = [](PlayerbotAI* botAI) -> Action*
+    { return Cast(botAI, "living earth", {SPELL_LIVING_EARTH}, SELF_TARGET); };
+    creators["shaman tank earth shock"] = [](PlayerbotAI* botAI) -> Action*
+    { return Cast(botAI, "earth shock", {SPELL_EARTH_SHOCK}); };
+    // The taunts: Earth Shock on the loose enemy (it taunts under Rockbiter), else Chain Lightning with it as the
+    // primary target
+    creators["shaman taunt earth shock"] = [](PlayerbotAI* botAI) -> Action*
+    { return Cast(botAI, "earth shock", {SPELL_EARTH_SHOCK}, LOOSE_ENEMY_TARGET); };
+    creators["shaman loose chain lightning"] = [](PlayerbotAI* botAI) -> Action*
+    {
+        return Cast(botAI, "chain lightning", {SPELL_CHAIN_LIGHTNING}, LOOSE_ENEMY_TARGET, {}, AOE);
+    };
+    creators["shaman tank stormstrike"] = [](PlayerbotAI* botAI) -> Action*
+    { return Cast(botAI, "stormstrike", {SPELL_STORMSTRIKE}); };
+    creators["shaman tank lava lash"] = [](PlayerbotAI* botAI) -> Action*
+    { return Cast(botAI, "lava lash", {SPELL_LAVA_LASH}); };
+    creators["shaman tank chain lightning"] = [](PlayerbotAI* botAI) -> Action*
+    { return Cast(botAI, "chain lightning", {SPELL_CHAIN_LIGHTNING}, CURRENT_TARGET, {}, AOE); };
+    creators["shaman tank mw chain lightning"] = [](PlayerbotAI* botAI) -> Action*
+    { return Cast(botAI, "chain lightning", {SPELL_CHAIN_LIGHTNING}, CURRENT_TARGET, {}, AOE); };
+    creators["shaman tank lightning bolt"] = [](PlayerbotAI* botAI) -> Action*
+    { return Cast(botAI, "lightning bolt", {SPELL_LIGHTNING_BOLT}, CURRENT_TARGET, {}); };
+    creators["shaman tank filler lightning bolt"] = [](PlayerbotAI* botAI) -> Action*
+    { return Cast(botAI, "lightning bolt", {SPELL_LIGHTNING_BOLT}, CURRENT_TARGET, {}); };
+    creators["shaman tank flame shock"] = [](PlayerbotAI* botAI) -> Action*
+    { return Cast(botAI, "flame shock", {SPELL_FLAME_SHOCK}); };
+    creators["shaman tank lightning shield"] = [](PlayerbotAI* botAI) -> Action*
+    { return Cast(botAI, "lightning shield", {SPELL_LIGHTNING_SHIELD}, SELF_TARGET); };
+    creators["shaman tank earth shield self"] = [](PlayerbotAI* botAI) -> Action*
+    { return Cast(botAI, "earth shield", {SPELL_EARTH_SHIELD}, SELF_TARGET); };
+    // Earthen Wall on the bot itself (the Restoration rows place it on the effective tank)
+    creators["shaman self earthen wall"] = [](PlayerbotAI* botAI) -> Action*
+    { return PlaceTotem(botAI, "earthen wall totem", SPELL_EARTHEN_WALL_TOTEM, SUMMON_SLOT_TOTEM_EARTH); };
+    // Magma at the bot's feet for threat on a pack
+    creators["shaman tank magma totem"] = [](PlayerbotAI* botAI) -> Action*
+    {
+        return new RowCheckedAction<ShamanGroundCastAction>(botAI, "magma totem", SPELL_MAGMA_TOTEM_GROUND,
+                                                            SELF_TARGET, MAGMA_RANGE, SUMMON_SLOT_TOTEM_FIRE);
+    };
 }
