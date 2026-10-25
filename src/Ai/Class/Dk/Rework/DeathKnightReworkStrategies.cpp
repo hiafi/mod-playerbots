@@ -28,3 +28,21 @@ uint32 DeathKnightReworkBloodStrategy::GetType() const
 {
     return (ai::dk_rework::IsTankBuild(botAI->GetBot()) ? STRATEGY_TYPE_TANK : STRATEGY_TYPE_DPS) | STRATEGY_TYPE_MELEE;
 }
+
+DeathKnightReworkFrostStrategy::DeathKnightReworkFrostStrategy(PlayerbotAI* botAI) : MeleeCombatStrategy(botAI) {}
+
+std::vector<NextAction> DeathKnightReworkFrostStrategy::getDefaultActions()
+{
+    return {NextAction("melee", ACTION_DEFAULT)};
+}
+
+void DeathKnightReworkFrostStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
+{
+    MeleeCombatStrategy::InitTriggers(triggers);
+    ai::data::AppendRows("dk/frost", triggers);
+}
+
+void DeathKnightReworkFrostAoeStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
+{
+    ai::data::AppendRows("dk/frost-pack", triggers);
+}

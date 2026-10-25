@@ -46,6 +46,31 @@ constexpr uint32 SPELL_CRIMSON_COMMUNION = 203141;
 constexpr uint32 SPELL_BLOOD_NOVA = 203143;
 constexpr uint32 SPELL_BONESTORM = 203148;
 
+// Frost kit and talents, cast by id. Obliterate carries its name on three ids (49020 is Mograine's, 66198 the off-hand
+// copy): the player's is 203054, DeathKnightData::SPELL_OBLITERATE_203054 in the core header. Frost Strike's off-hand
+// copy is 66196; Howling Blast is the one id
+constexpr uint32 SPELL_OBLITERATE = 203054;
+constexpr uint32 SPELL_FROST_STRIKE = 49143;
+constexpr uint32 SPELL_HOWLING_BLAST = 49184;
+constexpr uint32 SPELL_EMPOWER_RUNE_WEAPON = 47568;
+constexpr uint32 SPELL_ANTI_MAGIC_SHELL = 48707;
+constexpr uint32 SPELL_LICHBORNE = 49039;
+constexpr uint32 SPELL_GLACIAL_ADVANCE = 203273;
+constexpr uint32 SPELL_PILLAR_OF_FROST = 203280;
+constexpr uint32 SPELL_BREATH_OF_SINDRAGOSA = 203306;
+
+// Frost auras the strategy reads (the Killing Machine buff is 203320, not the talent rank 51123; Rime's buff is
+// Freezing Fog)
+constexpr uint32 SPELL_KILLING_MACHINE_BUFF = 203320;
+constexpr uint32 SPELL_FREEZING_FOG = 59052;
+
+// Frost talent ranks the build test reads (known(): a talent shows its current rank only, so a two-rank talent is
+// tested on both ranks). Frostwyrm's Wrath 203302 / 203303 and Rage of the Frozen Champion 203294 / 203295 are the
+// Breath build, Obliteration 203292 the Obliteration build
+constexpr uint32 SPELL_OBLITERATION = 203292;
+constexpr uint32 SPELL_FROSTWYRMS_WRATH = 203302;
+constexpr uint32 SPELL_RAGE_OF_THE_FROZEN_CHAMPION = 203294;
+
 // Auras the strategy reads
 constexpr uint32 SPELL_BONE_SHIELD = 49222;
 constexpr uint32 SPELL_BLOOD_PLAGUE = 55078;

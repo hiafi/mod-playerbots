@@ -22,11 +22,24 @@ namespace ai::dk_rework
 // Also read for a real player (PlayerbotAI::IsTank by spec), so it takes the Player and nothing from the bot.
 bool IsTankBuild(Player* player);
 
-// The premade slot (6.<slot>) a Blood Death Knight levels up on: 0 "blood tank" or 1 "blood tank worms", from the
-// stored "specNo" (slot + 1), the way the Shaman tank keeps its link. NO_PREMADE_SLOT when none is stored (a new bot,
-// or a stale Frost or Unholy slot), and then the tab-based pick stands.
+// The premade slot (6.<slot>) a Death Knight levels up on, from the stored "specNo" (slot + 1), the way the Shaman tank
+// keeps its link: 0 "blood tank", 1 "blood tank worms", 2 "frost breath" or 3 "frost obliteration". Slots 0 and 1 are
+// the Blood tab, 2 and 3 the Frost tab (4 and 5 will be the Unholy tab, S3). A stored slot counts only for the tab the
+// bot has talents in; with no talent yet it is taken as it is (the first point keeps the roll). With talents in a tab
+// and no usable slot (a new bot, a hand-specced one, a stale value) the tab picks: Blood -> slot 0, Frost -> slot 2.
+// NO_PREMADE_SLOT for the Unholy tab (until S3), for a slot above 3 and for a bot that is no Death Knight; then the
+// tab-based pick of PlayerbotFactory stands.
 constexpr uint32 NO_PREMADE_SLOT = 0xFFFFFFFF;
+constexpr uint32 BLOOD_SLOT = 0;
+constexpr uint32 FROST_SLOT = 2;
+constexpr uint32 LAST_PREMADE_SLOT = 3;
 uint32 PremadeSlot(Player* bot);
+
+// Dual Wield is baseline for a Death Knight (skill 118 and the spell the class acquires at login), at any level: gives
+// the Dual Wield skill and the dual wield permission. The permission is dropped by Player::resetTalents when the spell
+// is not known yet (a bot that levels up resets its talents), so the talent code calls this after every reset and the
+// skill code at creation. A no-op for any other class.
+void EnsureDualWield(Player* bot);
 
 // The Death Knight's ready runes by what they can pay for. A Death Rune is counted in every type it can fill.
 struct ReadyRunes
@@ -38,6 +51,7 @@ struct ReadyRunes
     uint8 exactFrost = 0;
     uint8 exactUnholy = 0;
     bool pair = false;  // a Frost and an Unholy Rune, in two different slots (Death Runes fill either)
+    bool trio = false;  // a Blood, a Frost and an Unholy Rune, in three different slots (Death Runes fill any)
 };
 
 ReadyRunes GetReadyRunes(Player* player);

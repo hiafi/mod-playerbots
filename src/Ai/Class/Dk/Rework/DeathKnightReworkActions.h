@@ -35,13 +35,38 @@ public:
     bool Execute(Event event) override;
     ActionThreatType getThreatType() override { return _threat; }
 
-private:
+protected:
     // The first of the ids the bot has learned, 0 when none
     uint32 SpellId() const;
 
+private:
     std::vector<uint32> _spellIds;
     std::string _target;
     ActionThreatType _threat;
+};
+
+// A self-cast spell that fires along the bot's facing (Breath of Sindragosa's cone, Glacial Advance's line): the bot
+// turns to its current target, then casts. A melee bot already stands facing it, but a tick after a knockback or a
+// strafe it may not, and both spells go where the bot looks.
+class DkFacingCastAction : public DkCastAction
+{
+public:
+    using DkCastAction::DkCastAction;
+
+    bool Execute(Event event) override;
+};
+
+// A self-cast spell that the core lets a feared or confused caster cast (Lichborne: the usable-while-feared and
+// confused attributes). PlayerbotAI::CanCastSpell refuses every cast under UNIT_STATE_LOST_CONTROL, so this asks the
+// core's own cast check instead and casts straight from the bot. A sleep still refuses it (a stun with the sleep
+// mechanic), and the core says so here.
+class DkControlLostCastAction : public DkCastAction
+{
+public:
+    using DkCastAction::DkCastAction;
+
+    bool isPossible() override;
+    bool Execute(Event event) override;
 };
 
 // Death and Decay dropped at the bot's feet (the unit "self target" is the fallback position). A ground spell has no

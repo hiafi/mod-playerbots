@@ -51,8 +51,8 @@ void AutoMaintenanceOnLevelupAction::AutoPickTalents()
     if (bot->GetFreeTalentPoints() <= 0)
         return;
 
-    // Rework: a Death Knight's first talent point rolls its premade slot (the 6.0 / 6.1 Blood split); keep the slot it
-    // landed on, so the later level-ups top up the same link
+    // Rework: a Death Knight's first talent point rolls its premade slot (the 6.0 to 6.3 Blood / Frost split); keep
+    // the slot it landed on, so the later level-ups top up the same link
     std::map<uint8, uint32> tabs = AiFactory::GetPlayerSpecTabs(bot);
     bool const firstDeathKnightPoint =
         bot->getClass() == CLASS_DEATH_KNIGHT && tabs[0] + tabs[1] + tabs[2] == 0;

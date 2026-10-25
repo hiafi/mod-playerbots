@@ -5,8 +5,9 @@
 # is never toggled in combat (it is the tank aura, -5% damage dealt) and a rune is an out-of-combat cast (spell group
 # 1271, one rune at a time), so the engines never swap either mid-fight.
 # Every spell carries `known()`: Blood Presence is taught at 10, the Rune of the Fallen Crusader at 6, Exsanguination at
-# 20. Frost and Unholy bots never cast Blood Presence (Frost Presence and Unholy Presence are gone), and keep the Fallen
-# Crusader rune until their own stages (S2/S3) give them theirs.
+# 20. Frost and Unholy bots never cast Blood Presence (Frost Presence and Unholy Presence are gone). They keep the
+# Fallen Crusader rune until level 20, then take the Rune of Razorice (S2 Frost; the Unholy tab shares this list until
+# S3 gives it its own rune, and no bot is Unholy before then).
 # Spell ids (DBC names): Blood Presence 48266, Rune of the Fallen Crusader 53344, Rune of Razorice 53343, Rune of
 # Exsanguination 203040, Rune of Boiling Blight 203042, Rune of the Apocalypse 203044, Rune of Unending Thirst 203049
 # (the runes are self auras: the cast spell and the aura share the id).
@@ -32,6 +33,22 @@ class: dk
 conditions:
   no_rune: not aura(self, "53344,53343,203040,203042,203044,203049")
 rows:
-  - do: dk rune fallen crusader
-    when: known(53344) and no_rune
+  # Leave Blood Presence: a Blood bot that a master re-specs to Frost keeps the aura, which counts as a tank to the
+  # roles and the LFG and costs 5% damage. The client cancel of the bot's own aura, out of combat only
+  - do: dk cancel blood presence
+    when: aura(self, 48266, own)
+    relevance: high + 2
+  # Rune of Razorice from 20 (the Frost rune; it replaces any other rune, which is cast out of combat only). Frost's
+  # Fallen Crusader before that, kept until the Razorice cast. Blood Presence is never cast here (the first row
+  # cancels it)
+  - do: dk rune razorice
+    when: known(53343) and not aura(self, 53343)
     relevance: high + 1
+  - do: dk rune fallen crusader
+    when: known(53344) and not known(53343) and no_rune
+    relevance: high + 0.9
+  # Horn of Winter before the pull, by id (S2b-2 F2: the stock name-cast "horn of winter" trigger of the strategy never
+  # fired in the pre-pull phase, so the buff was first cast in combat). After the rune, one GCD
+  - do: dk horn of winter
+    when: known(57330) and not aura(self, 57330)
+    relevance: high + 0.5

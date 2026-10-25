@@ -17,7 +17,7 @@ class PlayerbotAI;
 // The state the reworked Death Knight's YAML rows read, and that no shared value gives: Runic Power, the runes by what
 // they can pay for, the damage taken lately, the Death and Decay the bot stands in, the loose enemies.
 
-// Runic Power as the player sees it, 0 to 100.
+// Runic Power as the player sees it, 0 to the maximum (100, or 120 with Runic Power Mastery).
 class DkRunicPowerValue : public Uint8CalculatedValue
 {
 public:
@@ -26,15 +26,67 @@ public:
     uint8 Calculate() override;
 };
 
+// The Runic Power maximum as the player sees it (100, or 120 with Runic Power Mastery).
+class DkRunicPowerMaxValue : public Uint8CalculatedValue
+{
+public:
+    DkRunicPowerMaxValue(PlayerbotAI* botAI) : Uint8CalculatedValue(botAI, "dk runic power max") {}
+
+    uint8 Calculate() override;
+};
+
+// The Runic Power the bot lacks to the maximum (0 at the cap). The condition language has no arithmetic, so "near
+// the cap" (the guide: within 20) reads `value("dk runic power missing") <= 20` and "at the cap" `== 0`.
+class DkRunicPowerMissingValue : public Uint8CalculatedValue
+{
+public:
+    DkRunicPowerMissingValue(PlayerbotAI* botAI) : Uint8CalculatedValue(botAI, "dk runic power missing") {}
+
+    uint8 Calculate() override;
+};
+
 // How many ready runes can pay for a type: "blood", "frost" or "unholy" (Death Runes counted in each), "death" (the
-// Death Runes alone), or "pair" (1 when a Frost and an Unholy Rune are ready in two slots, Death Runes filling either,
-// else 0): the Marrowrend cost.
+// Death Runes alone), "pair" (1 when a Frost and an Unholy Rune are ready in two slots, Death Runes filling either,
+// else 0): the Marrowrend and Howling Blast cost, or "trio" (1 when a Blood, a Frost and an Unholy Rune are ready in
+// three slots, Death Runes filling any): the Death and Decay cost.
 class DkRunesReadyValue : public Uint8CalculatedValue, public Qualified
 {
 public:
     DkRunesReadyValue(PlayerbotAI* botAI) : Uint8CalculatedValue(botAI, "dk runes ready") {}
 
     uint8 Calculate() override;
+};
+
+// Milliseconds until the bot has enough runes of a type ready, 0 when it has them now. Qualifier: the type, "blood",
+// "frost" or "unholy" (Death Runes fill any), and optionally the count after a semicolon: `frost` is the next Frost
+// Rune, `frost;2` the second (both Frost Runes ready: the guide's "the other within 2 sec"). Saturates at a minute,
+// which is also the answer when the bot has fewer than that many runes of the type.
+class DkRuneReadyInValue : public Uint32CalculatedValue, public Qualified
+{
+public:
+    DkRuneReadyInValue(PlayerbotAI* botAI) : Uint32CalculatedValue(botAI, "dk rune ready in", 100) {}
+
+    uint32 Calculate() override;
+};
+
+// Enemies attacking the group inside a box in front of the bot: the first number is the length in yards along its
+// facing, the second the half-width. Qualifier: "length,halfwidth". Glacial Advance runs 20 yd and its eruptions have a
+// 3 yd radius.
+class DkEnemiesInLineValue : public Uint8CalculatedValue, public Qualified
+{
+public:
+    DkEnemiesInLineValue(PlayerbotAI* botAI) : Uint8CalculatedValue(botAI, "dk enemies in line", 200) {}
+
+    uint8 Calculate() override;
+};
+
+// The Frost pack list is on: the bot has the "frost aoe" combat strategy (the toggle chat commands flip).
+class DkAoeEnabledValue : public BoolCalculatedValue
+{
+public:
+    DkAoeEnabledValue(PlayerbotAI* botAI) : BoolCalculatedValue(botAI, "dk aoe enabled") {}
+
+    bool Calculate() override;
 };
 
 // The health the bot lost in the last 5 s as a percent of its maximum health, saturating at 255 (the guide's "recent

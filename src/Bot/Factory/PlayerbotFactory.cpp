@@ -1749,10 +1749,10 @@ uint32 PlayerbotFactory::InitTalentsTree(bool increment /*false*/, bool use_temp
     uint8 cls = bot->getClass();
     std::map<uint8, uint32> tabs = AiFactory::GetPlayerSpecTabs(bot);
     uint32 total_tabs = tabs[0] + tabs[1] + tabs[2];
-    // Rework: a Blood Death Knight keeps its premade slot (6.0 "blood tank" or 6.1 "blood tank worms") at any level,
-    // also for the first talent point; the tab (always 0) would send every one of them to 6.0
+    // Rework: a Death Knight keeps its premade slot (6.0 / 6.1 the Blood builds, 6.2 / 6.3 the Frost ones) at any
+    // level, also for the first talent point; the tab (0, 1 or 2) would send every one of them to 6.0 / 6.1 / 6.2
     uint32 deathKnightSlot = ai::dk_rework::NO_PREMADE_SLOT;
-    if (increment && cls == CLASS_DEATH_KNIGHT && (total_tabs == 0 || AiFactory::GetPlayerSpecTab(bot) == 0))
+    if (increment && cls == CLASS_DEATH_KNIGHT)
         deathKnightSlot = ai::dk_rework::PremadeSlot(bot);
 
     if (deathKnightSlot != ai::dk_rework::NO_PREMADE_SLOT)
@@ -1834,6 +1834,8 @@ uint32 PlayerbotFactory::InitTalentsTree(bool increment /*false*/, bool use_temp
         bot->SetSkill(SKILL_DUAL_WIELD, 0, 1, 1);
         bot->SetCanDualWield(true);
     }
+    // Rework: Dual Wield is baseline for a Death Knight too; a talent reset drops the permission
+    ai::dk_rework::EnsureDualWield(bot);
 
     bot->SendTalentsInfoData(false);
     return sPlayerbotAIConfig.RandomClassSpecIndex[cls][specTab];
@@ -1940,6 +1942,8 @@ void PlayerbotFactory::InitTalentsBySpecNo(Player* bot, int specNo, bool reset)
         bot->SetSkill(SKILL_DUAL_WIELD, 0, 1, 1);
         bot->SetCanDualWield(true);
     }
+    // Rework: Dual Wield is baseline for a Death Knight too; a talent reset drops the permission
+    ai::dk_rework::EnsureDualWield(bot);
 
     bot->SendTalentsInfoData(false);
     sRandomPlayerbotMgr.SetValue(bot->GetGUID().GetCounter(), "specNo", (uint32)specNo + 1);
@@ -3558,8 +3562,8 @@ void PlayerbotFactory::InitSkills()
             SetRandomSkill(SKILL_2H_MACES);
             SetRandomSkill(SKILL_2H_AXES);
             SetRandomSkill(SKILL_POLEARMS);
-            bot->SetSkill(SKILL_DUAL_WIELD, 0, dualWieldLevel, dualWieldLevel);
-            bot->SetCanDualWield(dualWieldLevel);
+            // Rework: Dual Wield is baseline for a Death Knight, at any level (Frost dual wields from level 1)
+            ai::dk_rework::EnsureDualWield(bot);
             break;
         default:
             break;

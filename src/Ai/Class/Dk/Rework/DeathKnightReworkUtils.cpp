@@ -32,10 +32,39 @@ uint32 PremadeSlot(Player* bot)
     if (!bot || bot->getClass() != CLASS_DEATH_KNIGHT)
         return NO_PREMADE_SLOT;
 
-    // The stored value is the premade slot + 1 (PlayerbotFactory stores it at creation and on a spec change); slots
-    // 6.0 and 6.1 are the two Blood builds, 6.2 and up are the stale Frost and Unholy ones
+    // The stored value is the premade slot + 1 (PlayerbotFactory stores it at creation and on a spec change)
     uint32 const specNo = sRandomPlayerbotMgr.GetValue(bot, "specNo");
-    return specNo == 1 || specNo == 2 ? specNo - 1 : NO_PREMADE_SLOT;
+    uint32 const slot = specNo >= 1 && specNo - 1 <= LAST_PREMADE_SLOT ? specNo - 1 : NO_PREMADE_SLOT;
+
+    std::map<uint8, uint32> const tabs = AiFactory::GetPlayerSpecTabs(bot);
+    uint32 points = 0;
+    for (auto const& [tab, spent] : tabs)
+        points += spent;
+
+    // No talent yet: the first point takes the slot the bot rolled
+    if (!points)
+        return slot;
+
+    // Talents in a tab: the stored slot stands when it belongs to that tab, else the tab's first slot (the Unholy tab
+    // has none until S3). GetPlayerSpecTab is the leading tab, the one the strategies are picked by
+    switch (AiFactory::GetPlayerSpecTab(bot))
+    {
+        case DEATH_KNIGHT_TAB_BLOOD:
+            return slot != NO_PREMADE_SLOT && slot < FROST_SLOT ? slot : BLOOD_SLOT;
+        case DEATH_KNIGHT_TAB_FROST:
+            return slot != NO_PREMADE_SLOT && slot >= FROST_SLOT ? slot : FROST_SLOT;
+        default:
+            return NO_PREMADE_SLOT;
+    }
+}
+
+void EnsureDualWield(Player* bot)
+{
+    if (!bot || bot->getClass() != CLASS_DEATH_KNIGHT)
+        return;
+
+    bot->SetSkill(SKILL_DUAL_WIELD, 0, 1, 1);
+    bot->SetCanDualWield(true);
 }
 
 ReadyRunes GetReadyRunes(Player* player)
@@ -79,6 +108,9 @@ ReadyRunes GetReadyRunes(Player* player)
     runes.exactFrost = exactFrost;
     runes.exactUnholy = exactUnholy;
     runes.pair = runes.frost >= 1 && runes.unholy >= 1 && (exactFrost + exactUnholy + death) >= 2;
+    // Each type without a rune of its own needs a Death Rune to stand in
+    uint8 const missing = (exactBlood ? 0 : 1) + (exactFrost ? 0 : 1) + (exactUnholy ? 0 : 1);
+    runes.trio = missing <= death;
     return runes;
 }
 

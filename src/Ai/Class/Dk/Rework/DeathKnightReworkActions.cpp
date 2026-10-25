@@ -5,10 +5,12 @@
  */
 
 #include "DeathKnightReworkActions.h"
+#include "CancelOwnAuraAction.h"
 #include "DeathKnightReworkIds.h"
 #include "DynamicObject.h"
 #include "Playerbots.h"
 #include "RowCheckedAction.h"
+#include "ServerFacade.h"
 #include "SpellInfo.h"
 #include "SpellMgr.h"
 #include <functional>
@@ -41,6 +43,26 @@ std::function<Action*(PlayerbotAI*)> Row(char const* name, uint32 spellId, char 
 {
     return [name, spellId, target, threat](PlayerbotAI* botAI) -> Action*
     { return Cast(botAI, name, spellId, target, threat); };
+}
+
+// A self-cast spell that fires along the facing (the bot turns to its target first), re-checked against its YAML row
+std::function<Action*(PlayerbotAI*)> FacingRow(char const* name, uint32 spellId,
+                                               Action::ActionThreatType threat = AOE)
+{
+    return [name, spellId, threat](PlayerbotAI* botAI) -> Action*
+    {
+        return new RowCheckedAction<DkFacingCastAction>(botAI, name, std::vector<uint32>{spellId}, SELF_TARGET, threat);
+    };
+}
+
+// A self-cast spell usable while feared or confused, re-checked against its YAML row
+std::function<Action*(PlayerbotAI*)> ControlLostRow(char const* name, uint32 spellId)
+{
+    return [name, spellId](PlayerbotAI* botAI) -> Action*
+    {
+        return new RowCheckedAction<DkControlLostCastAction>(botAI, name, std::vector<uint32>{spellId}, SELF_TARGET,
+                                                             SINGLE);
+    };
 }
 
 // The same cast without the row re-check, for the actions a C++ trigger, the pull strategy or a chat command queues
@@ -86,6 +108,37 @@ bool DkCastAction::Execute(Event /*event*/)
     uint32 const spellId = SpellId();
     Unit* target = GetTarget();
     return spellId && target && botAI->CastSpell(spellId, target);
+}
+
+bool DkFacingCastAction::Execute(Event event)
+{
+    Unit* target = AI_VALUE(Unit*, CURRENT_TARGET);
+    if (target && target != bot && target->IsInWorld() && target->GetMapId() == bot->GetMapId())
+        ServerFacade::instance().SetFacingTo(bot, target);
+
+    return DkCastAction::Execute(event);
+}
+
+bool DkControlLostCastAction::isPossible()
+{
+    uint32 const spellId = SpellId();
+    SpellInfo const* spellInfo = spellId ? sSpellMgr->GetSpellInfo(spellId) : nullptr;
+    if (!spellInfo || (botAI->IsInVehicle() && !botAI->IsInVehicle(false, false, true)) ||
+        bot->HasSpellCooldown(spellId))
+        return false;
+
+    // The core's own check: the cost, the aura-state and mechanic rules, and the usable-while-feared attributes
+    Spell* spell = new Spell(bot, spellInfo, TRIGGERED_NONE);
+    spell->m_targets.SetUnitTarget(bot);
+    SpellCastResult const result = spell->CheckCast(true);
+    delete spell;
+    return result == SPELL_CAST_OK;
+}
+
+bool DkControlLostCastAction::Execute(Event /*event*/)
+{
+    uint32 const spellId = SpellId();
+    return spellId && bot->CastSpell(bot, spellId, TRIGGERED_NONE) == SPELL_CAST_OK;
 }
 
 uint32 DkCastAction::SpellId() const
@@ -174,10 +227,40 @@ DkReworkActionFactory::DkReworkActionFactory()
     // A loose enemy: taunted, or gripped when it fights from range
     creators["dk dark command"] = Row("dk dark command", SPELL_DARK_COMMAND, LOOSE_ENEMY);
     creators["dk death grip"] = Row("dk death grip", SPELL_DEATH_GRIP, LOOSE_RANGED_ENEMY);
+    // Frost: the strikes and Howling Blast on the current target. The names are per role inside one list (Killing
+    // Machine, the Pillar pair, the near-cap and fever copies): rows of one list that can hold together never share a
+    // name, while rows of different lists (single target, Breath active, pooling, the Pillar window, the pack) are
+    // exclusive and share it
+    creators["dk frost obliterate"] = Row("dk frost obliterate", SPELL_OBLITERATE);
+    creators["dk frost obliterate km"] = Row("dk frost obliterate km", SPELL_OBLITERATE);
+    creators["dk frost obliterate pair"] = Row("dk frost obliterate pair", SPELL_OBLITERATE);
+    creators["dk frost strike"] = Row("dk frost strike", SPELL_FROST_STRIKE);
+    creators["dk frost strike cap"] = Row("dk frost strike cap", SPELL_FROST_STRIKE);
+    creators["dk frost howling blast"] = Row("dk frost howling blast", SPELL_HOWLING_BLAST, CURRENT_TARGET, AOE);
+    creators["dk frost howling blast fever"] =
+        Row("dk frost howling blast fever", SPELL_HOWLING_BLAST, CURRENT_TARGET, AOE);
+    creators["dk frost icy touch"] = Row("dk frost icy touch", SPELL_ICY_TOUCH);
+    creators["dk pack plague strike"] = Row("dk pack plague strike", SPELL_PLAGUE_STRIKE);
+    creators["dk pack blood boil"] = Row("dk pack blood boil", SPELL_BLOOD_BOIL, SELF_TARGET, AOE);
+    creators["dk filler heart strike"] = Row("dk filler heart strike", SPELL_HEART_STRIKE);
+    // Frost cooldowns and area spells on the bot: Breath's cone and Glacial Advance's line follow its facing
+    creators["dk frost breath"] = FacingRow("dk frost breath", SPELL_BREATH_OF_SINDRAGOSA);
+    creators["dk frost breath plain"] = FacingRow("dk frost breath plain", SPELL_BREATH_OF_SINDRAGOSA);
+    creators["dk frost glacial advance"] = FacingRow("dk frost glacial advance", SPELL_GLACIAL_ADVANCE);
+    creators["dk pillar of frost"] = Row("dk pillar of frost", SPELL_PILLAR_OF_FROST, SELF_TARGET);
+    creators["dk empower rune weapon"] = Row("dk empower rune weapon", SPELL_EMPOWER_RUNE_WEAPON, SELF_TARGET);
+    creators["dk anti magic shell"] = Row("dk anti magic shell", SPELL_ANTI_MAGIC_SHELL, SELF_TARGET);
+    creators["dk lichborne"] = ControlLostRow("dk lichborne", SPELL_LICHBORNE);
+
     // Setup out of combat: the tank aura and the rune
     creators["dk blood presence"] = Row("dk blood presence", SPELL_BLOOD_PRESENCE, SELF_TARGET);
+    // A non-Blood bot leaves the tank aura (a re-spec keeps the aura, and the aura makes the bot a tank to the roles
+    // and the LFG): the client cancel, out of combat only through the non-combat rows
+    creators["dk cancel blood presence"] = [](PlayerbotAI* botAI) -> Action*
+    { return new RowCheckedAction<CancelOwnAuraAction>(botAI, "dk cancel blood presence", SPELL_BLOOD_PRESENCE); };
     creators["dk rune fallen crusader"] =
         Row("dk rune fallen crusader", SPELL_RUNE_OF_THE_FALLEN_CRUSADER, SELF_TARGET);
+    creators["dk rune razorice"] = Row("dk rune razorice", SPELL_RUNE_OF_RAZORICE, SELF_TARGET);
     creators["dk rune exsanguination"] = Row("dk rune exsanguination", SPELL_RUNE_OF_EXSANGUINATION, SELF_TARGET);
 
     // The pull strategy casts Death's Caress under the spell's own name, which its range lookup resolves through the

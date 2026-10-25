@@ -30,7 +30,8 @@ public:
 private:
     static Strategy* nc(PlayerbotAI* botAI) { return new GenericDKNonCombatStrategy(botAI); }
     static Strategy* pull(PlayerbotAI* botAI) { return new DeathKnightPullStrategy(botAI); }
-    static Strategy* frost_aoe(PlayerbotAI* botAI) { return new FrostDKAoeStrategy(botAI); }
+    // Rework: "frost aoe" is the reworked Frost pack list; the stock FrostDKAoeStrategy stays compiled but unused
+    static Strategy* frost_aoe(PlayerbotAI* botAI) { return new DeathKnightReworkFrostAoeStrategy(botAI); }
     static Strategy* unholy_aoe(PlayerbotAI* botAI) { return new UnholyDKAoeStrategy(botAI); }
 };
 
@@ -39,7 +40,8 @@ class DeathKnightCombatStrategyFactoryInternal : public NamedObjectContext<Strat
 public:
     DeathKnightCombatStrategyFactoryInternal() : NamedObjectContext<Strategy>(false, true)
     {
-        // Rework: "tank" and "blood" are the reworked Blood tank; the stock BloodDKStrategy stays compiled but unused
+        // Rework: "tank" and "blood" are the reworked Blood tank, "frost" the reworked Frost DPS; the stock
+        // BloodDKStrategy and FrostDKStrategy stay compiled but unused
         creators["tank"] = &DeathKnightCombatStrategyFactoryInternal::blood;
         creators["blood"] = &DeathKnightCombatStrategyFactoryInternal::blood;
         creators["frost"] = &DeathKnightCombatStrategyFactoryInternal::frost_dps;
@@ -48,7 +50,8 @@ public:
 
 private:
     static Strategy* blood(PlayerbotAI* botAI) { return new DeathKnightReworkBloodStrategy(botAI); }
-    static Strategy* frost_dps(PlayerbotAI* botAI) { return new FrostDKStrategy(botAI); }
+    // Rework: "frost" is the reworked Frost DPS; the stock FrostDKStrategy stays compiled but unused
+    static Strategy* frost_dps(PlayerbotAI* botAI) { return new DeathKnightReworkFrostStrategy(botAI); }
     static Strategy* unholy_dps(PlayerbotAI* botAI) { return new UnholyDKStrategy(botAI); }
 };
 

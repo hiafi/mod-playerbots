@@ -13,6 +13,8 @@
 #include "Playerbots.h"
 #include "QualifierUtils.h"
 #include "Timer.h"
+#include <algorithm>
+#include <cmath>
 
 using namespace ai::dk_rework;
 
@@ -28,13 +30,96 @@ constexpr float RANGED_FROM_VICTIM = 8.0f;
 constexpr float GATHERED_DISTANCE = 8.0f;
 // Runic Power is stored in tenths
 constexpr uint32 RUNIC_POWER_SCALE = 10;
-constexpr uint32 RUNIC_POWER_MAX = 100;
+// "dk rune ready in" never reports more than this: a minute covers six full cooldowns
+constexpr uint32 RUNE_WAIT_CAP_MS = 60000;
 }  // namespace
 
 uint8 DkRunicPowerValue::Calculate()
 {
-    return uint8(std::min<uint32>(bot->GetPower(POWER_RUNIC_POWER) / RUNIC_POWER_SCALE, RUNIC_POWER_MAX));
+    // 100 for most builds, 120 with Runic Power Mastery: both fit a byte
+    return ai::qualifier::ClampCount(bot->GetPower(POWER_RUNIC_POWER) / RUNIC_POWER_SCALE);
 }
+
+uint8 DkRunicPowerMaxValue::Calculate()
+{
+    return ai::qualifier::ClampCount(bot->GetMaxPower(POWER_RUNIC_POWER) / RUNIC_POWER_SCALE);
+}
+
+uint8 DkRunicPowerMissingValue::Calculate()
+{
+    uint32 const power = bot->GetPower(POWER_RUNIC_POWER);
+    uint32 const maxPower = bot->GetMaxPower(POWER_RUNIC_POWER);
+    return ai::qualifier::ClampCount(maxPower > power ? (maxPower - power) / RUNIC_POWER_SCALE : 0);
+}
+
+uint32 DkRuneReadyInValue::Calculate()
+{
+    std::vector<std::string> const parts = ai::qualifier::Split(getQualifier(), ';');
+    if (parts.empty() || parts.size() > 2)
+        return RUNE_WAIT_CAP_MS;
+
+    RuneType type = RUNE_DEATH;
+    if (parts[0] == "blood")
+        type = RUNE_BLOOD;
+    else if (parts[0] == "frost")
+        type = RUNE_FROST;
+    else if (parts[0] == "unholy")
+        type = RUNE_UNHOLY;
+    else
+        return RUNE_WAIT_CAP_MS;
+
+    float count = 1.0f;
+    if (parts.size() == 2 && (!ai::qualifier::ParseNumber(parts[1], count) || count < 1.0f || count > MAX_RUNES))
+        return RUNE_WAIT_CAP_MS;
+
+    // The waits of the runes that can pay for the type: its own and the Death Runes. A rune's cooldown is the
+    // milliseconds left (Player::GetRuneCooldown), 0 when it is ready
+    std::vector<uint32> waits;
+    for (uint8 slot = 0; slot < MAX_RUNES; ++slot)
+    {
+        RuneType const current = bot->GetCurrentRune(slot);
+        if (current == type || current == RUNE_DEATH)
+            waits.push_back(bot->GetRuneCooldown(slot));
+    }
+
+    size_t const index = size_t(count) - 1;
+    if (index >= waits.size())
+        return RUNE_WAIT_CAP_MS;
+
+    std::sort(waits.begin(), waits.end());
+    return std::min(waits[index], RUNE_WAIT_CAP_MS);
+}
+
+uint8 DkEnemiesInLineValue::Calculate()
+{
+    std::vector<float> const args = ai::qualifier::ParseNumbers(getQualifier(), 2);
+    if (args.empty())
+        return 0;
+
+    // The unit's position in the bot's frame: along its facing, and sideways
+    float const facing = bot->GetOrientation();
+    float const cosine = std::cos(facing);
+    float const sine = std::sin(facing);
+
+    uint32 count = 0;
+    for (ObjectGuid const guid : AI_VALUE(GuidVector, "attackers"))
+    {
+        Unit* unit = botAI->GetUnit(guid);
+        if (!unit || !unit->IsAlive())
+            continue;
+
+        float const dx = unit->GetPositionX() - bot->GetPositionX();
+        float const dy = unit->GetPositionY() - bot->GetPositionY();
+        float const along = dx * cosine + dy * sine;
+        float const aside = std::fabs(dy * cosine - dx * sine);
+        if (along >= 0.0f && along <= args[0] && aside <= args[1])
+            ++count;
+    }
+
+    return ai::qualifier::ClampCount(count);
+}
+
+bool DkAoeEnabledValue::Calculate() { return botAI->HasStrategy("frost aoe", BOT_STATE_COMBAT); }
 
 uint8 DkRunesReadyValue::Calculate()
 {
@@ -50,6 +135,8 @@ uint8 DkRunesReadyValue::Calculate()
         return runes.death;
     if (type == "pair")
         return runes.pair ? 1 : 0;
+    if (type == "trio")
+        return runes.trio ? 1 : 0;
 
     return 0;
 }
@@ -187,6 +274,14 @@ uint8 DkPackWithoutPlagueValue::Calculate()
 DkReworkValueFactory::DkReworkValueFactory()
 {
     creators["dk runic power"] = [](PlayerbotAI* botAI) -> UntypedValue* { return new DkRunicPowerValue(botAI); };
+    creators["dk runic power max"] = [](PlayerbotAI* botAI) -> UntypedValue*
+    { return new DkRunicPowerMaxValue(botAI); };
+    creators["dk runic power missing"] = [](PlayerbotAI* botAI) -> UntypedValue*
+    { return new DkRunicPowerMissingValue(botAI); };
+    creators["dk rune ready in"] = [](PlayerbotAI* botAI) -> UntypedValue* { return new DkRuneReadyInValue(botAI); };
+    creators["dk enemies in line"] = [](PlayerbotAI* botAI) -> UntypedValue*
+    { return new DkEnemiesInLineValue(botAI); };
+    creators["dk aoe enabled"] = [](PlayerbotAI* botAI) -> UntypedValue* { return new DkAoeEnabledValue(botAI); };
     creators["dk runes ready"] = [](PlayerbotAI* botAI) -> UntypedValue* { return new DkRunesReadyValue(botAI); };
     creators["dk recent damage"] = [](PlayerbotAI* botAI) -> UntypedValue* { return new DkRecentDamageValue(botAI); };
     creators["dk in own dnd"] = [](PlayerbotAI* botAI) -> UntypedValue*

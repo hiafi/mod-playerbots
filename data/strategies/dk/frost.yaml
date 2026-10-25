@@ -1,0 +1,325 @@
+# The reworked Frost Death Knight's DPS rotation: "dk/frost", appended to the "frost" combat strategy by
+# DeathKnightReworkFrostStrategy::InitTriggers, with the pack list of dk/frost-pack.yaml (appended to "frost aoe").
+# Source: the Frost bot guide (docs/reworks/bot-strategy/death-knight-frost-bot-guide.md; the Frost rework doc wins over
+# it, and S2-HANDOFF section 2 and S2b-HANDOFF win over both). Each row queues its action at the relevance when its
+# condition holds (`when`, the expression language of StrategyExpression.h) or when an existing C++ trigger fires
+# (`trigger`). Execution order is by relevance, not by position in this file. Every action is a RowCheckedAction (it
+# re-checks its own row before casting) except the stock Mind Freeze rows and the walk to melee. Rows that can hold in
+# the same tick never share an action name (they would merge into one basket and only the first row would be
+# re-checked); rows of different lists are exclusive and do share one (see the factory in
+# DeathKnightReworkActions.cpp).
+#
+# The lists. Three single target states play one at a time, then the pack list on top (dk/frost-pack.yaml):
+#   Breath active  = aura(self, 203306): the "while Breath is active" list, any build, level 60.
+#   Pooling        = Breath build, Breath learned and not active, 15 s or less on its cooldown, and Breath castable
+#                    (no unpulled unit near, `safe_breath`): "while pooling". A bot that cannot Breath plays the
+#                    between-Breaths list instead of waiting for an area that may never clear.
+#   Pillar window  = Obliteration build in the Pillar of Frost aura (203280): the "in Pillar" list.
+#   Otherwise      = none of those: "between Breaths" (Breath build) and the Obliteration build's "otherwise" list are
+#                    the same nine lines, so one list serves both, with the pre-Pillar holds true for the Obliteration
+#                    build only (the guide's Leveling note: before a build the lists play without those holds).
+# A pack (three or more enemies within 10 yd of the bot while the "frost aoe" strategy is on) replaces the "Otherwise",
+# pooling and Pillar window rows by the pack list; the Breath active rows play in a pack too (Blood Boil for Heart
+# Strike). The filler rows (Horn of Winter, Heart Strike, Plague Strike) carry no pack gate: they are the last rows of
+# either list.
+#
+# Area safety (B-COMMON section 5, X11): every area row (Howling Blast, and in the pack file Death's Caress, Glacial
+# Advance, Blood Boil, Death and Decay) carries `value("unsafe aoe units::<yd>") == 0` (units not in combat, or crowd
+# controlled, within the area), so it never pulls a sleeping pack or breaks a sheep. Howling Blast is centred on the
+# target (`safe_target_10`); when it is unsafe and Frost Fever is low, Icy Touch keeps the disease up.
+#
+# Bands: ERW (high + 5), Pillar (high + 4) and Rune Tap (high + 3) are the off-the-GCD rows, checked every update; they
+# fire on consecutive ticks as a chain, each gate staying true after the previous cast. Icebound Fortitude, Anti-Magic
+# Shell and Lichborne sit at emergency + 2 .. + 1 (cooldown- or aura-gated, so each fires once). Breath of Sindragosa
+# is an on-the-GCD row at normal + 9.9, above the rotation, requiring the Pillar aura (or Pillar unknown / far from
+# ready) and melee range, so the whole chain starts in melee. The three lists run normal + 9.9 .. 9.0. Nothing is at
+# or above the pull sequence (105).
+#
+# Never (guide): no Frost Strike or Glacial Advance while Breath is active (every Frost Strike row below carries
+# `not breath_active`, as does the pack file's Glacial Advance), no Death Strike during Breath above 30% health, no
+# Breath below near cap (Breath build) or below 80 Runic Power (plain Breath), no Pillar while Breath has 15 to 40 s
+# left (Breath build; only the two arms below fire it), no Obliterate without Killing Machine pre-Pillar (Obliteration
+# build), no rune swap or Blood Presence in combat (nc.yaml sets the rune out of combat only).
+#
+# Approximations (the guide's Definitions and State against what the bot can read):
+# - Max Runic Power = value "dk runic power max" (100, 120 with Runic Power Mastery). Near cap = within 20 of it: the
+#   language has no arithmetic, so value "dk runic power missing" (max - power) <= 20; at max = == 0.
+# - Build test: Breath build = a rank of Frostwyrm's Wrath (203302 / 203303) or Rage of the Frozen Champion (203294 /
+#   203295) learned; Obliteration build = Obliteration (203292) learned and no Breath-build talent. known() on a
+#   talent is true for its CURRENT rank only, so both ranks of a two-rank talent are tested. A bot with neither is
+#   "before a build" (levels 1 to 52 in 6.2, to 55 in 6.3) and plays the Obliteration "otherwise" list without the
+#   pre-Pillar holds.
+# - Boss (pack and off-GCD rows) = no gate; the guide's boss is only a Death Strike / Breath context here.
+# - Pre-Pillar = Obliteration build, Pillar learned and not up, 5 s or less on its cooldown (0 included): the bot
+#   holds both Frost Runes and 60 Runic Power. "Pillar ready for 5 s" (the Pillar arm B fallback) =
+#   cooldown(203280) == 0 and combat_time() > 5000 and ms_since_cast(203280) > 66000: the 5 s after the 60 s cooldown
+#   (shortened a little by Cooldown Haste), and 5 s into the fight for the first one (ms_since_cast reads "never cast"
+#   as infinite).
+# - "Both Frost Runes ready, or one ready and the other within 2 s" = value "dk runes ready::frost" >= 2, or >= 1 and
+#   value "dk rune ready in::frost;2" <= 2000 (a Death Rune stands in for a Frost Rune on both sides).
+# - Frost Fever low = missing, or 3 s or less left, this bot's. Rime = aura 59052 (Freezing Fog). Killing Machine =
+#   stacks of the buff 203320 (0 to 2; the talent rank 51123 is no buff).
+# - Incoming magic damage and incoming fear / charm / sleep casts cannot be read. Anti-Magic Shell uses health below
+#   70% and a recent loss of 15% or more (value "dk recent damage", sampled when read: the rows put it first);
+#   Lichborne fires after the fact, on the stock "fear charm sleep" trigger, through DkControlLostCastAction: the bot
+#   module refuses every cast under lost control, so that action asks the core's own check instead. The core allows
+#   Lichborne while feared or confused (its usable-while-feared and confused attributes); it refuses it while asleep
+#   (a stun with the sleep mechanic), so the row only ever lands on a fear. Icebound Fortitude: health below 35%, or
+#   below 50% after a loss of 25% or more.
+# - Unpulled enemies in Breath's cone: the guide's fallback (open question 2): no Breath while value "unsafe aoe
+#   units::15;self" is nonzero (unfriendly units within 15 yd of the bot that are not in combat).
+# - The Pillar / Breath chain: the Breath row needs the Pillar aura (cast together), Pillar unknown, or Pillar more than
+#   8 s from ready (a safety valve the guide lacks: a Breath held for a Pillar that is a minute away is worse than a
+#   Breath without it). Empower Rune Weapon fires on the same terms (`breath_go and pillar_ok`), so it never lands on a
+#   bar that Breath then waits on. Breath ready but not castable (`breath_blocked`: unpulled units near) lets Pillar
+#   fire by its second arm instead of waiting for a Breath that is not coming.
+# - Plain Breath (Obliteration build, level 60): pooled for. While it is ready, castable, not in Pillar and Pillar is
+#   15 s or more from ready (`breath_63_window`), Frost Strike (N7) holds so the bar can reach 80, and Breath (N5, above
+#   the near-cap Frost Strike, which would otherwise take the 80 to 99 band first) goes at 80. The Pillar window and the
+#   15 s before it keep Frost Strike for the window. A Breath of 25 to 35 s may run into the next Pillar by a few
+#   seconds.
+#
+# Rune budget (S2b-1 report, L12): Howling Blast (Frost + Unholy) fires on a low Frost Fever (15 s duration, 3 s
+# threshold) and on Rime (free), so the paid casts are about 2.5 a minute (the dry model: 22% of the Obliterates),
+# against 12 Frost Runes a minute; Obliterate keeps the rest and the Unholy Rune it does not use falls to Plague Strike.
+#
+# Spell ids (DBC names, DeathKnightData.h): Heart Strike 55050, Plague Strike 45462, Icy Touch 45477, Death Coil 47541,
+# Death Strike 49998, Death's Caress 203001, Blood Boil 48721, Rune Tap 48982, Horn of Winter 57330, Icebound Fortitude
+# 48792, Mind Freeze 47528, Anti-Magic Shell 48707, Lichborne 49039, Empower Rune Weapon 47568, Frost Strike 49143,
+# Howling Blast 49184, Obliterate 203054 (the player's; 49020 is Mograine's, 66198 the off-hand copy), Glacial Advance
+# 203273, Pillar of Frost 203280, Breath of Sindragosa 203306. Auras: Frost Fever 55095 and Blood Plague 55078 (on the
+# target, the bot's own), Freezing Fog 59052, Killing Machine buff 203320. Talent ranks (known()): Frostwyrm's Wrath
+# 203302 / 203303, Rage of the Frozen Champion 203294 / 203295, Obliteration 203292, Endless Winter rank 2 49657 (its
+# capstone makes Mind Freeze free).
+strategy: dk/frost
+class: dk
+conditions:
+  target_alive: alive(target)
+  rp: value("dk runic power")
+  rp_missing: value("dk runic power missing")
+  near_cap: rp_missing <= 20
+  at_cap: rp_missing == 0
+  recent: value("dk recent damage")
+  blood_rune: value("dk runes ready::blood") >= 1
+  frost_rune: value("dk runes ready::frost") >= 1
+  frost_pair: value("dk runes ready::frost") >= 2
+  unholy_rune: value("dk runes ready::unholy") >= 1
+  fu_pair: value("dk runes ready::pair") >= 1
+  # Both Frost Runes ready, or one ready and the other within 2 s
+  frost_pair_soon: frost_pair or (frost_rune and value("dk rune ready in::frost;2") <= 2000)
+  km: stacks(self, 203320) >= 1
+  km_full: stacks(self, 203320) >= 2
+  rime: aura(self, 59052)
+  fever_missing: not aura(target, 55095, own)
+  fever_low: not aura(target, 55095, own) or remaining(target, 55095, own) <= 3000
+  breath_active: aura(self, 203306)
+  pillar: aura(self, 203280)
+  breath_build: known(203302) or known(203303) or known(203294) or known(203295)
+  obl_build: known(203292) and not breath_build
+  pooling: >-
+    breath_build and known(203306) and not breath_active and cooldown(203306) <= 15000 and safe_breath
+  pre_pillar: obl_build and known(203280) and not pillar and cooldown(203280) <= 5000
+  window: obl_build and pillar and not breath_active
+  # A pack: the pack list plays (dk/frost-pack.yaml), the single target lists below give way to it
+  pack: value("dk aoe enabled") and alive(target) and enemies_within(10) >= 3
+  single: alive(target) and not pack
+  cone: enemies_in_cone(12, 104) >= 3
+  # Breath's cone and its fallback for unpulled enemies; Howling Blast's area is centred on the target
+  safe_breath: value("unsafe aoe units::15;self") == 0
+  safe_target_10: value("unsafe aoe units::10") == 0
+  # The grid scan (cached 1 s) is the last term of every condition that holds it
+  breath_ready_base: known(203306) and cooldown(203306) == 0 and not breath_active and alive(target)
+  breath_ready: breath_ready_base and safe_breath
+  breath_blocked: breath_ready_base and not safe_breath
+  # The Breath build casts Breath at near cap, and into a pack at 80 with three enemies in the cone; in melee range, so
+  # the chain (ERW, Pillar, Breath) starts where Breath can hit
+  breath_go: >-
+    breath_build and breath_ready_base and in_range(target, 8)
+    and ((pack and rp >= 80 and cone) or (not pack and near_cap)) and safe_breath
+  # The Obliteration build's plain Breath: ready, castable, not in Pillar and Pillar 15 s or more away
+  breath_63_window: >-
+    not breath_build and breath_ready_base and not pillar and (not known(203280) or cooldown(203280) >= 15000)
+    and safe_breath
+  pillar_ok: pillar or not known(203280) or cooldown(203280) > 8000
+  # Pillar of Frost's second arm: the Obliteration style (and every bot before Breath is learned)
+  pillar_ready_5s: cooldown(203280) == 0 and combat_time() > 5000 and ms_since_cast(203280) > 66000
+  breath_known_build: breath_build and known(203306)
+rows:
+  # ---- Off the global cooldown (guide: checked every update) ----
+  # O2: Empower Rune Weapon. Breath build: in the update of Breath, right before it (the chain below: Pillar, ERW,
+  # Breath; ERW waits for Pillar's aura or its far cooldown, `pillar_ok`). Obliteration build: in Pillar, when no Frost
+  # Rune is ready. The Breath build before Breath is learned (54 to 59) plays it the same way, in Pillar
+  - do: dk empower rune weapon
+    when: >-
+      known(47568) and cooldown(47568) == 0
+      and ((breath_go and pillar_ok) or (obl_build and window and value("dk runes ready::frost") == 0)
+           or (breath_build and not known(203306) and pillar and value("dk runes ready::frost") == 0))
+    relevance: high + 5
+  # O1: Pillar of Frost. Arm A (the Breath build with Breath learned): with Breath, or while Breath has 40 s or more
+  # left (never at 15 to 40 s). Arm B (everything else): both Frost Runes ready (or one and the other within 2 s) and
+  # 60 Runic Power, or ready for 5 s. Arm A also fires by arm B's terms while Breath is ready but blocked (unpulled
+  # units near), so a blocked Breath does not hold Pillar
+  - do: dk pillar of frost
+    when: >-
+      known(203280) and cooldown(203280) == 0 and not pillar and alive(target)
+      and ((breath_known_build and (breath_go or cooldown(203306) >= 40000
+                                    or (breath_blocked and frost_pair_soon and rp >= 60)))
+           or (not breath_known_build and ((frost_pair_soon and rp >= 60) or pillar_ready_5s)))
+    relevance: high + 4
+  # O3: Rune Tap. Breath active: below 30 Runic Power. Obliteration build in Pillar: below 40. Otherwise at 60 or
+  # less, and (Breath build with Breath learned) with more than 60 s left on Breath
+  - do: dk rune tap
+    when: >-
+      recent >= 0 and known(48982) and cooldown(48982) == 0 and blood_rune and target_alive
+      and ((breath_active and rp < 30)
+           or (not breath_active and window and rp < 40)
+           or (not breath_active and not window and rp <= 60
+               and (not breath_known_build or cooldown(203306) > 60000)))
+    relevance: high + 3
+  # O5: Icebound Fortitude below 35% health, or below 50% after a loss of 25% or more; during Breath only below 35%
+  - do: dk icebound fortitude
+    when: >-
+      recent >= 0 and known(48792) and cooldown(48792) == 0
+      and (health_pct(self) < 35 or (health_pct(self) < 50 and recent >= 25 and not breath_active))
+    relevance: emergency + 2
+  # O6: Anti-Magic Shell below 70% health after a loss of 15% or more (no incoming-magic detector); during Breath only
+  # below 35%
+  - do: dk anti magic shell
+    when: >-
+      recent >= 0 and known(48707) and cooldown(48707) == 0
+      and ((health_pct(self) < 70 and recent >= 15 and not breath_active) or (health_pct(self) < 35 and recent >= 15))
+    relevance: emergency + 1.5
+  # O7: Lichborne after a fear, charm or sleep landed (the stock after-the-fact trigger)
+  - do: dk lichborne
+    when: known(49039) and cooldown(49039) == 0 and trigger("fear charm sleep")
+    relevance: emergency + 1
+
+  # ---- Breath of Sindragosa (on the GCD, above every list) ----
+  # Breath build: with Pillar and ERW (the chain above), near cap on a single target, 80 into a pack with three enemies
+  # in the cone
+  - do: dk frost breath
+    when: breath_go and pillar_ok
+    relevance: normal + 9.9
+  # Death Strike during Breath only below 30% health (it shortens Breath: the Never list)
+  - do: dk death strike
+    when: known(49998) and breath_active and alive(target) and health_pct(self) < 30 and rp >= 40
+    relevance: normal + 9.87
+
+  # ---- Breath active (any build) ----
+  - do: dk frost obliterate
+    when: known(203054) and breath_active and target_alive and frost_rune
+    relevance: normal + 9.85
+  - do: dk frost howling blast
+    when: known(49184) and breath_active and target_alive and rime and safe_target_10
+    relevance: normal + 9.8
+  - do: dk horn of winter
+    when: known(57330) and cooldown(57330) == 0 and breath_active and target_alive
+    relevance: normal + 9.75
+  - do: dk heart strike
+    when: known(55050) and breath_active and single and blood_rune
+    relevance: normal + 9.7
+  - do: dk plague strike
+    when: known(45462) and breath_active and target_alive and unholy_rune
+    relevance: normal + 9.65
+
+  # ---- Pooling (Breath build, 15 s or less to Breath: Breath is the row at the top) ----
+  - do: dk frost howling blast
+    when: known(49184) and pooling and single and rime and safe_target_10
+    relevance: normal + 9.6
+  - do: dk frost obliterate
+    when: known(203054) and pooling and single and frost_rune
+    relevance: normal + 9.55
+  # (Horn of Winter and the Heart Strike / Plague Strike fillers are the last rows below; the guide's pooling list ends
+  # with Frost Strike at max Runic Power, so that row sits under them)
+
+  # ---- Pillar window (Obliteration build, Pillar up) ----
+  - do: dk frost obliterate km
+    when: known(203054) and window and single and km and frost_rune
+    relevance: normal + 9.4
+  - do: dk frost strike
+    when: known(49143) and window and single and rp >= 40
+    relevance: normal + 9.38
+  - do: dk frost howling blast
+    when: known(49184) and window and single and rime and safe_target_10
+    relevance: normal + 9.36
+  - do: dk frost obliterate pair
+    when: known(203054) and window and single and frost_pair
+    relevance: normal + 9.34
+
+  # ---- Otherwise: between Breaths, outside the window, not pooling (single target) ----
+  # N1: Howling Blast when Frost Fever is low and Rime is up, or a Frost and an Unholy Rune are ready (the paid cast
+  # takes a Frost Rune, so never pre-Pillar, where both are held)
+  - do: dk frost howling blast fever
+    when: >-
+      known(49184) and single and not breath_active and not pooling and not window and fever_low
+      and (rime or (fu_pair and cooldown(49184) == 0 and not pre_pillar)) and safe_target_10
+    relevance: normal + 9.3
+  # N2: Obliterate with Killing Machine and a Frost Rune (pre-Pillar only with two stacks)
+  - do: dk frost obliterate km
+    when: >-
+      known(203054) and single and not breath_active and not pooling and not window and km and frost_rune
+      and (not pre_pillar or km_full)
+    relevance: normal + 9.25
+  # N3: Frost Strike near cap
+  - do: dk frost strike cap
+    when: known(49143) and single and not breath_active and not pooling and not window and near_cap
+    relevance: normal + 9.2
+  # N4: Howling Blast on Rime
+  - do: dk frost howling blast
+    when: known(49184) and single and not breath_active and not pooling and not window and rime and safe_target_10
+    relevance: normal + 9.15
+  # Icy Touch on a Frost Rune keeps Frost Fever up: before Howling Blast (level 20), and when Howling Blast is unsafe
+  # (unpulled units near its target) and the disease is low
+  - do: dk frost icy touch
+    when: >-
+      known(45477) and single and not breath_active and frost_rune
+      and ((not known(49184) and fever_missing)
+           or (known(49184) and not pooling and not window and not pre_pillar and fever_low
+               and not safe_target_10))
+    relevance: normal + 9.12
+  # N5: Breath of Sindragosa (plain, the Obliteration build): 80 Runic Power inside `breath_63_window` (not in Pillar,
+  # Pillar 15 s or more from ready; the Breath build casts it above, in the chain). Above the near-cap Frost Strike
+  # (N3 at 9.2), which takes the same 80 to 99 band: Frost Strike (N7) holds while the window is open so the bar gets
+  # here
+  - do: dk frost breath plain
+    when: breath_63_window and single and rp >= 80
+    relevance: normal + 9.22
+  # N6: Obliterate on a Frost Rune, never pre-Pillar without Killing Machine
+  - do: dk frost obliterate
+    when: >-
+      known(203054) and single and not breath_active and not pooling and not window and frost_rune
+      and not pre_pillar
+    relevance: normal + 9.05
+  # N7: Frost Strike at 40 Runic Power or more (pre-Pillar only at 90 or more)
+  - do: dk frost strike
+    when: >-
+      known(49143) and single and not breath_active and not pooling and not window and rp >= 40
+      and (not pre_pillar or rp >= 90) and not breath_63_window
+    relevance: normal + 9.0
+  # Horn of Winter and the fillers: the last rows of every list (no pack gate)
+  - do: dk horn of winter
+    when: known(57330) and cooldown(57330) == 0 and target_alive and not breath_active
+    relevance: normal + 8.95
+  - do: dk filler heart strike
+    when: known(55050) and target_alive and not breath_active and blood_rune
+    relevance: normal + 8.9
+  - do: dk filler plague strike
+    when: known(45462) and target_alive and not breath_active and unholy_rune
+    relevance: normal + 8.85
+  # Leveling (before Obliterate at 20): a Frost Rune with nothing else to pay goes to Icy Touch
+  - do: dk filler icy touch
+    when: known(45477) and not known(203054) and target_alive and not breath_active and frost_rune
+    relevance: normal + 8.8
+  # Pooling: Frost Strike only at max Runic Power, after every other row of the list (the guide's line 6)
+  - do: dk frost strike cap
+    when: known(49143) and pooling and single and at_cap and not breath_active
+    relevance: normal + 8.75
+
+  # ---- Interrupts: the stock rows, kept (Mind Freeze is level 18); 20 Runic Power each, free with Endless Winter's
+  # capstone, never while Breath is draining ----
+  - do: mind freeze
+    when: trigger("mind freeze") and (known(49657) or (not breath_active and rp >= 20))
+    relevance: interrupt
+  - do: mind freeze on enemy healer
+    when: trigger("mind freeze on enemy healer") and (known(49657) or (not breath_active and rp >= 20))
+    relevance: interrupt
