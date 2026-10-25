@@ -1,0 +1,105 @@
+# The reworked Blood Death Knight's pack rows: "dk/blood-pack" is appended, with "dk/blood", to the "blood" (alias
+# "tank") combat strategy by DeathKnightReworkBloodStrategy::InitTriggers. Source: the Packs list of the Blood bot guide
+# (docs/reworks/bot-strategy/death-knight-blood-bot-guide.md). The single-target rotation, the bands, the approximations
+# of the conditions and the spell ids are in blood.yaml, whose header explains them. A pack is three or more enemies
+# within 8 yd of the bot. Death Strike (pack line 1: the same conditions as single target lines 1 to 3) is the rows of
+# blood.yaml, which carry no `not pack`. The pack rows run under their own "dk pack ..." names, since these rows fire in
+# the same tick as those of blood.yaml and rows that share an action name merge into one basket that re-checks only the
+# first row. The pack rows sit at normal + 9.6 .. 8.5, interleaved with the Death Strike rows (9.9 .. 9.7) above them;
+# the single target rows 4 to 12 carry `not pack`, so only one list plays.
+#
+# S1 fix pass (2026-10-24): Death and Decay (line 4) moved above Marrowrend and Bone Shield's refresh (line 6) to 4
+# charges, see the rows. Order now: 9.9 .. 9.7 Death Strike, 9.7 Death and Decay, 9.65 Marrowrend (low shield),
+# 9.6 Grasp, 9.5 Blood Nova, 9.3 Bonestorm, 9.1 Pestilence, 9.0 Blood Boil, 8.9 Heart Strike, 8.8 Marrowrend,
+# 8.7 Death's Caress.
+#
+# Deviations from the guide, each for a reason the row says:
+# - Gorefiend's Grasp (line 2) is gated on three enemies within 15 yd, not on a pack within 8 yd: the loose enemies it
+#   gathers stand outside the 8 yd of a pack by definition.
+# - Heart Strike (line 9) reads "exactly 2 enemies in melee range" literally, and also plays without Blood Boil (before
+#   level 24, when Heart Strike is the only Blood Rune spender and cleaves two of the pack). With Blood Boil known the
+#   row never holds in a pack, since Blood Boil (line 8) takes the Blood Rune first.
+# - Bonestorm (line 5) needs 70 Runic Power and is not already running; Vampiric Blood goes first as its own
+#   off-the-GCD row. "If health is below 60% and recent damage is 25% or more, Death Strike first" is the Death Strike
+#   rows of blood.yaml (health below 70% or a big hit), which outrank it.
+# Spell ids as blood.yaml.
+strategy: dk/blood-pack
+class: dk
+conditions:
+  rp: value("dk runic power")
+  healthy: health_pct(self) >= 85
+  shroud: aura(self, 203146)
+  blood_rune: value("dk runes ready::blood") >= 1
+  unholy_rune: value("dk runes ready::unholy") >= 1
+  pair: value("dk runes ready::pair") >= 1
+  pack: alive(target) and enemies_within(8) >= 3
+  bonestorm_ready: known(203148) and cooldown(203148) == 0 and not aura(self, 203148) and rp >= 70
+rows:
+  # Off the GCD: Vampiric Blood before Bonestorm (a pack is within 8 yd, Runic Power for it, both ready)
+  - do: dk pack vampiric blood
+    when: >-
+      pack and bonestorm_ready and known(55233) and cooldown(55233) == 0 and not aura(self, 55233)
+    relevance: emergency + 3
+
+  # 2: Gorefiend's Grasp on the bot when two or more loose enemies (or enemies more than 8 yd away) are within 15 yd
+  - do: dk gorefiends grasp
+    when: >-
+      known(203127) and cooldown(203127) == 0 and alive(target) and enemies_within(15) >= 3
+      and value("dk loose enemies::15") >= 2
+    relevance: normal + 9.6
+  # 3: Blood Nova when the pack is within 8 yd and the bot is healthy, never under the Shroud
+  - do: dk pack blood nova
+    when: known(203143) and cooldown(203143) == 0 and pack and healthy and not shroud
+    relevance: normal + 9.5
+  # 4: Death and Decay at the bot's feet when none of this bot's is down, or while Crimson Scourge is up. Relevance 9.7,
+  # above Marrowrend (line 6): it needs a Blood, a Frost and an Unholy Rune at once, which eager Marrowrend and Blood
+  # Boil never leave ready (S1 fix pass: 0 casts a minute with it below them). While Bone Shield is under 3 charges (and
+  # Marrowrend is known) Marrowrend goes first
+  - do: dk pack death and decay
+    when: >-
+      known(43265) and cooldown(43265) == 0 and pack and (not dynobj(43265) or aura(self, 203137))
+      and (not known(203123) or charges(self, 49222) >= 3)
+    relevance: normal + 9.7
+  # 5: Bonestorm at 70 Runic Power or more (inside Vampiric Blood when it is up; alone when that is cooling down)
+  - do: dk bonestorm
+    when: pack and bonestorm_ready
+    relevance: normal + 9.3
+  # 6: Marrowrend on a pair when Bone Shield is under 4 charges: a charge goes at most every 2 s, so 3 charges are 6 s,
+  # and Marrowrend adds 3 up to 6, so topping up at 3 never wastes one and the shield does not lapse between pairs.
+  # Relevance 9.65, above Blood Nova's and Bonestorm's, below Death and Decay (S1 fix pass, F2: the pack Bone Shield
+  # uptime was 87 to 89% of the fight, now 91 to 93%)
+  - do: dk pack marrowrend
+    when: known(203123) and pack and pair and charges(self, 49222) < 4
+    relevance: normal + 9.65
+  # 7: Pestilence when the target has both of this bot's diseases and two or more enemies within 10 yd of it lack
+  # Blood Plague
+  - do: dk pestilence
+    when: >-
+      known(50842) and pack and blood_rune and aura(target, 55078, own) and aura(target, 55095, own)
+      and value("dk pack without plague::10") >= 2
+    relevance: normal + 9.1
+  # 8: Blood Boil on a Blood Rune with three or more enemies within 10 yd
+  - do: dk blood boil
+    when: known(48721) and pack and blood_rune and enemies_within(10) >= 3
+    relevance: normal + 9.0
+  # 9: Heart Strike on a Blood Rune with exactly two enemies in melee range (see the header)
+  - do: dk pack heart strike
+    when: >-
+      known(55050) and pack and blood_rune and (enemies_within(6) == 2 or not known(48721))
+    relevance: normal + 8.9
+  # 10: Marrowrend on any pair
+  - do: dk pack marrowrend pair
+    when: known(203123) and pack and pair
+    relevance: normal + 8.8
+  # 11: Death's Caress on a target without this bot's Blood Plague, when an Unholy Rune is ready
+  - do: dk pack deaths caress
+    when: known(203001) and pack and unholy_rune and not aura(target, 55078, own)
+    relevance: normal + 8.7
+  # 12: Crimson Communion when three party members are below 70% health
+  - do: dk pack crimson communion
+    when: known(203141) and cooldown(203141) == 0 and pack and value("party members below::70") >= 3
+    relevance: normal + 8.6
+  # 13: Dancing Rune Weapon on cooldown with five or more enemies engaged
+  - do: dk pack dancing rune weapon
+    when: known(49028) and cooldown(49028) == 0 and pack and enemies_within(10) >= 5
+    relevance: normal + 8.5

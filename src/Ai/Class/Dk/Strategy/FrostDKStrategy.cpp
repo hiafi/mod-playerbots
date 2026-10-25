@@ -25,7 +25,7 @@ private:
     {
         return new ActionNode(
             "icy touch",
-            /*P*/ { NextAction("blood presence") },
+            /*P*/ {},
             /*A*/ {},
             /*C*/ {}
         );
@@ -35,7 +35,7 @@ private:
     {
         return new ActionNode(
             "obliterate",
-            /*P*/ { NextAction("blood presence") },
+            /*P*/ {},
             /*A*/ {},
             /*C*/ {}
         );
@@ -45,7 +45,7 @@ private:
     {
         return new ActionNode(
             "rune strike",
-            /*P*/ { NextAction("blood presence") },
+            /*P*/ {},
             /*A*/ { NextAction("melee") },
             /*C*/ {}
         );
@@ -55,7 +55,7 @@ private:
     {
         return new ActionNode(
             "frost strike",
-            /*P*/ { NextAction("blood presence") },
+            /*P*/ {},
             /*A*/ {},
             /*C*/ {}
         );
@@ -65,7 +65,7 @@ private:
     {
         return new ActionNode(
             "howling blast",
-            /*P*/ { NextAction("blood presence") },
+            /*P*/ {},
             /*A*/ {},
             /*C*/ {}
         );
@@ -122,7 +122,7 @@ void FrostDKStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         new TriggerNode(
             "high blood rune",
             {
-                NextAction("blood strike", ACTION_DEFAULT + 0.2f)
+                NextAction("heart strike", ACTION_DEFAULT + 0.2f)
             }
         )
     );

@@ -5,7 +5,9 @@
  */
 
 #include "AutoMaintenanceOnLevelupAction.h"
+#include "AiFactory.h"
 #include "BroadcastHelper.h"
+#include "DeathKnightReworkIds.h"
 #include "PlayerbotAIConfig.h"
 #include "PlayerbotFactory.h"
 #include "RandomPlayerbotMgr.h"
@@ -15,6 +17,13 @@
 bool AutoMaintenanceOnLevelupAction::Execute(Event /*event*/)
 {
     AutoPickTalents();
+
+    // Rework: a Blood Death Knight becomes a tank at level 10 (Blood Presence). The engines cache the strategy type
+    // when they start, so rebuild the strategies once, now that the talents are picked
+    if (bot->getClass() == CLASS_DEATH_KNIGHT && bot->GetLevel() == ai::dk_rework::TANK_MIN_LEVEL &&
+        sRandomPlayerbotMgr.IsRandomBot(bot))
+        botAI->ResetStrategies();
+
     AutoLearnSpell();
     AutoTeleportForLevel();
     AutoUpgradeEquip();
@@ -42,8 +51,17 @@ void AutoMaintenanceOnLevelupAction::AutoPickTalents()
     if (bot->GetFreeTalentPoints() <= 0)
         return;
 
+    // Rework: a Death Knight's first talent point rolls its premade slot (the 6.0 / 6.1 Blood split); keep the slot it
+    // landed on, so the later level-ups top up the same link
+    std::map<uint8, uint32> tabs = AiFactory::GetPlayerSpecTabs(bot);
+    bool const firstDeathKnightPoint =
+        bot->getClass() == CLASS_DEATH_KNIGHT && tabs[0] + tabs[1] + tabs[2] == 0;
+
     PlayerbotFactory factory(bot, bot->GetLevel());
-    factory.InitTalentsTree(true, true, true);
+    uint32 const specIndex = factory.InitTalentsTree(true, true, true);
+    if (firstDeathKnightPoint)
+        sRandomPlayerbotMgr.SetValue(bot->GetGUID().GetCounter(), "specNo", specIndex + 1);
+
     factory.InitPetTalents();
 }
 

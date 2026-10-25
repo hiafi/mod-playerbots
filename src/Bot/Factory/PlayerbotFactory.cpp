@@ -13,6 +13,7 @@
 #include "ArenaTeamMgr.h"
 #include "DBCStores.h"
 #include "DBCStructure.h"
+#include "DeathKnightReworkUtils.h"
 #include "DruidReworkUtils.h"
 #include "GuildMgr.h"
 #include "InventoryAction.h"
@@ -1748,7 +1749,17 @@ uint32 PlayerbotFactory::InitTalentsTree(bool increment /*false*/, bool use_temp
     uint8 cls = bot->getClass();
     std::map<uint8, uint32> tabs = AiFactory::GetPlayerSpecTabs(bot);
     uint32 total_tabs = tabs[0] + tabs[1] + tabs[2];
-    if (increment && total_tabs != 0)
+    // Rework: a Blood Death Knight keeps its premade slot (6.0 "blood tank" or 6.1 "blood tank worms") at any level,
+    // also for the first talent point; the tab (always 0) would send every one of them to 6.0
+    uint32 deathKnightSlot = ai::dk_rework::NO_PREMADE_SLOT;
+    if (increment && cls == CLASS_DEATH_KNIGHT && (total_tabs == 0 || AiFactory::GetPlayerSpecTab(bot) == 0))
+        deathKnightSlot = ai::dk_rework::PremadeSlot(bot);
+
+    if (deathKnightSlot != ai::dk_rework::NO_PREMADE_SLOT)
+    {
+        specTab = deathKnightSlot;
+    }
+    else if (increment && total_tabs != 0)
     {
         /// @todo: match current talent with template
         specTab = AiFactory::GetPlayerSpecTab(bot);
@@ -3672,15 +3683,13 @@ void PlayerbotFactory::InitClassSpells()
             bot->learnSpell(2098, true);
             break;
         case CLASS_DEATH_KNIGHT:
+            // Rework: the trainer path (InitAvailableSpells) teaches the rest of the kit by level. Blood Strike
+            // (replaced by Heart Strike, which every Death Knight knows from creation), Runeforging, Death Gate (level
+            // 10) and the Deathcharger (level 55) are no longer granted here, and the "leave the starting area" grants
+            // are gone with the Ebon Hold start
             bot->learnSpell(45477, true);
             bot->learnSpell(47541, true);
             bot->learnSpell(45462, true);
-            bot->learnSpell(45902, true);
-            // to leave DK starting area
-            bot->learnSpell(53428, false);
-            bot->learnSpell(50977, false);
-            bot->learnSpell(49142, false);
-            bot->learnSpell(48778, false);
             break;
         case CLASS_HUNTER:
             bot->learnSpell(2973, true);
@@ -3747,11 +3756,6 @@ void PlayerbotFactory::InitSpecialSpells()
     {
         uint32 spellId = *i;
         bot->learnSpell(spellId);
-    }
-    // to leave DK starting area
-    if (bot->getClass() == CLASS_DEATH_KNIGHT)
-    {
-        bot->learnSpell(50977, false);
     }
 }
 

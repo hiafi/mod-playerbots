@@ -2045,14 +2045,31 @@ Playerbots.PremadeSpecLink.5.5.80 = --303320310102313132313110330131
 # DEATH KNIGHT
 #
 
-Playerbots.PremadeSpecName.6.0 = blood pve
+# Reworked Blood (docs/reworks/bot-strategy/death-knight-blood-bot-guide.md, docs/reworks/death-knight-blood-rework.md).
+# Each string is "<blood>-<frost>-<unholy>" with one digit per talent in (row, column) order, trailing zeros dropped and
+# a Blood-only build written without a hyphen (tab order Blood-Frost-Unholy, TalentTab OrderIndex 0/1/2). The Blood tab
+# has 33 talents; the digit order is the guide's table (row by row, left to right), confirmed against the S1 talent grid
+# (tab 398). Each link contains the one before it, so no talent is ever unlearned. .80 repeats .60 (the level cap is
+# 60). PremadeSpecName and PremadeSpecGlyph keep the stock glyph lists: bot glyphs are off on this server
+# (Playerbots.BotGlyphs = 0), so they are never applied.
+# 6.0 "blood tank": flat mitigation and Crimson Communion for the group. 6.1 "blood tank worms": Bloodworms and Sanguine
+# Ground, more self-healing, no Crimson Communion. A Death Knight is the tank build from level 10 on the Blood tab or
+# with Blood Presence (ai::dk_rework::IsTankBuild). Slots 6.2 to 6.6 are the stock Frost and Unholy builds and are STALE:
+# their links were written against the pre-rework trees, so they are illegal now; they stay at probability 0 until the
+# Frost and Unholy reworks (S2/S3) replace them. The Frost build that used to be 6.1 is gone with it.
+Playerbots.PremadeSpecName.6.0 = blood tank
 Playerbots.PremadeSpecGlyph.6.0 = 45805,43673,43538,43544,43672,43542
-Playerbots.PremadeSpecLink.6.0.60 = 035502150300331320102013111-005
-Playerbots.PremadeSpecLink.6.0.80 = 0055021533303310201020131-305020510002-00522
-Playerbots.PremadeSpecName.6.1 = frost pve
-Playerbots.PremadeSpecGlyph.6.1 = 45805,43673,43547,43544,43672,43543
-Playerbots.PremadeSpecLink.6.1.60 = -32003350332203012300023101351
-Playerbots.PremadeSpecLink.6.1.80 = -32002350352203012300033101351-230200305003
+Playerbots.PremadeSpecLink.6.0.30 = 23300321230101
+Playerbots.PremadeSpecLink.6.0.45 = 2330032123033130000301201
+Playerbots.PremadeSpecLink.6.0.60 = 233003212303313003030121201310311
+Playerbots.PremadeSpecLink.6.0.80 = 233003212303313003030121201310311
+Playerbots.PremadeSpecName.6.1 = blood tank worms
+Playerbots.PremadeSpecGlyph.6.1 = 45805,43673,43538,43544,43672,43542
+Playerbots.PremadeSpecLink.6.1.30 = 23300321130201
+Playerbots.PremadeSpecLink.6.1.45 = 2330032113033130300101201
+Playerbots.PremadeSpecLink.6.1.60 = 233003211303313030033120201210311
+Playerbots.PremadeSpecLink.6.1.80 = 233003211303313030033120201210311
+# Stale (pre-rework) Frost and Unholy builds, kept for their names until S2/S3:
 Playerbots.PremadeSpecName.6.2 = unholy pve
 Playerbots.PremadeSpecGlyph.6.2 = 43542,43673,43546,43535,43672,43549
 Playerbots.PremadeSpecLink.6.2.60 = --2301303050032151000150013131151
@@ -2480,14 +2497,16 @@ Playerbots.RandomClassSpecIndex.5.5 = 5
 # DEATH KNIGHT
 #
 
-# blood pve
-Playerbots.RandomClassSpecProb.6.0 = 30
+# Random Death Knights are Blood tanks until the Frost and Unholy reworks (S2/S3): their stock builds are illegal against
+# the reworked trees, so every Frost and Unholy slot is 0
+# blood tank
+Playerbots.RandomClassSpecProb.6.0 = 50
 Playerbots.RandomClassSpecIndex.6.0 = 0
-# frost pve
-Playerbots.RandomClassSpecProb.6.1 = 40
+# blood tank worms
+Playerbots.RandomClassSpecProb.6.1 = 50
 Playerbots.RandomClassSpecIndex.6.1 = 1
-# unholy pve
-Playerbots.RandomClassSpecProb.6.2 = 30
+# unholy pve (stale)
+Playerbots.RandomClassSpecProb.6.2 = 0
 Playerbots.RandomClassSpecIndex.6.2 = 2
 # double aura blood pve
 Playerbots.RandomClassSpecProb.6.3 = 0

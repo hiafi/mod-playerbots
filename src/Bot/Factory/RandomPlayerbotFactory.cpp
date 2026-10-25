@@ -94,14 +94,24 @@ constexpr RandomPlayerbotFactory::NameRaceAndGender RandomPlayerbotFactory::Comb
                                           ((gender >= GENDER_NONE) ? static_cast<uint8>(GENDER_MALE) : gender));
 }
 
+bool RandomPlayerbotFactory::DeathKnightsAllowed(uint32 expansion)
+{
+    if (expansion >= EXPANSION_WRATH_OF_THE_LICH_KING)
+        return true;
+
+    uint32 const startLevel = sWorld->getIntConfig(CONFIG_START_HEROIC_PLAYER_LEVEL);
+    return startLevel >= 1 && startLevel <= sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL);
+}
+
 bool RandomPlayerbotFactory::IsValidRaceClassCombination(uint8 race, uint8 cls, uint32 expansion)
 {
     // skip expansion races if not playing with expansion
     if (expansion < EXPANSION_THE_BURNING_CRUSADE && (race == RACE_BLOODELF || race == RACE_DRAENEI))
         return false;
 
-    // skip expansion classes if not playing with expansion
-    if (expansion < EXPANSION_WRATH_OF_THE_LICH_KING && cls == CLASS_DEATH_KNIGHT)
+    // skip the Death Knight unless the server lets one be played: a WotLK expansion, or (a server that rewrites the
+    // class, like a reworked Classic realm with a level 1 Death Knight start) a heroic start level within the level cap
+    if (cls == CLASS_DEATH_KNIGHT && !DeathKnightsAllowed(expansion))
         return false;
 
     PlayerInfo const* info = sObjectMgr->GetPlayerInfo(race, cls);
@@ -215,11 +225,6 @@ Player* RandomPlayerbotFactory::CreateRandomBot(WorldSession* session, uint8 cls
 
     player->setCinematic(2);
     player->SetAtLoginFlag(AT_LOGIN_NONE);
-
-    if (cls == CLASS_DEATH_KNIGHT)
-    {
-        player->learnSpell(50977, false);
-    }
 
     LOG_DEBUG("playerbots", "Random bot created - name: \"{}\", race: {}, class: {}",
             name.c_str(), race, cls);
@@ -484,7 +489,7 @@ uint32 RandomPlayerbotFactory::CalculateTotalAccountCount()
 uint32 RandomPlayerbotFactory::CalculateAvailableCharsPerAccount()
 {
     // Death Knight availability according to their login eligibility, and if WotLK is enabled at all.
-    bool noDK = sPlayerbotAIConfig.DisableDeathKnightLogin || sWorld->getIntConfig(CONFIG_EXPANSION) != EXPANSION_WRATH_OF_THE_LICH_KING;
+    bool noDK = sPlayerbotAIConfig.DisableDeathKnightLogin || !DeathKnightsAllowed(sWorld->getIntConfig(CONFIG_EXPANSION));
 
     uint32 availableChars = noDK ? 9 : 10;
 

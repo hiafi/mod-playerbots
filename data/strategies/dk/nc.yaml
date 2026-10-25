@@ -1,0 +1,37 @@
+# The Death Knight's out-of-combat setup rows: "dk/nc-blood" and "dk/nc-dps", appended to the Death Knight non-combat
+# strategy by GenericDKNonCombatStrategy::InitTriggers (the Blood tab gets the first, the Frost and Unholy tabs the
+# second). Source: the Setup list of the Blood bot guide (docs/reworks/bot-strategy/death-knight-blood-bot-guide.md) and
+# S1-HANDOFF U32/Part A.6. Horn of Winter is the stock row of the strategy. Nothing here runs in combat: Blood Presence
+# is never toggled in combat (it is the tank aura, -5% damage dealt) and a rune is an out-of-combat cast (spell group
+# 1271, one rune at a time), so the engines never swap either mid-fight.
+# Every spell carries `known()`: Blood Presence is taught at 10, the Rune of the Fallen Crusader at 6, Exsanguination at
+# 20. Frost and Unholy bots never cast Blood Presence (Frost Presence and Unholy Presence are gone), and keep the Fallen
+# Crusader rune until their own stages (S2/S3) give them theirs.
+# Spell ids (DBC names): Blood Presence 48266, Rune of the Fallen Crusader 53344, Rune of Razorice 53343, Rune of
+# Exsanguination 203040, Rune of Boiling Blight 203042, Rune of the Apocalypse 203044, Rune of Unending Thirst 203049
+# (the runes are self auras: the cast spell and the aura share the id).
+strategy: dk/nc-blood
+class: dk
+conditions:
+  # None of the six runes is up
+  no_rune: not aura(self, "53344,53343,203040,203042,203044,203049")
+rows:
+  - do: dk blood presence
+    when: known(48266) and not aura(self, 48266)
+    relevance: high + 2
+  # Rune of Exsanguination from 20; the Rune of the Fallen Crusader before that
+  - do: dk rune exsanguination
+    when: known(203040) and no_rune
+    relevance: high + 1
+  - do: dk rune fallen crusader
+    when: known(53344) and not known(203040) and no_rune
+    relevance: high + 0.9
+---
+strategy: dk/nc-dps
+class: dk
+conditions:
+  no_rune: not aura(self, "53344,53343,203040,203042,203044,203049")
+rows:
+  - do: dk rune fallen crusader
+    when: known(53344) and no_rune
+    relevance: high + 1

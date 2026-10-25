@@ -7,6 +7,7 @@
 #include "AiFactory.h"
 #include "BattlegroundMgr.h"
 #include "DKAiObjectContext.h"
+#include "DeathKnightReworkUtils.h"
 #include "DruidAiObjectContext.h"
 #include "DruidReworkUtils.h"
 #include "Engine.h"
@@ -166,6 +167,10 @@ BotRoles AiFactory::GetPlayerRoles(Player* player)
                 role = BOT_ROLE_TANK;
             else
                 role = BOT_ROLE_DPS;
+            break;
+        case CLASS_DEATH_KNIGHT:
+            // Rework: the Blood tab from level 10, or a Death Knight in Blood Presence, is the tank
+            role = ai::dk_rework::IsTankBuild(player) ? BOT_ROLE_TANK : BOT_ROLE_DPS;
             break;
         case CLASS_PALADIN:
             if (tab == PALADIN_TAB_HOLY)
@@ -405,8 +410,15 @@ void AiFactory::AddDefaultCombatStrategies(Player* player, PlayerbotAI* const fa
             break;
 
         case CLASS_DEATH_KNIGHT:
+            // Rework: the Blood tab tanks from level 10 (Blood Presence); below it the "blood" strategy is a DPS one
+            // (its type follows IsTankBuild), so no tank target selection or pulling
             if (tab == DEATH_KNIGHT_TAB_BLOOD)
-                engine->addStrategiesNoInit("blood", "tank assist", "pull", "pull back", nullptr);
+            {
+                if (ai::dk_rework::IsTankBuild(player))
+                    engine->addStrategiesNoInit("blood", "tank assist", "pull", "pull back", nullptr);
+                else
+                    engine->addStrategiesNoInit("blood", "dps assist", nullptr);
+            }
             else if (tab == DEATH_KNIGHT_TAB_FROST)
                 engine->addStrategiesNoInit("frost", "frost aoe", "dps assist", nullptr);
             else // if (tab == DEATH_KNIGHT_TAB_UNHOLY)
@@ -590,7 +602,7 @@ void AiFactory::AddDefaultNonCombatStrategies(Player* player, PlayerbotAI* const
             nonCombatEngine->addStrategiesNoInit("dps assist", "ss self", nullptr);
             break;
         case CLASS_DEATH_KNIGHT:
-            if (tab == DEATH_KNIGHT_TAB_BLOOD)
+            if (tab == DEATH_KNIGHT_TAB_BLOOD && ai::dk_rework::IsTankBuild(player))
                 nonCombatEngine->addStrategiesNoInit("tank assist", "pull", nullptr);
             else
                 nonCombatEngine->addStrategy("dps assist", false);

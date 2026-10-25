@@ -72,6 +72,7 @@ public:
 private:
     friend class ArenaTeamAssignOperation;
 
+    static bool DeathKnightsAllowed(uint32 expansion);
     static bool IsValidRaceClassCombination(uint8 race, uint8 class_, uint32 expansion);
     std::string const CreateRandomBotName(NameRaceAndGender raceAndGender);
 

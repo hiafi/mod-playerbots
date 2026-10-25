@@ -14,6 +14,7 @@
 #include "Common.h"
 #include "CreatureData.h"
 #include "DBCStores.h"
+#include "DeathKnightReworkUtils.h"
 #include "DruidReworkIds.h"
 #include "DruidReworkUtils.h"
 #include "EmoteAction.h"
@@ -67,7 +68,6 @@
 namespace
 {
 constexpr uint32 SPELL_TITAN_GRIP = 49152;
-constexpr uint32 SPELL_DK_FROST_PRESENCE = 48263;
 constexpr uint32 SPELL_GRAVITY_LAPSE_TK = 39432;
 constexpr uint32 SPELL_GRAVITY_LAPSE_MGT = 44226;
 constexpr uint32 VEHICLE_FLAG_FIXED_POSITION = 0x00200000;
@@ -2397,10 +2397,10 @@ bool PlayerbotAI::IsTank(Player* player, bool bySpec)
     switch (player->getClass())
     {
         case CLASS_DEATH_KNIGHT:
-            if (tab == DEATH_KNIGHT_TAB_BLOOD || player->HasAura(SPELL_DK_FROST_PRESENCE))
-            {
+            // Rework: a tank Death Knight is the Blood tab from level 10, or one with Blood Presence (the tank aura;
+            // Frost Presence is gone)
+            if (ai::dk_rework::IsTankBuild(player))
                 return true;
-            }
             break;
         case CLASS_PALADIN:
             if (tab == PALADIN_TAB_PROTECTION)
@@ -2513,7 +2513,8 @@ bool PlayerbotAI::IsDps(Player* player, bool bySpec)
             }
             break;
         case CLASS_DEATH_KNIGHT:
-            if (tab != DEATH_KNIGHT_TAB_BLOOD)
+            // Rework: the mirror of IsTank, so a Blood Death Knight under 10 plays as a melee DPS
+            if (!ai::dk_rework::IsTankBuild(player))
             {
                 return true;
             }

@@ -5,6 +5,7 @@
  */
 
 #include "DeathKnightPullStrategy.h"
+#include "DeathKnightReworkIds.h"
 #include "Player.h"
 #include "PlayerbotAI.h"
 #include "Playerbots.h"
@@ -17,6 +18,11 @@ std::string DeathKnightPullStrategy::GetPullActionName() const
     {
         return PullStrategy::GetPullActionName();
     }
+
+    // Rework: Death's Caress (taught at 12) opens from range and puts Blood Plague on the pack's main target; the
+    // guide's pull. Below 12 the stock pull plays
+    if (botAI->CanCastSpell(ai::dk_rework::SPELL_DEATHS_CARESS, target, true))
+        return "death's caress";
 
     if (botAI->CanCastSpell("death grip", target))
         return "death grip";

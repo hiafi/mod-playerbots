@@ -24,7 +24,7 @@ private:
     {
         return new ActionNode(
             "death strike",
-            /*P*/ { NextAction("blood presence") },
+            /*P*/ {},
             /*A*/ {},
             /*C*/ {}
         );
@@ -33,7 +33,7 @@ private:
     {
         return new ActionNode(
             "ghoul frenzy",
-            /*P*/ { NextAction("blood presence") },
+            /*P*/ {},
             /*A*/ {},
             /*C*/ {}
         );
@@ -42,7 +42,7 @@ private:
     {
         return new ActionNode(
             "corpse explosion",
-            /*P*/ { NextAction("blood presence") },
+            /*P*/ {},
             /*A*/ {},
             /*C*/ {}
         );
@@ -52,7 +52,7 @@ private:
     {
         return new ActionNode(
             "scourge strike",
-            /*P*/ { NextAction("blood presence") },
+            /*P*/ {},
             /*A*/ {},
             /*C*/ {}
         );
@@ -61,7 +61,7 @@ private:
     {
         return new ActionNode(
             "icy touch",
-            /*P*/ { NextAction("blood presence") },
+            /*P*/ {},
             /*A*/ {},
             /*C*/ {}
         );
@@ -102,7 +102,7 @@ void UnholyDKStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
                 NextAction("ghoul frenzy", ACTION_DEFAULT + 0.9f),
                 NextAction("scourge strike", ACTION_DEFAULT + 0.8f),
                 NextAction("icy touch", ACTION_DEFAULT + 0.7f),
-                NextAction("blood strike", ACTION_DEFAULT + 0.6f),
+                NextAction("heart strike", ACTION_DEFAULT + 0.6f),
                 NextAction("plague strike", ACTION_DEFAULT + 0.5f),
             }
         )
@@ -112,7 +112,7 @@ void UnholyDKStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         new TriggerNode(
             "dd cd and no desolation",
             {
-                NextAction("blood strike", ACTION_DEFAULT + 0.75f)
+                NextAction("heart strike", ACTION_DEFAULT + 0.75f)
             }
         )
     );
@@ -128,7 +128,7 @@ void UnholyDKStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         new TriggerNode(
             "high blood rune",
             {
-                NextAction("blood strike", ACTION_NORMAL + 2)
+                NextAction("heart strike", ACTION_NORMAL + 2)
             }
         )
     );
@@ -159,13 +159,6 @@ void UnholyDKStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
             "army of the dead",
             {
                 NextAction("army of the dead", ACTION_HIGH + 6)
-            }
-        )
-    );
-    triggers.push_back(
-        new TriggerNode("bone shield",
-            {
-                NextAction("bone shield", ACTION_HIGH + 3)
             }
         )
     );

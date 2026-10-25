@@ -6,6 +6,7 @@
 
 #include "LfgActions.h"
 #include "AiFactory.h"
+#include "DeathKnightReworkUtils.h"
 #include "ItemVisitors.h"
 #include "LFGMgr.h"
 #include "Opcodes.h"
@@ -91,7 +92,8 @@ uint32 LfgJoinAction::GetRoles()
                 return PLAYER_ROLE_DAMAGE;
             break;
         case CLASS_DEATH_KNIGHT:
-            if (spec == 0)
+            // Rework: the tank Death Knight (Blood tab from level 10, or Blood Presence on)
+            if (ai::dk_rework::IsTankBuild(bot))
                 return PLAYER_ROLE_TANK;
             else
                 return PLAYER_ROLE_DAMAGE;
