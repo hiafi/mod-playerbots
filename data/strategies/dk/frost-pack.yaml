@@ -83,7 +83,6 @@ conditions:
   safe_breath: value("unsafe aoe units::15;self") == 0
   safe_target_10: value("unsafe aoe units::10") == 0
   safe_self_10: value("unsafe aoe units::10;self") == 0
-  safe_self_8: value("unsafe aoe units::8;self") == 0
   safe_self_20: value("unsafe aoe units::20;self") == 0
 rows:
   # K1: Death's Caress on the pull: a target without this bot's Blood Plague, an Unholy Rune ready, the pack engaged in
@@ -119,7 +118,7 @@ rows:
   - do: dk pack death and decay
     when: >-
       known(43265) and cooldown(43265) == 0 and pack and not breath_active and enemies_within(8) >= 4
-      and not moving(target) and not dynobj(43265) and trio and safe_self_8
+      and not moving(target) and not dynobj(43265) and trio and safe_self_10
     relevance: normal + 9.66
   # K7: Heart Strike on a Blood Rune with exactly two enemies in melee range (it cleaves one extra target); Blood
   # Boil (K5) takes the Blood Rune first when it is known

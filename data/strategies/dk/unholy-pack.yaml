@@ -1,0 +1,198 @@
+# The reworked Unholy Death Knight's pack rows: "dk/unholy-pack" is appended to the "unholy aoe" combat strategy by
+# DeathKnightReworkUnholyAoeStrategy::InitTriggers (the toggle the aoe chat commands flip; the "dk aoe enabled" value
+# reads it). Source: the Packs list of the Unholy bot guide
+# (docs/reworks/bot-strategy/death-knight-unholy-bot-guide.md);
+# the off-the-GCD rows, the single target lists, the bands, the approximations of the conditions and the spell ids are
+# in
+# unholy.yaml, whose header explains them. A pack is three or more enemies within 10 yd of the bot with "unholy aoe" on
+# (S3b-HANDOFF Part C); the guide defines it as three within 10 yd of the target, the same set for a melee bot.
+#
+# Which rows play where. The pack replaces the single target rows of the build (they carry `single` in unholy.yaml);
+# the off-the-GCD rows, Army of the Dead, the ghoul, Death Strike, Horn of Winter and the leveling fillers play in a
+# pack too. Pack rows are normal + 9.95 .. 9.5 and run under their own names where a unholy.yaml row of the same spell
+# can hold in the same tick. Plague and minion rows are exclusive (`plague_pack` / `minion_pack`).
+#
+# Pack lines (guide) -> rows:
+#  Both builds, opening:
+#   1 Death's Caress on a target without Blood Plague in the first 3 s of the engagement        -> O1
+#   2 Icy Touch on the main target when its Frost Fever is missing                              -> O2
+#   3 Raise Abomination with three within 8 yd of the bot                                       -> O3
+#   - Summon Gargoyle on a boss, or with two elites near the target                              -> G
+#  Plague build:
+#   1 Pestilence (Blood Rune, both diseases on the target, two lacking diseases, or 4 wounds)    -> P1
+#   2 Death and Decay on three or more within 8 yd, standing, a rune of each type               -> P2
+#   3 Death Coil at 80 Runic Power                                                              -> P3
+#   4 Plague Strike on the main target, or the fewest-wound enemy when the main target is dying -> P4 / P4b
+#   5 Scourge Strike on the most-wound enemy that is not about to die                           -> P5
+#   6 Death Coil at 40 Runic Power                                                              -> P6
+#   7 Horn of Winter                                                                            -> unholy.yaml
+#  Minion build:
+#   1 Pestilence (two lacking diseases; no wounds under Necromancy)                             -> M1
+#   2 Corpse Explosion (30 Runic Power, a fresh ghoul, three within 8 yd of the target)         -> M2
+#   3 Scourge Strike with energy on a Blood and a Frost Rune                                    -> M3
+#   4 Death and Decay                                                                           -> M4
+#   5 Plague Strike with one or no energy on an Unholy Rune                                     -> M5
+#   6 Death Coil when free or at 90 Runic Power and Corpse Explosion's line is false            -> M6
+#   7 Horn of Winter                                                                            -> unholy.yaml
+#
+# Area safety (B-COMMON section 5, X11, L20): every area row carries `value("unsafe aoe units::<yd>") == 0` (units not
+# in combat, or crowd controlled, within the area), so a pack never pulls the next one or breaks a sheep: Death's Caress
+# and Corpse Explosion around the target (10 and 8 yd), Pestilence around the target at its radius, Death and Decay
+# around the bot (10 yd) and the Abomination's cloud around the bot (8 yd). Each is one 1 s cached grid visit, and
+# the last term of its row.
+#
+# Deviations from the guide, each for a reason the row says:
+# - Pestilence's wound clause ("4 or more wounds and 3 or more within the radius") is rate limited to once per 6 s
+#   (`ms_since_cast(50842) >= 6000`). Unrestricted it stays true while the target keeps its wounds, and a Pestilence on
+#   every Blood Rune that recharges would leave Scourge Strike (Blood + Frost) with no Blood Rune for the whole pack.
+#   The disease clause is limited to once per 3 s (`ms_since_cast(50842) >= 3000`): an add that is immune or out of
+#   reach keeps the lacking count at two for the whole fight.
+# - Pestilence's radius is by On a Pale Horse's rank: known(49146) or known(51267) is rank 1 or 2 (+5 yd), known(51267)
+#   rank 2 (+10); known() reads the current rank only. The guide's Glyph of Pestilence is retired.
+# - Death and Decay needs three within 8 yd of the target AND of the bot (it lands at the bot's feet); its area safety
+#   gate is 10 yd (the spell's radius).
+# - "The pack was engaged in the last 3 s" is `combat_time() <= 3000`. "The pack is not moving" is `not moving(target)`;
+#   "a rune of each type ready" is value "dk runes ready::trio". "About to die" is a non-boss at 20% health or less;
+#   the wound target values skip it, so Scourge Strike goes to the most-wound enemy that is not dying and is skipped
+#   when
+#   every enemy in reach is.
+# - Summon Gargoyle in a pack has no Shadow Infusion wait (the guide puts the wait on the single target line only).
+strategy: dk/unholy-pack
+class: dk
+conditions:
+  target_alive: alive(target)
+  rp: value("dk runic power")
+  blood_rune: value("dk runes ready::blood") >= 1
+  frost_rune: value("dk runes ready::frost") >= 1
+  unholy_rune: value("dk runes ready::unholy") >= 1
+  bloodfrost: value("dk runes ready::bloodfrost") >= 1
+  trio: value("dk runes ready::trio") >= 1
+  minion_build: known(203442)
+  plague_build: not minion_build
+  energy_1: stacks(self, 203461) >= 1
+  energy_low: stacks(self, 203461) <= 1
+  wounds_4: stacks(target, 203456, own) >= 4
+  harbinger: aura(self, 203463)
+  fever_missing: not aura(target, 55095, own)
+  big: boss(target) or (elite(target) and health_pct(target) > 30)
+  dying: health_pct(target) <= 20 and not boss(target)
+  # The pack list: the bot has "unholy aoe" and three or more enemies are within 10 yd
+  pack: value("dk aoe enabled") and alive(target) and enemies_within(10) >= 3
+  plague_pack: pack and plague_build
+  minion_pack: pack and minion_build
+  # Area safety (X11): no unpulled or crowd controlled unit in the area
+  safe_target_8: value("unsafe aoe units::8") == 0
+  safe_target_10: value("unsafe aoe units::10") == 0
+  safe_target_15: value("unsafe aoe units::15") == 0
+  safe_target_20: value("unsafe aoe units::20") == 0
+  safe_self_8: value("unsafe aoe units::8;self") == 0
+  safe_self_10: value("unsafe aoe units::10;self") == 0
+  # Pestilence: both of this bot's diseases on the target, and enough others to spread to within its radius, which is
+  # 10 yd plus 5 per rank of On a Pale Horse (49146 / 51267, the talent's two ranks)
+  both_diseases: aura(target, 55078, own) and aura(target, 55095, own)
+  oph1: known(49146) or known(51267)
+  oph2: known(51267)
+  # Rate limited like the wound clause: an immune or unreachable add keeps the count up for the whole fight
+  lack_10: value("dk enemies lacking diseases::10") >= 2 and ms_since_cast(50842) >= 3000
+  lack_15: value("dk enemies lacking diseases::15") >= 2 and ms_since_cast(50842) >= 3000
+  lack_20: value("dk enemies lacking diseases::20") >= 2 and ms_since_cast(50842) >= 3000
+  # The wound clause (plague build): four wounds on the target and three within the radius, once per 6 s
+  wounds_10: wounds_4 and enemies_near_target(10) >= 3 and ms_since_cast(50842) >= 6000
+  wounds_15: wounds_4 and enemies_near_target(15) >= 3 and ms_since_cast(50842) >= 6000
+  wounds_20: wounds_4 and enemies_near_target(20) >= 3 and ms_since_cast(50842) >= 6000
+  pest_plague: >-
+    (not oph1 and (lack_10 or wounds_10) and safe_target_10)
+    or (oph1 and not oph2 and (lack_15 or wounds_15) and safe_target_15)
+    or (oph2 and (lack_20 or wounds_20) and safe_target_20)
+  pest_minion: >-
+    (not oph1 and lack_10 and safe_target_10) or (oph1 and not oph2 and lack_15 and safe_target_15)
+    or (oph2 and lack_20 and safe_target_20)
+  # Death and Decay: three within 8 yd of the target and of the bot, the pack standing, a rune of each type; safe over
+  # its 10 yd area (radius index 13)
+  dnd: >-
+    known(43265) and cooldown(43265) == 0 and enemies_near_target(8) >= 3 and enemies_within(8) >= 3
+    and not moving(target) and not dynobj(43265) and trio and safe_self_10
+  # Corpse Explosion: 30 Runic Power, a Lesser Ghoul raised in the last 2 s, three within 8 yd of the target. The fresh
+  # ghoul value is read first: it samples the ghoul counter, so it must not sit behind a short circuit
+  ce_line: >-
+    known(49158) and value("dk fresh ghoul") and rp >= 30 and enemies_near_target(8) >= 3 and safe_target_8
+rows:
+  # ---- Both builds, opening ----
+  # O1: Death's Caress on a target without Blood Plague, an Unholy Rune ready, the pack engaged in the last 3 s
+  - do: dk pack deaths caress
+    when: >-
+      known(203001) and pack and unholy_rune and combat_time() <= 3000 and not aura(target, 55078, own)
+      and safe_target_10
+    relevance: normal + 9.94
+  # O2: Icy Touch on the main target when Frost Fever is missing on it
+  - do: dk icy touch
+    when: known(45477) and pack and fever_missing and frost_rune
+    relevance: normal + 9.93
+  # O3: Raise Abomination with three or more within 8 yd of the bot (the cloud's radius), nothing unpulled in it
+  - do: dk pack raise abomination
+    when: >-
+      known(203452) and cooldown(203452) == 0 and pack and rp >= 40 and enemies_within(8) >= 3 and in_range(target, 5)
+      and safe_self_8
+    relevance: normal + 9.9
+  # G: Summon Gargoyle on a boss, or with two or more elites near the target
+  - do: dk pack summon gargoyle
+    when: >-
+      known(49206) and cooldown(49206) == 0 and pack and (boss(target) or value("elite enemies near target::10") >= 2)
+    relevance: normal + 9.95
+
+  # ---- Plague build ----
+  # P1: Pestilence
+  - do: dk pestilence
+    when: known(50842) and plague_pack and blood_rune and both_diseases and pest_plague
+    relevance: normal + 9.8
+  # P2: Death and Decay
+  - do: dk pack death and decay
+    when: plague_pack and dnd
+    relevance: normal + 9.75
+  # P3: Death Coil at 80 Runic Power
+  - do: dk pack death coil
+    when: known(47541) and plague_pack and rp >= 80
+    relevance: normal + 9.7
+  # P4: Plague Strike on the main target; P4b the fewest-wound enemy in reach when the main target is about to die (and
+  # an enemy that is not dying exists; with none, the main target takes it)
+  - do: dk pack plague strike
+    when: >-
+      known(45462) and plague_pack and unholy_rune and (not dying or not alive("dk wound target::fewest"))
+    relevance: normal + 9.65
+  - do: dk plague strike fewest
+    when: known(45462) and plague_pack and unholy_rune and dying and alive("dk wound target::fewest")
+    relevance: normal + 9.64
+  # P5: Scourge Strike on the most-wound enemy in reach that is not about to die
+  - do: dk scourge strike wounds
+    when: known(55090) and plague_pack and bloodfrost and alive("dk wound target::most")
+    relevance: normal + 9.6
+  # P6: Death Coil at 40 Runic Power
+  - do: dk pack death coil low
+    when: known(47541) and plague_pack and rp >= 40
+    relevance: normal + 9.5
+
+  # ---- Minion build ----
+  # M1: Pestilence (the diseases only: no wounds under Necromancy)
+  - do: dk pestilence
+    when: known(50842) and minion_pack and blood_rune and both_diseases and pest_minion
+    relevance: normal + 9.8
+  # M2: Corpse Explosion on the fresh ghoul
+  - do: dk corpse explosion
+    when: minion_pack and ce_line
+    relevance: normal + 9.78
+  # M3: Scourge Strike with energy (raises the ghoul Corpse Explosion detonates)
+  - do: dk pack scourge strike
+    when: known(55090) and minion_pack and energy_1 and bloodfrost
+    relevance: normal + 9.7
+  # M4: Death and Decay
+  - do: dk pack death and decay
+    when: minion_pack and dnd
+    relevance: normal + 9.65
+  # M5: Plague Strike with one or no energy on an Unholy Rune
+  - do: dk pack plague strike
+    when: known(45462) and minion_pack and energy_low and unholy_rune
+    relevance: normal + 9.6
+  # M6: Death Coil when free, or at 90 Runic Power and Corpse Explosion's line is false
+  - do: dk pack death coil
+    when: known(47541) and minion_pack and (harbinger or (rp >= 90 and not ce_line))
+    relevance: normal + 9.5

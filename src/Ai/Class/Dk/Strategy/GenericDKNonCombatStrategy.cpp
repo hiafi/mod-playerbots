@@ -24,8 +24,20 @@ void GenericDKNonCombatStrategy::InitTriggers(std::vector<TriggerNode*>& trigger
 
     // Rework: Blood Presence (taught at 10) is the tank aura, so only a Blood bot puts it on, and no strategy casts it
     // in combat. Bone Shield has no cast of its own any more (Marrowrend applies it). The rune aura (one at a time,
-    // out of combat only) and, for Blood, the presence are the rows of "dk/nc-blood" and "dk/nc-dps"
-    ai::data::AppendRows(AiFactory::GetPlayerSpecTab(botAI->GetBot()) == DEATH_KNIGHT_TAB_BLOOD ? "dk/nc-blood"
-                                                                                                : "dk/nc-dps",
-                         triggers);
+    // out of combat only) and, for Blood, the presence are the rows of "dk/nc-blood", "dk/nc-dps" (Frost) and
+    // "dk/nc-unholy" (Boiling Blight, the permanent ghoul)
+    char const* rows = "dk/nc-dps";
+    switch (AiFactory::GetPlayerSpecTab(botAI->GetBot()))
+    {
+        case DEATH_KNIGHT_TAB_BLOOD:
+            rows = "dk/nc-blood";
+            break;
+        case DEATH_KNIGHT_TAB_UNHOLY:
+            rows = "dk/nc-unholy";
+            break;
+        default:
+            break;
+    }
+
+    ai::data::AppendRows(rows, triggers);
 }

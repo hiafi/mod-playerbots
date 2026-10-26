@@ -45,14 +45,16 @@ uint32 PremadeSlot(Player* bot)
     if (!points)
         return slot;
 
-    // Talents in a tab: the stored slot stands when it belongs to that tab, else the tab's first slot (the Unholy tab
-    // has none until S3). GetPlayerSpecTab is the leading tab, the one the strategies are picked by
+    // Talents in a tab: the stored slot stands when it belongs to that tab, else the tab's first slot.
+    // GetPlayerSpecTab is the leading tab, the one the strategies are picked by
     switch (AiFactory::GetPlayerSpecTab(bot))
     {
         case DEATH_KNIGHT_TAB_BLOOD:
             return slot != NO_PREMADE_SLOT && slot < FROST_SLOT ? slot : BLOOD_SLOT;
         case DEATH_KNIGHT_TAB_FROST:
-            return slot != NO_PREMADE_SLOT && slot >= FROST_SLOT ? slot : FROST_SLOT;
+            return slot != NO_PREMADE_SLOT && slot >= FROST_SLOT && slot < UNHOLY_SLOT ? slot : FROST_SLOT;
+        case DEATH_KNIGHT_TAB_UNHOLY:
+            return slot != NO_PREMADE_SLOT && slot >= UNHOLY_SLOT ? slot : UNHOLY_SLOT;
         default:
             return NO_PREMADE_SLOT;
     }
@@ -105,12 +107,15 @@ ReadyRunes GetReadyRunes(Player* player)
     runes.frost = exactFrost + death;
     runes.unholy = exactUnholy + death;
     runes.death = death;
+    runes.exactBlood = exactBlood;
     runes.exactFrost = exactFrost;
     runes.exactUnholy = exactUnholy;
     runes.pair = runes.frost >= 1 && runes.unholy >= 1 && (exactFrost + exactUnholy + death) >= 2;
     // Each type without a rune of its own needs a Death Rune to stand in
     uint8 const missing = (exactBlood ? 0 : 1) + (exactFrost ? 0 : 1) + (exactUnholy ? 0 : 1);
     runes.trio = missing <= death;
+    // Scourge Strike: each of Blood and Frost without a rune of its own needs a Death Rune of its own to stand in
+    runes.bloodFrost = (exactBlood ? 0 : 1) + (exactFrost ? 0 : 1) <= death;
     return runes;
 }
 

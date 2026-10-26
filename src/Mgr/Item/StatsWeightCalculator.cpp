@@ -645,14 +645,15 @@ void StatsWeightCalculator::CalculateItemTypePenalty(ItemTemplate const* proto)
             }
         }
         // spec with double hand
-        // fury without duel wield, arms, bear, retribution, blood dk
+        // fury without duel wield, arms, bear, retribution, blood dk, unholy dk (Rework: every Death Knight can dual
+        // wield, so without this an Unholy bot can prefer two one-handers to the two-hander its rotation is sized on)
         if (!isDoubleHand)
         {
             if ((cls == CLASS_HUNTER && !player_->CanDualWield()) ||
                 (cls == CLASS_WARRIOR && tab == WARRIOR_TAB_FURY && !player_->CanDualWield()) ||
                 (cls == CLASS_WARRIOR && tab == WARRIOR_TAB_ARMS) || (cls == CLASS_DRUID && tab == DRUID_TAB_FERAL) ||
                 (cls == CLASS_PALADIN && tab == PALADIN_TAB_RETRIBUTION) ||
-                (cls == CLASS_DEATH_KNIGHT && tab == DEATH_KNIGHT_TAB_BLOOD) ||
+                (cls == CLASS_DEATH_KNIGHT && (tab == DEATH_KNIGHT_TAB_BLOOD || tab == DEATH_KNIGHT_TAB_UNHOLY)) ||
                 (cls == CLASS_SHAMAN && tab == SHAMAN_TAB_ENHANCEMENT && !player_->CanDualWield()))
             {
                 weight_ *= 0.1;

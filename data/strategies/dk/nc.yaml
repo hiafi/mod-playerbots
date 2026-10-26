@@ -1,13 +1,17 @@
-# The Death Knight's out-of-combat setup rows: "dk/nc-blood" and "dk/nc-dps", appended to the Death Knight non-combat
-# strategy by GenericDKNonCombatStrategy::InitTriggers (the Blood tab gets the first, the Frost and Unholy tabs the
-# second). Source: the Setup list of the Blood bot guide (docs/reworks/bot-strategy/death-knight-blood-bot-guide.md) and
+# The Death Knight's out-of-combat setup rows: "dk/nc-blood", "dk/nc-dps" and "dk/nc-unholy", appended to the Death
+# Knight non-combat strategy by GenericDKNonCombatStrategy::InitTriggers (the Blood tab gets the first, the Frost tab
+# the
+# second, the Unholy tab the third). Source: the Setup list of the Blood bot guide
+# (docs/reworks/bot-strategy/death-knight-blood-bot-guide.md) and
 # S1-HANDOFF U32/Part A.6. Horn of Winter is the stock row of the strategy. Nothing here runs in combat: Blood Presence
 # is never toggled in combat (it is the tank aura, -5% damage dealt) and a rune is an out-of-combat cast (spell group
 # 1271, one rune at a time), so the engines never swap either mid-fight.
 # Every spell carries `known()`: Blood Presence is taught at 10, the Rune of the Fallen Crusader at 6, Exsanguination at
-# 20. Frost and Unholy bots never cast Blood Presence (Frost Presence and Unholy Presence are gone). They keep the
-# Fallen Crusader rune until level 20, then take the Rune of Razorice (S2 Frost; the Unholy tab shares this list until
-# S3 gives it its own rune, and no bot is Unholy before then).
+# 20. Frost and Unholy bots never cast Blood Presence (Frost Presence and Unholy Presence are gone). Frost keeps the
+# Fallen Crusader rune until level 20, then takes the Rune of Razorice; Unholy keeps it until level 20, then takes the
+# Rune of Boiling Blight (its own rune, never Razorice), puts Horn of Winter up by id and raises the permanent ghoul
+# (Master of Ghouls, level 25) by id with no bot-side cooldown, also in the sim's buff phase, where the stock name-cast
+# rows do not fire (S2b-2 F2).
 # Spell ids (DBC names): Blood Presence 48266, Rune of the Fallen Crusader 53344, Rune of Razorice 53343, Rune of
 # Exsanguination 203040, Rune of Boiling Blight 203042, Rune of the Apocalypse 203044, Rune of Unending Thirst 203049
 # (the runes are self auras: the cast spell and the aura share the id).
@@ -52,3 +56,40 @@ rows:
   - do: dk horn of winter
     when: known(57330) and not aura(self, 57330)
     relevance: high + 0.5
+---
+strategy: dk/nc-unholy
+class: dk
+conditions:
+  no_rune: not aura(self, "53344,53343,203040,203042,203044,203049")
+rows:
+  # Leave Blood Presence: a Blood bot that a master re-specs to Unholy keeps the aura (S2b-1 m5), which counts as a tank
+  # to the roles and the LFG and costs 5% damage. The client cancel of the bot's own aura, out of combat only
+  - do: dk cancel blood presence
+    when: aura(self, 48266, own)
+    relevance: high + 2
+  # Rune of Boiling Blight from 20, replacing any other rune (one at a time, out of combat only; it takes a worn Fallen
+  # Crusader's place). Never Razorice. Before 20 the Rune of the Fallen Crusader
+  - do: dk rune boiling blight
+    when: known(203042) and not aura(self, 203042)
+    relevance: high + 1
+  - do: dk rune fallen crusader
+    when: known(53344) and not known(203042) and no_rune
+    relevance: high + 0.9
+  # The permanent ghoul (Master of Ghouls, 25) whenever it is missing and Raise Dead is ready, by id with no bot-side
+  # cooldown. `not alive("pet target")`, never the `no pet` trigger: a guardian (Gargoyle, Lesser Ghoul) makes that
+  # false.
+  # The sim actor starts with no ghoul and does not keep it between iterations, so the buff phase raises it
+  - do: dk raise dead
+    when: known(46584) and known(52143) and cooldown(46584) == 0 and not alive("pet target")
+    relevance: high + 0.6
+  # Horn of Winter before the pull, by id (S2b-2 F2). After the rune, one global cooldown
+  - do: dk horn of winter
+    when: known(57330) and not aura(self, 57330)
+    relevance: high + 0.5
+  # The stock pet rows: the ghoul's autocast and its stance (Playerbots.DefaultPetStance)
+  - do: toggle pet spell
+    trigger: has pet
+    relevance: raid
+  - do: set pet stance
+    trigger: new pet
+    relevance: raid

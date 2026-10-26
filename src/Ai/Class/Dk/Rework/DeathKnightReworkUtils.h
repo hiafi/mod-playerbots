@@ -23,16 +23,17 @@ namespace ai::dk_rework
 bool IsTankBuild(Player* player);
 
 // The premade slot (6.<slot>) a Death Knight levels up on, from the stored "specNo" (slot + 1), the way the Shaman tank
-// keeps its link: 0 "blood tank", 1 "blood tank worms", 2 "frost breath" or 3 "frost obliteration". Slots 0 and 1 are
-// the Blood tab, 2 and 3 the Frost tab (4 and 5 will be the Unholy tab, S3). A stored slot counts only for the tab the
-// bot has talents in; with no talent yet it is taken as it is (the first point keeps the roll). With talents in a tab
-// and no usable slot (a new bot, a hand-specced one, a stale value) the tab picks: Blood -> slot 0, Frost -> slot 2.
-// NO_PREMADE_SLOT for the Unholy tab (until S3), for a slot above 3 and for a bot that is no Death Knight; then the
-// tab-based pick of PlayerbotFactory stands.
+// keeps its link: 0 "blood tank", 1 "blood tank worms", 2 "frost breath", 3 "frost obliteration", 4 "unholy plague" or
+// 5 "unholy minion". Slots 0 and 1 are the Blood tab, 2 and 3 the Frost tab, 4 and 5 the Unholy tab. A stored slot
+// counts only for the tab the bot has talents in; with no talent yet it is taken as it is (the first point keeps the
+// roll). With talents in a tab and no usable slot (a new bot, a hand-specced one, a stale value) the tab picks: Blood
+// -> slot 0, Frost -> slot 2, Unholy -> slot 4. NO_PREMADE_SLOT for a slot above 5 (the unused 6.6) and for a bot that
+// is no Death Knight; then the tab-based pick of PlayerbotFactory stands.
 constexpr uint32 NO_PREMADE_SLOT = 0xFFFFFFFF;
 constexpr uint32 BLOOD_SLOT = 0;
 constexpr uint32 FROST_SLOT = 2;
-constexpr uint32 LAST_PREMADE_SLOT = 3;
+constexpr uint32 UNHOLY_SLOT = 4;
+constexpr uint32 LAST_PREMADE_SLOT = 5;
 uint32 PremadeSlot(Player* bot);
 
 // Dual Wield is baseline for a Death Knight (skill 118 and the spell the class acquires at login), at any level: gives
@@ -48,9 +49,13 @@ struct ReadyRunes
     uint8 frost = 0;   // ready Frost Runes and Death Runes
     uint8 unholy = 0;  // ready Unholy Runes and Death Runes
     uint8 death = 0;   // ready Death Runes
+    uint8 exactBlood = 0;
     uint8 exactFrost = 0;
     uint8 exactUnholy = 0;
     bool pair = false;  // a Frost and an Unholy Rune, in two different slots (Death Runes fill either)
+    // A Blood and a Frost Rune, in two different slots (Death Runes fill either, but never one Death Rune for both):
+    // the Scourge Strike cost
+    bool bloodFrost = false;
     bool trio = false;  // a Blood, a Frost and an Unholy Rune, in three different slots (Death Runes fill any)
 };
 

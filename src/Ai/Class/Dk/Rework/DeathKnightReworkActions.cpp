@@ -27,6 +27,10 @@ constexpr char CURRENT_TARGET[] = "current target";
 constexpr char SELF_TARGET[] = "self target";
 constexpr char LOOSE_ENEMY[] = "dk loose enemy";
 constexpr char LOOSE_RANGED_ENEMY[] = "dk loose ranged enemy";
+constexpr char PET_TARGET[] = "pet target";
+// The enemy in melee reach with the most / fewest of this bot's Festering Wounds (DkWoundTargetValue)
+constexpr char MOST_WOUNDS_ENEMY[] = "dk wound target::most";
+constexpr char FEWEST_WOUNDS_ENEMY[] = "dk wound target::fewest";
 constexpr auto SINGLE = Action::ActionThreatType::Single;
 constexpr auto AOE = Action::ActionThreatType::Aoe;
 
@@ -252,6 +256,31 @@ DkReworkActionFactory::DkReworkActionFactory()
     creators["dk anti magic shell"] = Row("dk anti magic shell", SPELL_ANTI_MAGIC_SHELL, SELF_TARGET);
     creators["dk lichborne"] = ControlLostRow("dk lichborne", SPELL_LICHBORNE);
 
+    // Unholy, on the current target unless said otherwise. A name per role inside one list, as Frost's: the single
+    // target, minion and pack lists are exclusive and share a name where one spell has a row in each
+    creators["dk scourge strike"] = Row("dk scourge strike", SPELL_SCOURGE_STRIKE);
+    creators["dk pack scourge strike"] = Row("dk pack scourge strike", SPELL_SCOURGE_STRIKE);
+    // The plague pack: Scourge Strike on the enemy with the most wounds, a spare Plague Strike on the one with the
+    // fewest
+    creators["dk scourge strike wounds"] = Row("dk scourge strike wounds", SPELL_SCOURGE_STRIKE, MOST_WOUNDS_ENEMY);
+    creators["dk plague strike fewest"] = Row("dk plague strike fewest", SPELL_PLAGUE_STRIKE, FEWEST_WOUNDS_ENEMY);
+    creators["dk death coil low"] = Row("dk death coil low", SPELL_DEATH_COIL);
+    creators["dk death coil finish"] = Row("dk death coil finish", SPELL_DEATH_COIL);
+    creators["dk pack death coil"] = Row("dk pack death coil", SPELL_DEATH_COIL);
+    creators["dk pack death coil low"] = Row("dk pack death coil low", SPELL_DEATH_COIL);
+    // Dark Transformation lands on the permanent ghoul (the pet), off the global cooldown
+    creators["dk dark transformation"] = Row("dk dark transformation", SPELL_DARK_TRANSFORMATION, PET_TARGET);
+    // Raise Dead by id with no bot-side cooldown (the stock action adds 3 min to the spell's own cooldown); a self cast
+    creators["dk raise dead"] = Row("dk raise dead", SPELL_RAISE_DEAD, SELF_TARGET);
+    creators["dk summon gargoyle"] = Row("dk summon gargoyle", SPELL_SUMMON_GARGOYLE);
+    creators["dk pack summon gargoyle"] = Row("dk pack summon gargoyle", SPELL_SUMMON_GARGOYLE);
+    creators["dk raise abomination"] = Row("dk raise abomination", SPELL_RAISE_ABOMINATION, SELF_TARGET, AOE);
+    creators["dk pack raise abomination"] =
+        Row("dk pack raise abomination", SPELL_RAISE_ABOMINATION, SELF_TARGET, AOE);
+    // Corpse Explosion detonates the bot's own Lesser Ghoul (or a corpse): no target of its own, a self cast
+    creators["dk corpse explosion"] = Row("dk corpse explosion", SPELL_CORPSE_EXPLOSION, SELF_TARGET, AOE);
+    creators["dk army of the dead"] = Row("dk army of the dead", SPELL_ARMY_OF_THE_DEAD, SELF_TARGET);
+
     // Setup out of combat: the tank aura and the rune
     creators["dk blood presence"] = Row("dk blood presence", SPELL_BLOOD_PRESENCE, SELF_TARGET);
     // A non-Blood bot leaves the tank aura (a re-spec keeps the aura, and the aura makes the bot a tank to the roles
@@ -262,6 +291,7 @@ DkReworkActionFactory::DkReworkActionFactory()
         Row("dk rune fallen crusader", SPELL_RUNE_OF_THE_FALLEN_CRUSADER, SELF_TARGET);
     creators["dk rune razorice"] = Row("dk rune razorice", SPELL_RUNE_OF_RAZORICE, SELF_TARGET);
     creators["dk rune exsanguination"] = Row("dk rune exsanguination", SPELL_RUNE_OF_EXSANGUINATION, SELF_TARGET);
+    creators["dk rune boiling blight"] = Row("dk rune boiling blight", SPELL_RUNE_OF_BOILING_BLIGHT, SELF_TARGET);
 
     // The pull strategy casts Death's Caress under the spell's own name, which its range lookup resolves through the
     // spellbook; a pull action is not a YAML row, so it is not re-checked against one

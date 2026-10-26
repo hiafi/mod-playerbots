@@ -62,4 +62,37 @@ public:
     std::string const getName() override { return "frost aoe"; }
 };
 
+// The reworked Unholy DPS rotation: MeleeCombatStrategy's rows (the walk to melee) plus those of "dk/unholy" (the
+// off-the-global-cooldown rows and the single target lists of both builds; data/strategies/dk/unholy.yaml). Registered
+// as "unholy". It derives from no stock Death Knight strategy, whose rows (a name-cast Ghoul Frenzy / Scourge Strike /
+// Heart Strike, Death and Decay at high + 5, Summon Gargoyle on no gate, Raise Dead behind a 3 min bot cooldown, Army
+// of
+// the Dead, Raise Dead and Death Pact on critical health) fight the rework. The default action is the generic melee
+// swing. No multipliers. Unholy does not pull (the "pull" strategy is the tank's).
+//
+// Below level 10 a Death Knight has no talents and is a Blood-tab bot, so it plays the Blood shell as a DPS; the Unholy
+// tab begins with the first talent point at 10 and Scourge Strike with the fifth point at 15.
+class DeathKnightReworkUnholyStrategy : public MeleeCombatStrategy
+{
+public:
+    DeathKnightReworkUnholyStrategy(PlayerbotAI* botAI);
+
+    std::vector<NextAction> getDefaultActions() override;
+    void InitTriggers(std::vector<TriggerNode*>& triggers) override;
+    std::string const getName() override { return "unholy"; }
+    uint32 GetType() const override { return STRATEGY_TYPE_DPS | STRATEGY_TYPE_MELEE; }
+};
+
+// The Unholy pack lists ("dk/unholy-pack", data/strategies/dk/unholy-pack.yaml), registered as "unholy aoe": the toggle
+// the chat commands flip (the "dk aoe enabled" value reads it, so the single-target rows give way to the pack rows only
+// while it is on).
+class DeathKnightReworkUnholyAoeStrategy : public CombatStrategy
+{
+public:
+    DeathKnightReworkUnholyAoeStrategy(PlayerbotAI* botAI) : CombatStrategy(botAI) {}
+
+    void InitTriggers(std::vector<TriggerNode*>& triggers) override;
+    std::string const getName() override { return "unholy aoe"; }
+};
+
 #endif

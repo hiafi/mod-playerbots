@@ -71,6 +71,28 @@ constexpr uint32 SPELL_OBLITERATION = 203292;
 constexpr uint32 SPELL_FROSTWYRMS_WRATH = 203302;
 constexpr uint32 SPELL_RAGE_OF_THE_FROZEN_CHAMPION = 203294;
 
+// Unholy kit and talents, cast or read by id. Scourge Strike, Plague Strike, Death Coil, Pestilence, Corpse Explosion,
+// Raise Dead and Army of the Dead carry their names on NPC copies (Death Coil 52375 / 59134 / 62900, Plague Strike
+// 60186, Scourge Strike 71488), so the casts name the id. Necromancy is All Will Serve's second rank 203442
+// (DeathKnightData::SPELL_ALL_WILL_SERVE_203442); Raise Dead stays the one id 46584 with Master of Ghouls (52143)
+constexpr uint32 SPELL_SCOURGE_STRIKE = 55090;
+constexpr uint32 SPELL_RAISE_DEAD = 46584;
+constexpr uint32 SPELL_MASTER_OF_GHOULS = 52143;
+constexpr uint32 SPELL_ARMY_OF_THE_DEAD = 42650;
+constexpr uint32 SPELL_CORPSE_EXPLOSION = 49158;
+constexpr uint32 SPELL_SUMMON_GARGOYLE = 49206;
+constexpr uint32 SPELL_RAISE_ABOMINATION = 203452;
+constexpr uint32 SPELL_DARK_TRANSFORMATION = 203448;
+constexpr uint32 SPELL_ALL_WILL_SERVE_RANK_2 = 203442;
+
+// Unholy auras and creatures the C++ values read: this bot's Festering Wounds on an enemy (the caster is always the
+// Death Knight), its Necromantic Energy, the Lesser Ghoul counter buff and the Lesser Ghoul creature. The Gargoyle's
+// creature entry is 27829
+constexpr uint32 SPELL_FESTERING_WOUND = 203456;
+constexpr uint32 SPELL_NECROMANTIC_ENERGY = 203461;
+constexpr uint32 SPELL_LESSER_GHOUL_COUNTER = 203470;
+constexpr uint32 NPC_LESSER_GHOUL = 300320;
+
 // Auras the strategy reads
 constexpr uint32 SPELL_BONE_SHIELD = 49222;
 constexpr uint32 SPELL_BLOOD_PLAGUE = 55078;
@@ -92,6 +114,8 @@ constexpr uint32 SPELL_SANGUINE_GROUND_CAPSTONE = 203131;
 // Tuning mirrored from the guide, not from the core
 constexpr uint32 DAMAGE_WINDOW_MS = 5000;  // "recent damage": the Death Strike record window (core: 5 s)
 constexpr uint8 TANK_MIN_LEVEL = 10;       // Blood Presence is taught at level 10
+constexpr uint32 FRESH_GHOUL_MS = 2000;    // "fresh ghoul": a Lesser Ghoul raised within this long ("2 sec", the guide)
+constexpr uint32 GARGOYLE_UNKNOWN_MS = 600000;  // "dk gargoyle due in" for a bot that has not learned Summon Gargoyle
 
 }  // namespace ai::dk_rework
 

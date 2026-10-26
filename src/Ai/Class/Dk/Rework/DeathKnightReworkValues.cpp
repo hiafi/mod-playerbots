@@ -9,9 +9,13 @@
 #include "DeathKnightReworkIds.h"
 #include "DynamicObject.h"
 #include "Group.h"
+#include "AuraIdUtils.h"
 #include "GroupUtils.h"
 #include "Playerbots.h"
 #include "QualifierUtils.h"
+#include "SpellCastStamps.h"
+#include "SpellReadyUtils.h"
+#include "TargetTypeUtils.h"
 #include "Timer.h"
 #include <algorithm>
 #include <cmath>
@@ -20,6 +24,8 @@ using namespace ai::dk_rework;
 
 namespace
 {
+// A non-boss enemy at this health percent or less is "about to die" (the guide's definition)
+constexpr float ABOUT_TO_DIE_PCT = 20.0f;
 // Death Grip and Dark Command both reach 30 yd
 constexpr float LOOSE_ENEMY_RANGE = 30.0f;
 // A loose enemy farther than this from the bot is a Death Grip candidate
@@ -119,7 +125,10 @@ uint8 DkEnemiesInLineValue::Calculate()
     return ai::qualifier::ClampCount(count);
 }
 
-bool DkAoeEnabledValue::Calculate() { return botAI->HasStrategy("frost aoe", BOT_STATE_COMBAT); }
+bool DkAoeEnabledValue::Calculate()
+{
+    return botAI->HasStrategy("frost aoe", BOT_STATE_COMBAT) || botAI->HasStrategy("unholy aoe", BOT_STATE_COMBAT);
+}
 
 uint8 DkRunesReadyValue::Calculate()
 {
@@ -135,6 +144,10 @@ uint8 DkRunesReadyValue::Calculate()
         return runes.death;
     if (type == "pair")
         return runes.pair ? 1 : 0;
+    if (type == "bloodfrost")
+        return runes.bloodFrost ? 1 : 0;
+    if (type == "exactblood")
+        return runes.exactBlood;
     if (type == "trio")
         return runes.trio ? 1 : 0;
 
@@ -271,6 +284,96 @@ uint8 DkPackWithoutPlagueValue::Calculate()
     return ai::qualifier::ClampCount(count);
 }
 
+uint8 DkEnemiesLackingDiseasesValue::Calculate()
+{
+    float yards = 0.0f;
+    Unit* target = AI_VALUE(Unit*, "current target");
+    if (!target || !target->IsAlive() || !ai::qualifier::ParseNumber(getQualifier(), yards))
+        return 0;
+
+    uint32 count = 0;
+    for (ObjectGuid const guid : AI_VALUE(GuidVector, "attackers"))
+    {
+        Unit* unit = botAI->GetUnit(guid);
+        if (unit && unit != target && unit->IsAlive() && target->GetExactDist(unit) <= yards &&
+            (!unit->HasAura(SPELL_BLOOD_PLAGUE, bot->GetGUID()) || !unit->HasAura(SPELL_FROST_FEVER, bot->GetGUID())))
+            ++count;
+    }
+
+    return ai::qualifier::ClampCount(count);
+}
+
+ObjectGuid DkWoundTargetValue::CalculateGuid()
+{
+    std::string const& mode = getQualifier();
+    bool const most = mode == "most";
+    if (!most && mode != "fewest")
+        return ObjectGuid::Empty;
+
+    Unit* current = AI_VALUE(Unit*, "current target");
+    Unit* best = nullptr;
+    uint32 bestWounds = 0;
+    for (ObjectGuid const guid : AI_VALUE(GuidVector, "attackers"))
+    {
+        Unit* unit = botAI->GetUnit(guid);
+        if (!unit || !unit->IsAlive() || !bot->IsWithinMeleeRange(unit))
+            continue;
+
+        if (unit->GetHealthPct() <= ABOUT_TO_DIE_PCT && !ai::target::IsBoss(unit))
+            continue;
+
+        uint32 const wounds = ai::aura::AuraStacks(unit, {SPELL_FESTERING_WOUND}, bot->GetGUID());
+        bool const better = !best || (most ? wounds > bestWounds : wounds < bestWounds) ||
+                            (wounds == bestWounds && unit == current);
+        if (!better)
+            continue;
+
+        best = unit;
+        bestWounds = wounds;
+    }
+
+    return best ? best->GetGUID() : ObjectGuid::Empty;
+}
+
+uint8 DkLesserGhoulsValue::Calculate()
+{
+    // The counter buff is the core's own count; the controlled set answers while it is missing
+    uint8 const stacks = ai::aura::AuraStacks(bot, {SPELL_LESSER_GHOUL_COUNTER}, bot->GetGUID());
+    if (stacks)
+        return stacks;
+
+    return AI_VALUE2(uint8, "controlled units by entry", std::to_string(NPC_LESSER_GHOUL));
+}
+
+bool DkFreshGhoulValue::Calculate()
+{
+    uint32 const now = getMSTime();
+    uint8 const count = AI_VALUE(uint8, "dk lesser ghouls");
+    if (_sampled && count > _lastCount)
+    {
+        _raised = true;
+        _raisedAt = now;
+    }
+
+    _lastCount = count;
+    _sampled = true;
+
+    // Scourge Strike with Necromancy raises a ghoul on every cast the rows make (they cast it only with energy)
+    if (bot->HasSpell(SPELL_ALL_WILL_SERVE_RANK_2) || bot->HasTalent(SPELL_ALL_WILL_SERVE_RANK_2, bot->GetActiveSpec()))
+        if (botAI->GetSpellCastStamps().MsSince(SPELL_SCOURGE_STRIKE, now) <= double(FRESH_GHOUL_MS))
+            return true;
+
+    return _raised && getMSTimeDiff(_raisedAt, now) <= FRESH_GHOUL_MS;
+}
+
+uint32 DkGargoyleDueInValue::Calculate()
+{
+    if (!bot->HasSpell(SPELL_SUMMON_GARGOYLE))
+        return GARGOYLE_UNKNOWN_MS;
+
+    return std::min(ai::spell::CooldownRemainingMs(bot, SPELL_SUMMON_GARGOYLE), GARGOYLE_UNKNOWN_MS);
+}
+
 DkReworkValueFactory::DkReworkValueFactory()
 {
     creators["dk runic power"] = [](PlayerbotAI* botAI) -> UntypedValue* { return new DkRunicPowerValue(botAI); };
@@ -293,4 +396,11 @@ DkReworkValueFactory::DkReworkValueFactory()
     creators["dk group health"] = [](PlayerbotAI* botAI) -> UntypedValue* { return new DkGroupHealthValue(botAI); };
     creators["dk pack without plague"] = [](PlayerbotAI* botAI) -> UntypedValue*
     { return new DkPackWithoutPlagueValue(botAI); };
+    creators["dk enemies lacking diseases"] = [](PlayerbotAI* botAI) -> UntypedValue*
+    { return new DkEnemiesLackingDiseasesValue(botAI); };
+    creators["dk wound target"] = [](PlayerbotAI* botAI) -> UntypedValue* { return new DkWoundTargetValue(botAI); };
+    creators["dk lesser ghouls"] = [](PlayerbotAI* botAI) -> UntypedValue* { return new DkLesserGhoulsValue(botAI); };
+    creators["dk fresh ghoul"] = [](PlayerbotAI* botAI) -> UntypedValue* { return new DkFreshGhoulValue(botAI); };
+    creators["dk gargoyle due in"] = [](PlayerbotAI* botAI) -> UntypedValue*
+    { return new DkGargoyleDueInValue(botAI); };
 }

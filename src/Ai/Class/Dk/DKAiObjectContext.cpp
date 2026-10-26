@@ -32,7 +32,8 @@ private:
     static Strategy* pull(PlayerbotAI* botAI) { return new DeathKnightPullStrategy(botAI); }
     // Rework: "frost aoe" is the reworked Frost pack list; the stock FrostDKAoeStrategy stays compiled but unused
     static Strategy* frost_aoe(PlayerbotAI* botAI) { return new DeathKnightReworkFrostAoeStrategy(botAI); }
-    static Strategy* unholy_aoe(PlayerbotAI* botAI) { return new UnholyDKAoeStrategy(botAI); }
+    // Rework: "unholy aoe" is the reworked Unholy pack list; the stock UnholyDKAoeStrategy stays compiled but unused
+    static Strategy* unholy_aoe(PlayerbotAI* botAI) { return new DeathKnightReworkUnholyAoeStrategy(botAI); }
 };
 
 class DeathKnightCombatStrategyFactoryInternal : public NamedObjectContext<Strategy>
@@ -40,8 +41,8 @@ class DeathKnightCombatStrategyFactoryInternal : public NamedObjectContext<Strat
 public:
     DeathKnightCombatStrategyFactoryInternal() : NamedObjectContext<Strategy>(false, true)
     {
-        // Rework: "tank" and "blood" are the reworked Blood tank, "frost" the reworked Frost DPS; the stock
-        // BloodDKStrategy and FrostDKStrategy stay compiled but unused
+        // Rework: "tank" and "blood" are the reworked Blood tank, "frost" the reworked Frost DPS, "unholy" the reworked
+        // Unholy DPS; the stock BloodDKStrategy, FrostDKStrategy and UnholyDKStrategy stay compiled but unused
         creators["tank"] = &DeathKnightCombatStrategyFactoryInternal::blood;
         creators["blood"] = &DeathKnightCombatStrategyFactoryInternal::blood;
         creators["frost"] = &DeathKnightCombatStrategyFactoryInternal::frost_dps;
@@ -52,7 +53,8 @@ private:
     static Strategy* blood(PlayerbotAI* botAI) { return new DeathKnightReworkBloodStrategy(botAI); }
     // Rework: "frost" is the reworked Frost DPS; the stock FrostDKStrategy stays compiled but unused
     static Strategy* frost_dps(PlayerbotAI* botAI) { return new DeathKnightReworkFrostStrategy(botAI); }
-    static Strategy* unholy_dps(PlayerbotAI* botAI) { return new UnholyDKStrategy(botAI); }
+    // Rework: "unholy" is the reworked Unholy DPS; the stock UnholyDKStrategy stays compiled but unused
+    static Strategy* unholy_dps(PlayerbotAI* botAI) { return new DeathKnightReworkUnholyStrategy(botAI); }
 };
 
 class DeathKnightTriggerFactoryInternal : public NamedObjectContext<Trigger>

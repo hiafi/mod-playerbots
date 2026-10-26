@@ -46,3 +46,21 @@ void DeathKnightReworkFrostAoeStrategy::InitTriggers(std::vector<TriggerNode*>& 
 {
     ai::data::AppendRows("dk/frost-pack", triggers);
 }
+
+DeathKnightReworkUnholyStrategy::DeathKnightReworkUnholyStrategy(PlayerbotAI* botAI) : MeleeCombatStrategy(botAI) {}
+
+std::vector<NextAction> DeathKnightReworkUnholyStrategy::getDefaultActions()
+{
+    return {NextAction("melee", ACTION_DEFAULT)};
+}
+
+void DeathKnightReworkUnholyStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
+{
+    MeleeCombatStrategy::InitTriggers(triggers);
+    ai::data::AppendRows("dk/unholy", triggers);
+}
+
+void DeathKnightReworkUnholyAoeStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
+{
+    ai::data::AppendRows("dk/unholy-pack", triggers);
+}
