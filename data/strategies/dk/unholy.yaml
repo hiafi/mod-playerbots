@@ -29,9 +29,9 @@
 # Never (guide): no Frost Strike, Obliterate or Blood Boil; no Heart Strike once Scourge Strike is known (the leveling
 # Heart Strike row is gated on `not known(55090)`); Death Strike only below 30% health; no Corpse Explosion below three
 # enemies or without a fresh ghoul and no Pestilence alone (dk/unholy-pack.yaml); no Plague Strike at two or more energy
-# (minion); no Death Coil at the bot's own ghoul (every Coil is on the current target); no Rune Tap above 50 Runic
-# Power; no Raise Dead or Death Pact on critical health (the stock rows are not loaded); no rune swap or Blood Presence
-# in combat (nc.yaml sets the rune out of combat only).
+# (minion) unless no Blood and Frost pair is ready (the M8 filler); no Death Coil at the bot's own ghoul (every Coil
+# is on the current target); no Rune Tap above 50 Runic Power; no Raise Dead or Death Pact on critical health (the
+# stock rows are not loaded); no rune swap or Blood Presence in combat (nc.yaml sets the rune out of combat only).
 #
 # Approximations (the guide's Definitions and State against what the bot can read):
 # - Energy = stacks(self, 203461) (Necromantic Energy, 0 to 6). Wounds = stacks(target, 203456, own) (the caster of the
@@ -175,6 +175,12 @@ rows:
   - do: dk death strike
     when: known(49998) and target_alive and health_pct(self) < 30 and rp >= 40
     relevance: normal + 9.93
+  # Horn of Winter when its buff is missing (RETUNE 2026-10-25, S3b-2-DIAG Q4: the plague rotation fills ~99% of its
+  # global cooldowns, so the "when ready" row below almost never won and Horn lapsed). One global cooldown per 2 min.
+  # Its own qualified name keeps it out of the "when ready" row's basket
+  - do: dk horn of winter::missing
+    when: known(57330) and cooldown(57330) == 0 and target_alive and not aura(self, 57330)
+    relevance: normal + 9.92
   # Raise Abomination: ready, 40 Runic Power, in melee range, nothing unpulled in the cloud. Falls back to this row
   # when a
   # pack stands but fewer than three are within 8 yd (the pack row needs three there)
@@ -227,6 +233,16 @@ rows:
   - do: dk icy touch
     when: known(45477) and minion_single and fever_missing and frost_rune
     relevance: normal + 9.55
+  # M8: Plague Strike as the filler when no Blood and Frost pair is ready and a plain Unholy Rune is (RETUNE 2026-10-25,
+  # S3b-2-DIAG Q2; Unholy doc section 9). Runes, not energy, bind the minion build: the plain Unholy Rune comes back
+  # as a Death Rune, so the next global cooldown has a Death pair for Scourge Strike; energy past 6 is lost (accepted).
+  # A plain Unholy Rune: under `not bloodfrost` at most one Death Rune is ready, so 2 or more Unholy-or-Death means one
+  # is plain. Its own qualified name keeps it out of M5's basket
+  - do: dk plague strike::filler
+    when: >-
+      known(45462) and minion_single and not bloodfrost and rp < 40
+      and (value("dk runes ready::unholy") >= 2 or (unholy_rune and value("dk runes ready::death") == 0))
+    relevance: normal + 9.5
 
   # ---- Leveling and the last rows of every list (no pack gate) ----
   # Below Scourge Strike (15): Heart Strike on a Blood Rune, Icy Touch on a Frost Rune (keeps Frost Fever up)
