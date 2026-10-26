@@ -2003,7 +2003,9 @@ void RandomPlayerbotMgr::Randomize(Player* bot)
     if (bot->InBattleground())
         return;
 
-    if (bot->GetLevel() < 3 || (bot->GetLevel() < 56 && bot->getClass() == CLASS_DEATH_KNIGHT))
+    // A Death Knight at or below the heroic start level (55 on a stock server) is re-rolled from the start
+    if (bot->GetLevel() < 3 || (bot->GetLevel() <= sWorld->getIntConfig(CONFIG_START_HEROIC_PLAYER_LEVEL) &&
+                                bot->getClass() == CLASS_DEATH_KNIGHT))
     {
         RandomizeFirst(bot);
     }

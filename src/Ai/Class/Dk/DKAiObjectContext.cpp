@@ -9,6 +9,7 @@
 #include "DKActions.h"
 #include "DKTriggers.h"
 #include "DeathKnightPullStrategy.h"
+#include "DeathKnightReworkContext.h"
 #include "FrostDKStrategy.h"
 #include "GenericDKNonCombatStrategy.h"
 #include "GenericTriggers.h"
@@ -29,8 +30,10 @@ public:
 private:
     static Strategy* nc(PlayerbotAI* botAI) { return new GenericDKNonCombatStrategy(botAI); }
     static Strategy* pull(PlayerbotAI* botAI) { return new DeathKnightPullStrategy(botAI); }
-    static Strategy* frost_aoe(PlayerbotAI* botAI) { return new FrostDKAoeStrategy(botAI); }
-    static Strategy* unholy_aoe(PlayerbotAI* botAI) { return new UnholyDKAoeStrategy(botAI); }
+    // Rework: "frost aoe" is the reworked Frost pack list; the stock FrostDKAoeStrategy stays compiled but unused
+    static Strategy* frost_aoe(PlayerbotAI* botAI) { return new DeathKnightReworkFrostAoeStrategy(botAI); }
+    // Rework: "unholy aoe" is the reworked Unholy pack list; the stock UnholyDKAoeStrategy stays compiled but unused
+    static Strategy* unholy_aoe(PlayerbotAI* botAI) { return new DeathKnightReworkUnholyAoeStrategy(botAI); }
 };
 
 class DeathKnightCombatStrategyFactoryInternal : public NamedObjectContext<Strategy>
@@ -38,6 +41,8 @@ class DeathKnightCombatStrategyFactoryInternal : public NamedObjectContext<Strat
 public:
     DeathKnightCombatStrategyFactoryInternal() : NamedObjectContext<Strategy>(false, true)
     {
+        // Rework: "tank" and "blood" are the reworked Blood tank, "frost" the reworked Frost DPS, "unholy" the reworked
+        // Unholy DPS; the stock BloodDKStrategy, FrostDKStrategy and UnholyDKStrategy stay compiled but unused
         creators["tank"] = &DeathKnightCombatStrategyFactoryInternal::blood;
         creators["blood"] = &DeathKnightCombatStrategyFactoryInternal::blood;
         creators["frost"] = &DeathKnightCombatStrategyFactoryInternal::frost_dps;
@@ -45,10 +50,11 @@ public:
     }
 
 private:
-    static Strategy* tank(PlayerbotAI* botAI) { return new BloodDKStrategy(botAI); }
-    static Strategy* blood(PlayerbotAI* botAI) { return new BloodDKStrategy(botAI); }
-    static Strategy* frost_dps(PlayerbotAI* botAI) { return new FrostDKStrategy(botAI); }
-    static Strategy* unholy_dps(PlayerbotAI* botAI) { return new UnholyDKStrategy(botAI); }
+    static Strategy* blood(PlayerbotAI* botAI) { return new DeathKnightReworkBloodStrategy(botAI); }
+    // Rework: "frost" is the reworked Frost DPS; the stock FrostDKStrategy stays compiled but unused
+    static Strategy* frost_dps(PlayerbotAI* botAI) { return new DeathKnightReworkFrostStrategy(botAI); }
+    // Rework: "unholy" is the reworked Unholy DPS; the stock UnholyDKStrategy stays compiled but unused
+    static Strategy* unholy_dps(PlayerbotAI* botAI) { return new DeathKnightReworkUnholyStrategy(botAI); }
 };
 
 class DeathKnightTriggerFactoryInternal : public NamedObjectContext<Trigger>
@@ -88,7 +94,6 @@ public:
         creators["dd cd and no desolation"] = &DeathKnightTriggerFactoryInternal::dd_cd_and_no_desolation;
         creators["death and decay cooldown"] = &DeathKnightTriggerFactoryInternal::death_and_decay_cooldown;
         creators["army of the dead"] = &DeathKnightTriggerFactoryInternal::army_of_the_dead;
-        creators["hysteria no cd"] = &DeathKnightTriggerFactoryInternal::hysteria_no_cd;
     }
 
 private:
@@ -141,7 +146,6 @@ private:
     }
     static Trigger* death_and_decay_cooldown(PlayerbotAI* botAI) { return new DeathAndDecayCooldownTrigger(botAI); }
     static Trigger* army_of_the_dead(PlayerbotAI* botAI) { return new ArmyOfTheDeadTrigger(botAI); }
-    static Trigger* hysteria_no_cd(PlayerbotAI* botAI) { return new HysteriaNoCooldownTrigger(botAI); }
 };
 
 class DeathKnightAiObjectContextInternal : public NamedObjectContext<Action>
@@ -199,9 +203,10 @@ public:
         creators["vampiric blood"] = &DeathKnightAiObjectContextInternal::vampiric_blood;
         creators["death pact"] = &DeathKnightAiObjectContextInternal::death_pact;
         creators["death rune_mastery"] = &DeathKnightAiObjectContextInternal::death_rune_mastery;
-        creators["hysteria"] = &DeathKnightAiObjectContextInternal::hysteria;
         creators["dancing rune weapon"] = &DeathKnightAiObjectContextInternal::dancing_rune_weapon;
         creators["dark command"] = &DeathKnightAiObjectContextInternal::dark_command;
+        // The static function was there but never registered, so the stock rows that queue it matched no action
+        creators["mind freeze on enemy healer"] = &DeathKnightAiObjectContextInternal::mind_freeze_on_enemy_healer;
     }
 
 private:
@@ -255,7 +260,6 @@ private:
     static Action* vampiric_blood(PlayerbotAI* botAI) { return new CastVampiricBloodAction(botAI); }
     static Action* death_pact(PlayerbotAI* botAI) { return new CastDeathPactAction(botAI); }
     static Action* death_rune_mastery(PlayerbotAI* botAI) { return new CastDeathRuneMasteryAction(botAI); }
-    static Action* hysteria(PlayerbotAI* botAI) { return new CastHysteriaAction(botAI); }
     static Action* dancing_rune_weapon(PlayerbotAI* botAI) { return new CastDancingRuneWeaponAction(botAI); }
     static Action* dark_command(PlayerbotAI* botAI) { return new CastDarkCommandAction(botAI); }
     static Action* mind_freeze_on_enemy_healer(PlayerbotAI* botAI)
@@ -293,6 +297,7 @@ void DKAiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextList<A
 {
     AiObjectContext::BuildSharedActionContexts(actionContexts);
     actionContexts.Add(new DeathKnightAiObjectContextInternal());
+    actionContexts.Add(new DkReworkActionFactory());
 }
 
 void DKAiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextList<Trigger>& triggerContexts)
@@ -304,4 +309,5 @@ void DKAiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextList<
 void DKAiObjectContext::BuildSharedValueContexts(SharedNamedObjectContextList<UntypedValue>& valueContexts)
 {
     AiObjectContext::BuildSharedValueContexts(valueContexts);
+    valueContexts.Add(new DkReworkValueFactory());
 }

@@ -341,11 +341,4 @@ public:
     CastBloodTapAction(PlayerbotAI* botAI) : CastMeleeSpellAction(botAI, "blood tap") {}
 };
 
-class CastHysteriaAction : public CastSpellAction
-{
-public:
-    CastHysteriaAction(PlayerbotAI* botAI) : CastSpellAction(botAI, "hysteria") {}
-    Unit* GetTarget() override;
-};
-
 #endif

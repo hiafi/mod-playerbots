@@ -1,0 +1,243 @@
+# The reworked Blood Death Knight's tank rotation: "dk/blood", appended to the "blood" (alias "tank") combat strategy by
+# DeathKnightReworkBloodStrategy::InitTriggers, with the pack list of dk/blood-pack.yaml. Source: the Blood bot guide
+# (docs/reworks/bot-strategy/death-knight-blood-bot-guide.md; the Blood rework doc wins, and S1-HANDOFF section 2 wins
+# over both). Each row queues its action at the relevance when its condition holds (`when`, the expression language of
+# StrategyExpression.h) or when an existing C++ trigger fires (`trigger`). Execution order is by relevance, not by
+# position in this file. Every action is a RowCheckedAction (it re-checks its own row before casting) except the stock
+# Mind Freeze rows and the walk to melee. Rows that can fire together never share an action name (they would merge into
+# one basket and only the first row would be re-checked): the three Death Strike rows, the two Marrowrend rows and the
+# filler and pulling copies each have their own "dk ..." name.
+#
+# Bands: the guide's "Off the global cooldown" list: Rune Tap, Vampiric Blood and Icebound Fortitude sit at
+# emergency + 4 .. + 2; they are off the global cooldown in the data (S1a), so the engine runs them during the
+# global cooldown too. Rune Strike (an on-next-swing spell, queued once per swing) sits at high + 5, above the
+# rotation and the pull rows and below `avoid aoe` (emergency). The pulling rows (a loose enemy, the opener from range)
+# sit at high + 4 .. high + 2, above the walk to melee (high + 1, MeleeCombatStrategy). The Single target list is
+# normal + 9.9 .. normal + 8.7 in the guide's order; the pack list (blood-pack.yaml) interleaves at the same band, and
+# the single rows 4 to 12 carry `not pack`, so only one of the two lists plays. Horn of Winter (line 13), the leveling
+# fillers and Death Coil carry no pack gate: they are the last rows of either list, for a tick on which nothing above
+# is available. Nothing is at or above the pull sequence (105).
+#
+# Every spell a bot may not know yet carries `known()`: `cooldown()` of an unknown spell reads 0, and `known()` also
+# reads talents, so the castables of the talents (Marrowrend, Gorefiend's Grasp, Crimson Communion, Blood Nova,
+# Bonestorm) work. A level 20, 30 or 46 bot plays the guide's leveling table with what it has learned: a bot that does
+# not know Death's Caress spends Unholy Runes on Plague Strike; one that does not know Marrowrend spends pairs on
+# the diseases and Icy Touch with no Bone Shield gate; Death Strike (level 10) takes Runic Power, Death Coil before it.
+#
+# Approximations (the guide's Definitions and State sections against what the bot can read):
+# - Recent damage = value "dk recent damage": the health the bot lost in the last 5 s as a percent of its maximum
+#   (a module tracker; the core's Death Strike record is not readable without the core header, S1-HANDOFF U31). A heal
+#   between two samples hides part of a drop. "A big hit" = recent damage >= 25. The value is sampled when it is read,
+#   so the Rune Tap row (the first off-the-GCD row) reads it unconditionally on every tick.
+# - Shroud of Purgatory active = aura(self, 203146); Purgatory's cooldown = aura(self, 203147) (the lockout debuff).
+# - Crimson Scourge active = aura(self, 203137) (the buff; there is no action button glow in 3.3.5).
+# - Pack = three or more enemies within 8 yd of the bot (blood-pack.yaml).
+# - Boss or elite = the existing boss(target) / elite(target).
+# - "Pair available" = value "dk runes ready::pair": a Frost and an Unholy Rune ready in two slots, Death Runes
+#   filling either. Blood Rune ready = "dk runes ready::blood" (Death Runes count).
+# - Bone Shield charges = charges(self, 49222) (the aura's ProcCharges, 1 to 6).
+#
+# S1 fix pass (2026-10-24, tank sim 60 s x 5): the Death Strike filler S14 below, and the pack list changes in
+# blood-pack.yaml. Rune Strike stays at 80 Runic Power: lowering it to 40 or 60 raised the Rune Strike count in the dps
+# scenario but cut the survive scenario's time to death by about a quarter (32 s against 42 s, 10 runs each), most
+# likely because a Rune Strike after every parry spends the Runic Power the next Death Strike needs.
+#
+# Not implemented, with the guide line: the pre-pull Death Strike for a Blood Shield (Setup, level 46 and up): the pull
+# strategy opens from range and has no melee-range pre-pull hook. The guide's open question 3 (incoming magic damage for
+# Anti-Magic Shell, tank busters for Vampiric Blood): no row, health and recent damage are the fallback.
+#
+# Spell ids (DBC names): Heart Strike 55050, Plague Strike 45462, Icy Touch 45477, Death Coil 47541, Death Strike
+# 49998 (heal 45470), Death's Caress 203001, Blood Boil 48721, Pestilence 50842, Rune Strike 56815, Rune Tap 48982,
+# Horn of Winter 57330, Dark Command 56222, Death Grip 49576, Icebound Fortitude 48792, Mind Freeze 47528, Death and
+# Decay 43265, Vampiric Blood 55233, Dancing Rune Weapon 49028, Marrowrend 203123, Gorefiend's Grasp 203127, Crimson
+# Communion 203141, Blood Nova 203143, Bonestorm 203148.
+# Auras (DeathKnightData.h names): Bone Shield 49222 (charges), Blood Plague 55078 and Frost Fever 55095 (on the
+# target, the bot's own), Crimson Scourge buff 203137, Shroud of Purgatory 203146, Purgatory lockout 203147,
+# Vampiric Blood 55233, Bonestorm 203148 (the aura of the cast itself). Talent rank ids (known() on a passive):
+# Sanguine Ground capstone 203131.
+strategy: dk/blood
+class: dk
+conditions:
+  target_alive: alive(target)
+  rp: value("dk runic power")
+  recent: value("dk recent damage")
+  # Hurt: the Death Strike trigger of the guide (health below 70% or a big hit). The tracker is read first
+  hurt: recent >= 25 or health_pct(self) < 70
+  healthy: health_pct(self) >= 85
+  shroud: aura(self, 203146)
+  blood_rune: value("dk runes ready::blood") >= 1
+  frost_rune: value("dk runes ready::frost") >= 1
+  unholy_rune: value("dk runes ready::unholy") >= 1
+  pair: value("dk runes ready::pair") >= 1
+  # Marrowrend wants a refresh: under 3 charges or under 5 s left (a missing aura reads 0 and 0)
+  bone_low: charges(self, 49222) < 3 or remaining(self, 49222) < 5000
+  # Diseases are applied only while Bone Shield holds 4 charges or more; before Marrowrend (level 20) there is no gate
+  disease_ok: not known(203123) or charges(self, 49222) >= 4
+  plague_due: not aura(target, 55078, own) or remaining(target, 55078, own) <= 3000
+  fever_missing: not aura(target, 55095, own)
+  # A pack: three or more enemies within 8 yd of the bot
+  pack: alive(target) and enemies_within(8) >= 3
+  single: alive(target) and not pack
+  # Off the GCD: a Death Strike line below would be true but Runic Power is short
+  ds_wanted: shroud or hurt
+  # Past melee reach (a ranged opener is worth it)
+  opener_range: alive(target) and not in_range(target, 8) and in_range(target, 28)
+rows:
+  # ---- Off the global cooldown (guide: checked every update) ----
+  # O1: Rune Tap when Runic Power is below 40, a Blood Rune is ready and a Death Strike line would otherwise be true.
+  # `recent >= 0` is always true: it reads the damage tracker first on every tick, so the history is sampled whether or
+  # not a later clause is reached
+  - do: dk rune tap
+    when: >-
+      recent >= 0 and known(48982) and cooldown(48982) == 0 and rp < 40 and blood_rune and ds_wanted
+    relevance: emergency + 4
+  # O2: Vampiric Blood below 50% health after a big hit, or under the Shroud (the pack copy is in blood-pack.yaml)
+  - do: dk vampiric blood
+    when: >-
+      known(55233) and cooldown(55233) == 0 and not aura(self, 55233)
+      and ((health_pct(self) < 50 and recent >= 30) or shroud)
+    relevance: emergency + 3
+  # O3: Icebound Fortitude below 30% health when Vampiric Blood is cooling down or already up
+  - do: dk icebound fortitude
+    when: >-
+      known(48792) and cooldown(48792) == 0 and health_pct(self) < 30
+      and (aura(self, 55233) or not known(55233) or cooldown(55233) > 0)
+    relevance: emergency + 2
+  # O4: Rune Strike (usable only after a dodge or a parry: the core refuses it otherwise) to spend Runic Power at 80 or
+  # more, never below 70% health (the Never list)
+  # High + 5, not emergency: it is queued until the swing lands, so it must stay under `avoid aoe` (emergency); the
+  # action's next-swing guard and the 1500 ms stamp keep it from being queued again before the swing
+  - do: dk rune strike
+    when: >-
+      known(56815) and alive(target) and rp >= 80 and health_pct(self) > 70 and ms_since_cast(56815) > 1500
+    relevance: high + 5
+
+  # ---- Single target (the pack list replaces lines 4 to 13 when a pack is within 8 yd) ----
+  # S1: Death Strike under the Shroud, every global cooldown until it clears
+  - do: dk death strike
+    when: known(49998) and alive(target) and shroud
+    relevance: normal + 9.9
+  # S2: Death Strike with 40 Runic Power or more after a big hit or below 70% health
+  - do: dk death strike hurt
+    when: known(49998) and alive(target) and rp >= 40 and hurt
+    relevance: normal + 9.8
+  # S2b (the guide's Never exception): Bonestorm on one target only at 100 Runic Power, above 90% health and with
+  # no Death Strike line 1 or 2 true (the guide says "no Death Strike line", but line 3 is true at 100 Runic Power)
+  - do: dk bonestorm single
+    when: >-
+      known(203148) and cooldown(203148) == 0 and not aura(self, 203148) and alive(target) and rp >= 100
+      and health_pct(self) > 90 and not shroud and recent < 25
+    relevance: normal + 9.75
+  # S3: Death Strike at 90 Runic Power or more (at full health this banks a Blood Shield)
+  - do: dk death strike full
+    when: known(49998) and alive(target) and rp >= 90
+    relevance: normal + 9.7
+  # S4: Marrowrend with a pair ready and Bone Shield under 3 charges or about to lapse
+  - do: dk marrowrend
+    when: known(203123) and single and pair and bone_low
+    relevance: normal + 9.6
+  # S5: Dancing Rune Weapon on a boss or an elite, when hurt (below 90%) or in the first 10 s of the fight
+  - do: dk dancing rune weapon
+    when: >-
+      known(49028) and cooldown(49028) == 0 and single and (boss(target) or elite(target))
+      and (health_pct(self) < 90 or combat_time() <= 10000)
+    relevance: normal + 9.5
+  # S6: Blood Nova when healthy and the Shroud is not up (never below 85% health: the Never list)
+  - do: dk blood nova
+    when: >-
+      known(203143) and cooldown(203143) == 0 and single and healthy and not shroud and enemies_within(8) >= 1
+    relevance: normal + 9.4
+  # S7: Heart Strike on a Blood Rune
+  - do: dk heart strike
+    when: known(55050) and single and blood_rune
+    relevance: normal + 9.3
+  # S8: Marrowrend on any pair
+  - do: dk marrowrend pair
+    when: known(203123) and single and pair
+    relevance: normal + 9.2
+  # S9: Death and Decay at the bot's feet while Crimson Scourge is up (the free cast)
+  - do: dk death and decay
+    when: known(43265) and single and aura(self, 203137) and enemies_within(8) >= 1
+    relevance: normal + 9.1
+  # S10: Death's Caress on an Unholy Rune when Blood Plague is missing or has 3 s left or less, with Bone Shield at 4
+  # charges (no gate before Marrowrend). Relevance 9.25, above Marrowrend on any pair (S8, 9.2): at 9.0 Marrowrend took
+  # every pair, so no Unholy Rune was left for the diseases (2026-10-24 smoke test: Blood Plague 0%, no Crimson Scourge)
+  - do: dk deaths caress
+    when: known(203001) and single and unholy_rune and plague_due and disease_ok
+    relevance: normal + 9.25
+  # S10b: before Death's Caress (level 12) Plague Strike plays its part
+  - do: dk plague strike
+    when: not known(203001) and known(45462) and single and unholy_rune and plague_due and disease_ok
+    relevance: normal + 8.95
+  # S11: Icy Touch on a Frost Rune when Frost Fever is missing, with Bone Shield at 4 charges
+  - do: dk icy touch
+    when: known(45477) and single and frost_rune and fever_missing and disease_ok
+    relevance: normal + 8.9
+  # S12: Crimson Communion when three party members are below 70% health or the group's average is below 75%
+  - do: dk crimson communion
+    when: >-
+      known(203141) and cooldown(203141) == 0 and single
+      and (value("party members below::70") >= 3 or value("dk group health") < 75)
+    relevance: normal + 8.8
+  # Leveling: until Marrowrend (level 20) the Unholy and Frost Runes go to Plague Strike or Death's Caress and Icy Touch
+  # whenever one is ready (the diseases rows above come first when one is due)
+  - do: dk filler deaths caress
+    when: not known(203123) and known(203001) and alive(target) and unholy_rune
+    relevance: normal + 8.78
+  - do: dk filler plague strike
+    when: not known(203123) and not known(203001) and known(45462) and alive(target) and unholy_rune
+    relevance: normal + 8.76
+  - do: dk filler icy touch
+    when: not known(203123) and known(45477) and alive(target) and frost_rune
+    relevance: normal + 8.74
+  # Leveling: before Death Strike (level 10) Runic Power goes to Death Coil at 40
+  - do: dk death coil
+    when: known(47541) and not known(49998) and alive(target) and rp >= 40
+    relevance: normal + 8.72
+  # S13: Horn of Winter when nothing above is available and Runic Power is below 90 (it generates Runic Power)
+  - do: dk horn of winter
+    when: known(57330) and cooldown(57330) == 0 and alive(target) and rp < 90
+    relevance: normal + 8.7
+
+  # S14: Death Strike as the Runic Power filler. Last row of the list (below Horn of Winter): when nothing above is
+  # castable (every rune on cooldown, no big hit yet) and there are 70 Runic Power, spend 40 on a Death Strike rather
+  # than stand idle ("whenever Runic Power is near full", Blood doc section 9: at full health it banks a Blood Shield).
+  # A Death Strike costs no rune. Its own qualified name keeps it out of the basket of the Death Strike rows above.
+  # In the dps scenario of the tank sim the health is refilled every step, so "hurt" never holds when the bot acts and
+  # Runic Power only goes out through line 3 (90); this row takes it out at 70 (S1 fix pass, F3 and F4)
+  - do: dk death strike::fill
+    when: known(49998) and alive(target) and rp >= 70
+    relevance: normal + 8.6
+
+  # ---- Pulling ----
+  # P1: Death's Caress on the target from range, once (Blood Plague missing; the opener, not a refresh)
+  - do: dk pull deaths caress
+    when: known(203001) and opener_range and unholy_rune and not aura(target, 55078, own)
+    relevance: high + 3
+  # P2: Icy Touch on the same target from range (it reaches 20 yd, Death's Caress 30) if a Frost Rune is ready, once
+  - do: dk pull icy touch
+    when: known(45477) and opener_range and in_range(target, 20) and frost_rune and fever_missing
+    relevance: high + 2.9
+  # P3 is the stock walk to melee (reach melee, high + 1).
+  # P4: Dark Command on a loose enemy that attacks a party member
+  - do: dk dark command
+    when: known(56222) and cooldown(56222) == 0 and alive("dk loose enemy")
+    relevance: high + 4
+  # P4: Death Grip on a loose caster or archer more than 10 yd away
+  - do: dk death grip
+    when: known(49576) and cooldown(49576) == 0 and alive("dk loose ranged enemy")
+    relevance: high + 3.5
+
+  # ---- Stay in the bot's own Death and Decay with Sanguine Ground's capstone (Never list) ----
+  # The action also needs the target inside the area (or within melee reach of its edge); otherwise `reach melee` wins
+  - do: dk move into dnd
+    when: known(203131) and alive(target) and dynobj(43265) and not value("dk in own dnd")
+    relevance: high + 2
+
+  # ---- Interrupts: the stock rows, kept (Mind Freeze is level 18) ----
+  - do: mind freeze
+    trigger: mind freeze
+    relevance: interrupt
+  - do: mind freeze on enemy healer
+    trigger: mind freeze on enemy healer
+    relevance: interrupt

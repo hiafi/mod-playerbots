@@ -1,0 +1,149 @@
+# The reworked Frost Death Knight's pack rows: "dk/frost-pack" is appended to the "frost aoe" combat strategy by
+# DeathKnightReworkFrostAoeStrategy::InitTriggers (the toggle the aoe chat commands flip; the "dk aoe enabled" value
+# reads it). Source: the Packs list of the Frost bot guide (docs/reworks/bot-strategy/death-knight-frost-bot-guide.md);
+# the single target rotation, the bands, the approximations of the conditions and the spell ids are in frost.yaml,
+# whose header explains them. A pack is three or more enemies within 10 yd of the bot with "frost aoe" on
+# (S2b-HANDOFF Part C); the guide defines it as three within 10 yd of the target, which is the same set for a melee bot.
+#
+# Which rows play where. The pack replaces the single target "Otherwise", pooling and Pillar window rows (they carry
+# `single` in frost.yaml); the Breath active rows, Breath of Sindragosa itself (cone and Runic Power gates in the
+# `breath_go` condition of frost.yaml), the off-the-GCD chain and the fillers play in a pack too. Pack rows are
+# normal + 9.95 .. 9.4, interleaved with the rows of frost.yaml above them (Breath 9.9, the Breath active list 9.87 ..
+# 9.65). They run under their own names where a frost.yaml row of the same spell can hold in the same tick.
+#
+# Pack lines (guide) -> rows:
+#  1 Death's Caress on a target without Blood Plague in the first 3 s of the engagement  -> K1
+#  2 Howling Blast on Rime, or a Frost and an Unholy Rune ready                         -> K2
+#  3 Breath of Sindragosa (Breath build) with 80 Runic Power and 3 in the cone          -> frost.yaml `breath_go`
+#  4 Glacial Advance, Breath not active, 30 Runic Power, 2 in the line                  -> K3
+#  5 Obliterate with Killing Machine on a Frost Rune                                    -> K4
+#  6 Blood Boil on a Blood Rune with 3 in 10 yd                                         -> K5 (below K6)
+#  7 Death and Decay at 4 in 8 yd, the pack standing still, a rune of each type ready   -> K6 (above K5)
+#  8 Heart Strike on a Blood Rune with exactly 2 in melee range                         -> K7
+#  9 Frost Strike near cap when Glacial Advance is not castable                         -> K8
+# 10 Obliterate on a Frost Rune                                                         -> K10
+# 11 Plague Strike on an Unholy Rune                                                    -> K11
+# The Obliteration build's Pillar window plays the same with Glacial Advance in Frost Strike's place (K3); when
+# Glacial Advance is not castable (cooling down, fewer than two in the line) Frost Strike takes the 40 Runic Power
+# (K9), the Killing Machine generator of the window. Blood Boil while Breath is active (line 3: "Blood Boil in place of
+# Heart Strike") is K12.
+#
+# Area safety (B-COMMON section 5, X11): every area row carries `value("unsafe aoe units::<yd>") == 0` (units within
+# the area that are not in combat, or are crowd controlled), so a pack never pulls the next one or breaks a sheep:
+# Death's Caress and Howling Blast around the target (10 yd), Blood Boil around the bot (10 yd), Death and Decay around
+# the bot (8 yd), Glacial Advance along its line (the 20 yd length around the bot, the precedent shape). Each is one
+# 1 s cached grid visit, and the last term of its row.
+#
+# Deviations from the guide, each for a reason the row says:
+# - Glacial Advance (line 4) does not fire while pooling for Breath (the Breath build, 15 s or less to Breath) unless
+#   the bar is full: the guide's pack list has no pooling note, but a Glacial Advance every 6 s keeps the bar under the
+#   80 Runic Power that Breath into a pack needs. Pre-Pillar (Obliteration build) it needs 90, like Frost Strike.
+# - Frost Strike (line 9) follows the same two holds; Obliterate without Killing Machine (line 10) is not played
+#   pre-Pillar (the Never list).
+# - Death and Decay (line 7) sits above Blood Boil (line 6): both need a Blood Rune and Blood Boil has no cooldown, so
+#   in the guide's order Death and Decay could never be reached. Its own gate (four within 8 yd, standing, a rune of
+#   each type, 30 s cooldown) keeps it to about one cast per 30 s.
+# - "The pack was engaged in the last 3 s" is `combat_time() <= 3000` (the clock since the engine went to combat).
+#   "The pack is not moving" is `not moving(target)`; "a rune of each type ready" is value "dk runes ready::trio" (a
+#   Blood, a Frost and an Unholy Rune in three slots, Death Runes filling any).
+# - The line (Glacial Advance) is a box in front of the bot: value "dk enemies in line::20,3" (20 yd long, 3 yd
+#   half-width, the eruption radius).
+strategy: dk/frost-pack
+class: dk
+conditions:
+  target_alive: alive(target)
+  rp: value("dk runic power")
+  rp_missing: value("dk runic power missing")
+  near_cap: rp_missing <= 20
+  at_cap: rp_missing == 0
+  blood_rune: value("dk runes ready::blood") >= 1
+  frost_rune: value("dk runes ready::frost") >= 1
+  unholy_rune: value("dk runes ready::unholy") >= 1
+  fu_pair: value("dk runes ready::pair") >= 1
+  trio: value("dk runes ready::trio") >= 1
+  km: stacks(self, 203320) >= 1
+  km_full: stacks(self, 203320) >= 2
+  rime: aura(self, 59052)
+  breath_active: aura(self, 203306)
+  pillar: aura(self, 203280)
+  breath_build: known(203302) or known(203303) or known(203294) or known(203295)
+  obl_build: known(203292) and not breath_build
+  pooling: >-
+    breath_build and known(203306) and not breath_active and cooldown(203306) <= 15000 and safe_breath
+  pre_pillar: obl_build and known(203280) and not pillar and cooldown(203280) <= 5000
+  window: obl_build and pillar and not breath_active
+  # The pack list: the bot has "frost aoe" and three or more enemies are within 10 yd
+  pack: value("dk aoe enabled") and alive(target) and enemies_within(10) >= 3
+  # Runic Power is spent on Glacial Advance / Frost Strike unless it is pooled for Breath or held for Pillar
+  ga_open: (not pooling or at_cap) and (not pre_pillar or rp >= 90)
+  line: value("dk enemies in line::20,3") >= 2
+  ga_ready: known(203273) and cooldown(203273) == 0
+  # Area safety (X11): no unpulled or crowd controlled unit in the area
+  # Breath's own 15 yd check (frost.yaml): a bot that cannot Breath does not pool for it
+  safe_breath: value("unsafe aoe units::15;self") == 0
+  safe_target_10: value("unsafe aoe units::10") == 0
+  safe_self_10: value("unsafe aoe units::10;self") == 0
+  safe_self_20: value("unsafe aoe units::20;self") == 0
+rows:
+  # K1: Death's Caress on the pull: a target without this bot's Blood Plague, an Unholy Rune ready, the pack engaged in
+  # the last 3 s (it hits two extra targets). Above Breath (frost.yaml 9.9): the pull opens with the disease
+  - do: dk pack deaths caress
+    when: >-
+      known(203001) and pack and not breath_active and unholy_rune and combat_time() <= 3000
+      and not aura(target, 55078, own) and safe_target_10
+    relevance: normal + 9.95
+  # K2: Howling Blast on Rime, or when a Frost and an Unholy Rune are ready (off cooldown, and never pre-Pillar: the
+  # paid cast takes one of the two Frost Runes the Obliteration build holds)
+  - do: dk frost howling blast
+    when: >-
+      known(49184) and pack and not breath_active
+      and (rime or (fu_pair and cooldown(49184) == 0 and not pre_pillar)) and safe_target_10
+    relevance: normal + 9.8
+  # K3: Glacial Advance: 30 Runic Power and two enemies in the 20 yd line, never while Breath is active
+  - do: dk frost glacial advance
+    when: >-
+      ga_ready and pack and not breath_active and rp >= 30 and line and ga_open and safe_self_20
+    relevance: normal + 9.75
+  # K4: Obliterate with Killing Machine on a Frost Rune (pre-Pillar only with two stacks)
+  - do: dk frost obliterate km
+    when: >-
+      known(203054) and pack and not breath_active and km and frost_rune and (not pre_pillar or km_full)
+    relevance: normal + 9.7
+  # K5: Blood Boil on a Blood Rune with three enemies within 10 yd (the pack condition), nothing unpulled in the 10 yd
+  - do: dk blood boil
+    when: known(48721) and pack and not breath_active and blood_rune and safe_self_10
+    relevance: normal + 9.65
+  # K6: Death and Decay at the bot's feet: four enemies within 8 yd, none of this bot's down, the pack standing still,
+  # a rune of each type ready. Above Blood Boil (K5), which would take the Blood Rune first every tick
+  - do: dk pack death and decay
+    when: >-
+      known(43265) and cooldown(43265) == 0 and pack and not breath_active and enemies_within(8) >= 4
+      and not moving(target) and not dynobj(43265) and trio and safe_self_10
+    relevance: normal + 9.66
+  # K7: Heart Strike on a Blood Rune with exactly two enemies in melee range (it cleaves one extra target); Blood
+  # Boil (K5) takes the Blood Rune first when it is known
+  - do: dk pack heart strike
+    when: >-
+      known(55050) and pack and not breath_active and blood_rune and enemies_within(5) == 2
+    relevance: normal + 9.55
+  # K8: Frost Strike near cap when Glacial Advance did not go above (cooling down, unlearned, or fewer than two in the
+  # line: holding the bar for a Glacial Advance that cannot fire would waste it)
+  - do: dk frost strike cap
+    when: known(49143) and pack and not breath_active and near_cap and ga_open
+    relevance: normal + 9.5
+  # K9: the Pillar window's Frost Strike (Killing Machine generator) when Glacial Advance cannot go
+  - do: dk frost strike
+    when: known(49143) and pack and window and rp >= 40
+    relevance: normal + 9.45
+  # K10: Obliterate on a Frost Rune, never pre-Pillar without Killing Machine (K4 plays it with the buff)
+  - do: dk frost obliterate
+    when: known(203054) and pack and not breath_active and frost_rune and not pre_pillar
+    relevance: normal + 9.4
+  # K11: Plague Strike on an Unholy Rune
+  - do: dk pack plague strike
+    when: known(45462) and pack and not breath_active and unholy_rune
+    relevance: normal + 9.35
+  # K12: Blood Boil in place of Heart Strike while Breath is active, on a Blood Rune with three enemies within 10 yd
+  - do: dk pack blood boil
+    when: known(48721) and pack and breath_active and blood_rune and safe_self_10
+    relevance: normal + 9.7

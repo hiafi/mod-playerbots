@@ -2045,34 +2045,93 @@ Playerbots.PremadeSpecLink.5.5.80 = --303320310102313132313110330131
 # DEATH KNIGHT
 #
 
-Playerbots.PremadeSpecName.6.0 = blood pve
+# Reworked Blood (docs/reworks/bot-strategy/death-knight-blood-bot-guide.md, docs/reworks/death-knight-blood-rework.md).
+# Each string is "<blood>-<frost>-<unholy>" with one digit per talent in (row, column) order, trailing zeros dropped and
+# a Blood-only build written without a hyphen (tab order Blood-Frost-Unholy, TalentTab OrderIndex 0/1/2). The Blood tab
+# has 33 talents; the digit order is the guide's table (row by row, left to right), confirmed against the S1 talent grid
+# (tab 398). Each link contains the one before it, so no talent is ever unlearned. .80 repeats .60 (the level cap is
+# 60). PremadeSpecName and PremadeSpecGlyph keep the stock glyph lists: bot glyphs are off on this server
+# (Playerbots.BotGlyphs = 0), so they are never applied.
+# 6.0 "blood tank": flat mitigation and Crimson Communion for the group. 6.1 "blood tank worms": Bloodworms and Sanguine
+# Ground, more self-healing, no Crimson Communion. A Death Knight is the tank build from level 10 on the Blood tab or
+# with Blood Presence (ai::dk_rework::IsTankBuild). Slots 6.2 and 6.3 are the reworked Frost builds, 6.4 and 6.5 the
+# reworked Unholy builds (below); slot 6.6 is unused.
+Playerbots.PremadeSpecName.6.0 = blood tank
 Playerbots.PremadeSpecGlyph.6.0 = 45805,43673,43538,43544,43672,43542
-Playerbots.PremadeSpecLink.6.0.60 = 035502150300331320102013111-005
-Playerbots.PremadeSpecLink.6.0.80 = 0055021533303310201020131-305020510002-00522
-Playerbots.PremadeSpecName.6.1 = frost pve
-Playerbots.PremadeSpecGlyph.6.1 = 45805,43673,43547,43544,43672,43543
-Playerbots.PremadeSpecLink.6.1.60 = -32003350332203012300023101351
-Playerbots.PremadeSpecLink.6.1.80 = -32002350352203012300033101351-230200305003
-Playerbots.PremadeSpecName.6.2 = unholy pve
-Playerbots.PremadeSpecGlyph.6.2 = 43542,43673,43546,43535,43672,43549
-Playerbots.PremadeSpecLink.6.2.60 = --2301303050032151000150013131151
-Playerbots.PremadeSpecLink.6.2.80 = 23050202--2302303350032152000150003133151
-Playerbots.PremadeSpecName.6.3 = double aura blood pve
-Playerbots.PremadeSpecGlyph.6.3 = 45805,43673,43538,43544,43672,43554
-Playerbots.PremadeSpecLink.6.3.60 = 005512153330030320102013-305
-Playerbots.PremadeSpecLink.6.3.80 = 005512153330030320102013-3050505002023001-002
-Playerbots.PremadeSpecName.6.4 = blood pvp
-Playerbots.PremadeSpecGlyph.6.4 = 43534,43535,45799,43673,43672,45805
-Playerbots.PremadeSpecLink.6.4.60 = 2305021503003313201222101351
-Playerbots.PremadeSpecLink.6.4.80 = 2305021503003313201222101351--032232300023
-Playerbots.PremadeSpecName.6.5 = frost pvp
-Playerbots.PremadeSpecGlyph.6.5 = 43543,43539,45800,43673,43672,45806
-Playerbots.PremadeSpecLink.6.5.60 = -32015351022203012001233101251
-Playerbots.PremadeSpecLink.6.5.80 = 0055-32015351052203012001233131351-03
-Playerbots.PremadeSpecName.6.6 = unholy pvp
-Playerbots.PremadeSpecGlyph.6.6 = 45804,43539,43549,43673,43672,45805
-Playerbots.PremadeSpecLink.6.6.60 = --2301323301002152230101203103151
-Playerbots.PremadeSpecLink.6.6.80 = -320050410002-2301323301002152230101203133151
+Playerbots.PremadeSpecLink.6.0.30 = 23300321230101
+Playerbots.PremadeSpecLink.6.0.45 = 2330032123033130000301201
+Playerbots.PremadeSpecLink.6.0.60 = 233003212303313003030121201310311
+Playerbots.PremadeSpecLink.6.0.80 = 233003212303313003030121201310311
+Playerbots.PremadeSpecName.6.1 = blood tank worms
+Playerbots.PremadeSpecGlyph.6.1 = 45805,43673,43538,43544,43672,43542
+Playerbots.PremadeSpecLink.6.1.30 = 23300321130201
+Playerbots.PremadeSpecLink.6.1.45 = 2330032113033130300101201
+Playerbots.PremadeSpecLink.6.1.60 = 233003211303313030033120201210311
+Playerbots.PremadeSpecLink.6.1.80 = 233003211303313030033120201210311
+# Reworked Frost (docs/reworks/bot-strategy/death-knight-frost-bot-guide.md, docs/reworks/death-knight-frost-rework.md).
+# The Frost tab (399) has 36 talents; a Frost-only link starts with a hyphen (the Blood tab is empty) and its digits are
+# the guide's table (row by row, left to right, 1 to 36; Improved Icy Talons is gone, its point is a rank of Improved Icy
+# Touch). Each link contains the one before it. The guide's .30 / .45 /
+# .60 strings plus intermediate .20 / .40 (/ .50) links: playerbots spends the digits in row-major order and resets at
+# every level-up, so without them Howling Blast would arrive at 23 and Pillar of Frost at 42 to 44; with them Howling
+# Blast is at 20, Glacial Advance at 30, Pillar of Frost at 40, Obliteration at 50 (6.3) and Breath of Sindragosa at 60.
+# 6.2 "frost breath": Breath of Sindragosa every 2 min, Runic Power talents, Gravefrost fillers (the build is told by
+# Frostwyrm's Wrath or Rage of the Frozen Champion, from level 53). 6.3 "frost obliteration": Frost Strike and Killing
+# Machine Obliterate inside Pillar of Frost, plain Breath at 60 (told by Obliteration, from level 50). A Death Knight
+# on the Frost tab keeps its slot (ai::dk_rework::PremadeSlot). Bot glyphs are off (Playerbots.BotGlyphs = 0), so no
+# glyph lines.
+Playerbots.PremadeSpecName.6.2 = frost breath
+Playerbots.PremadeSpecLink.6.2.20 = -03203201
+Playerbots.PremadeSpecLink.6.2.30 = -032032311230001
+Playerbots.PremadeSpecLink.6.2.40 = -032032311332001330001
+Playerbots.PremadeSpecLink.6.2.45 = -13203231133200133021100001
+Playerbots.PremadeSpecLink.6.2.60 = -132032311332001330211000332000203021
+Playerbots.PremadeSpecLink.6.2.80 = -132032311332001330211000332000203021
+Playerbots.PremadeSpecName.6.3 = frost obliteration
+Playerbots.PremadeSpecLink.6.3.20 = -03203201
+Playerbots.PremadeSpecLink.6.3.30 = -032032311320001
+Playerbots.PremadeSpecLink.6.3.40 = -132032311332001032001
+Playerbots.PremadeSpecLink.6.3.45 = -1320323113320010322010201
+Playerbots.PremadeSpecLink.6.3.50 = -13203231133200103222102030001
+Playerbots.PremadeSpecLink.6.3.60 = -132032311332001032221023330010020101
+Playerbots.PremadeSpecLink.6.3.80 = -132032311332001032221023330010020101
+# Reworked Unholy (docs/reworks/bot-strategy/death-knight-unholy-bot-guide.md,
+# docs/reworks/death-knight-unholy-rework.md).
+# The Unholy tab (400) has 35 talents; an Unholy-only link starts with two hyphens (the Blood and Frost tabs are empty)
+# and its digits are the guide's table (row by row, left to right, 1 to 35). Each link contains the one before it, so no
+# talent is ever unlearned. The guide's .30 / .45 / .60 strings plus intermediate links: playerbots spends the digits in
+# row-major order and resets at every level-up, so without them Scourge Strike would arrive at 17, Festering Plague at
+# 24, Master of Ghouls at 28, Necromancy at 29 and Raise Abomination at 55 to 57; with them Scourge Strike is at 15,
+# Festering Plague at 20, Necromancy (6.5) at 22, Master of Ghouls at 25, Dark Transformation (6.5) at 40, Raise
+# Abomination at 50 and Summon Gargoyle at 60. .80 repeats .60 (the level cap is 60); any level key is read.
+# 6.4 "unholy plague": Plague Strike stacks Festering Wounds, Scourge Strike bursts them, Pestilence and death
+# explosions carry packs. 6.5 "unholy minion": Necromancy (All Will Serve rank 2): Plague Strike banks energy, each
+# Scourge Strike raises a Lesser Ghoul, Death Coil feeds Dark Transformation; before level 22 it plays the plague
+# lists. A Death Knight on the Unholy tab keeps its slot (ai::dk_rework::PremadeSlot). Bot glyphs are off
+# (Playerbots.BotGlyphs = 0), so no glyph lines. Slot 6.6 is unused (probability 0).
+Playerbots.PremadeSpecName.6.4 = unholy plague
+Playerbots.PremadeSpecLink.6.4.15 = --23001
+Playerbots.PremadeSpecLink.6.4.20 = --230113001
+Playerbots.PremadeSpecLink.6.4.25 = --2302130310001
+Playerbots.PremadeSpecLink.6.4.30 = --23021303130012
+Playerbots.PremadeSpecLink.6.4.40 = --2302130313021201300300001
+Playerbots.PremadeSpecLink.6.4.45 = --23021303130212013003000230001
+Playerbots.PremadeSpecLink.6.4.50 = --23021303130212013003000230023001
+Playerbots.PremadeSpecLink.6.4.60 = --23021303130212013003000230033331021
+Playerbots.PremadeSpecLink.6.4.80 = --23021303130212013003000230033331021
+Playerbots.PremadeSpecName.6.5 = unholy minion
+Playerbots.PremadeSpecLink.6.5.15 = --23001
+Playerbots.PremadeSpecLink.6.5.20 = --230013101
+Playerbots.PremadeSpecLink.6.5.22 = --23001310102
+Playerbots.PremadeSpecLink.6.5.25 = --2300132110201
+Playerbots.PremadeSpecLink.6.5.30 = --2300132313201
+Playerbots.PremadeSpecLink.6.5.31 = --2300132313201000001
+Playerbots.PremadeSpecLink.6.5.40 = --230013331320100032100020001
+Playerbots.PremadeSpecLink.6.5.41 = --230013331320100032100020101
+Playerbots.PremadeSpecLink.6.5.45 = --230013331320100032100022301
+Playerbots.PremadeSpecLink.6.5.50 = --23001333132010003210002233101001
+Playerbots.PremadeSpecLink.6.5.60 = --23001333132010003210002233103301131
+Playerbots.PremadeSpecLink.6.5.80 = --23001333132010003210002233103301131
 
 #
 #
@@ -2480,25 +2539,28 @@ Playerbots.RandomClassSpecIndex.5.5 = 5
 # DEATH KNIGHT
 #
 
-# blood pve
-Playerbots.RandomClassSpecProb.6.0 = 30
+# Random Death Knights split a third each between Blood tanks (6.0, 6.1), Frost DPS (6.2, 6.3) and Unholy DPS (6.4,
+# 6.5), even across each spec's two builds (weights, not percent: the roll is urand(1, sum), once, at the first talent
+# point). Slot 6.6 is unused
+# blood tank
+Playerbots.RandomClassSpecProb.6.0 = 17
 Playerbots.RandomClassSpecIndex.6.0 = 0
-# frost pve
-Playerbots.RandomClassSpecProb.6.1 = 40
+# blood tank worms
+Playerbots.RandomClassSpecProb.6.1 = 17
 Playerbots.RandomClassSpecIndex.6.1 = 1
-# unholy pve
-Playerbots.RandomClassSpecProb.6.2 = 30
+# frost breath
+Playerbots.RandomClassSpecProb.6.2 = 17
 Playerbots.RandomClassSpecIndex.6.2 = 2
-# double aura blood pve
-Playerbots.RandomClassSpecProb.6.3 = 0
+# frost obliteration
+Playerbots.RandomClassSpecProb.6.3 = 17
 Playerbots.RandomClassSpecIndex.6.3 = 3
-# blood pvp
-Playerbots.RandomClassSpecProb.6.4 = 0
+# unholy plague
+Playerbots.RandomClassSpecProb.6.4 = 16
 Playerbots.RandomClassSpecIndex.6.4 = 4
-# frost pvp
-Playerbots.RandomClassSpecProb.6.5 = 0
+# unholy minion
+Playerbots.RandomClassSpecProb.6.5 = 16
 Playerbots.RandomClassSpecIndex.6.5 = 5
-# unholy pvp
+# unused
 Playerbots.RandomClassSpecProb.6.6 = 0
 Playerbots.RandomClassSpecIndex.6.6 = 6
 

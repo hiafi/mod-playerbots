@@ -199,10 +199,4 @@ public:
     ArmyOfTheDeadTrigger(PlayerbotAI* botAI) : BoostTrigger(botAI, "army of the dead") {}
 };
 
-class HysteriaNoCooldownTrigger : public SpellNoCooldownTrigger
-{
-public:
-    HysteriaNoCooldownTrigger(PlayerbotAI* botAI) : SpellNoCooldownTrigger(botAI, "hysteria") {}
-};
-
 #endif

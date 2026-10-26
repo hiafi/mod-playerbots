@@ -1,0 +1,274 @@
+# The reworked Unholy Death Knight's DPS rotation: "dk/unholy", appended to the "unholy" combat strategy by
+# DeathKnightReworkUnholyStrategy::InitTriggers, with the pack lists of dk/unholy-pack.yaml (appended to "unholy aoe").
+# Source: the Unholy bot guide (docs/reworks/bot-strategy/death-knight-unholy-bot-guide.md; the Unholy rework doc wins
+# over it, and S3-HANDOFF section 2 and S3b-HANDOFF win over both). Each row queues its action at the relevance when its
+# condition holds (`when`, the expression language of StrategyExpression.h) or when an existing C++ trigger fires
+# (`trigger`). Execution order is by relevance, not by position in this file. Every action is a RowCheckedAction (it
+# re-checks its own row before casting) except the stock Mind Freeze rows and the walk to melee. Rows that can hold in
+# the same tick never share an action name (they would merge into one basket and only the first row would be
+# re-checked); rows of different lists are exclusive and do share one (see the factory in
+# DeathKnightReworkActions.cpp).
+#
+# The lists. Two builds, then a pack on top (dk/unholy-pack.yaml):
+#   Minion build = Necromancy, All Will Serve's second rank (203442): Plague Strike banks Necromantic Energy, Scourge
+#                  Strike with energy raises a Lesser Ghoul. A 6.5 bot below level 22 has not got it and plays the
+#                  plague list.
+#   Plague build = everything else (the 6.4 link, and the 6.5 link before 22): Festering Wounds from Plague Strike,
+#                  Scourge Strike bursts them.
+#   Pack         = three or more enemies within 10 yd of the bot while "unholy aoe" is on (`pack`); it replaces the
+#                  single target rows of the build (they carry `single`). The off-the-GCD rows, Army of the Dead, the
+#                  ghoul, Gargoyle, Death Strike and the fillers (Horn of Winter, the leveling Heart Strike and Icy
+#                  Touch)
+#                  play in both.
+#
+# Bands: Dark Transformation (high + 6), Empower Rune Weapon (+ 5) and Rune Tap (+ 3) are the off-the-GCD rows, checked
+# every update; Icebound Fortitude, Anti-Magic Shell and Lichborne sit at emergency + 2 .. + 1 (cooldown- or aura-gated,
+# so each fires once). The on-the-GCD rows are normal + 9.97 .. 8.95 in the guide's order. Nothing is at or above the
+# pull sequence (105); Unholy does not pull (the pull strategy is the tank's).
+#
+# Never (guide): no Frost Strike, Obliterate or Blood Boil; no Heart Strike once Scourge Strike is known (the leveling
+# Heart Strike row is gated on `not known(55090)`); Death Strike only below 30% health; no Corpse Explosion below three
+# enemies or without a fresh ghoul and no Pestilence alone (dk/unholy-pack.yaml); no Plague Strike at two or more energy
+# (minion) unless no Blood and Frost pair is ready (the M8 filler); no Death Coil at the bot's own ghoul (every Coil
+# is on the current target); no Rune Tap above 50 Runic Power; no Raise Dead or Death Pact on critical health (the
+# stock rows are not loaded); no rune swap or Blood Presence in combat (nc.yaml sets the rune out of combat only).
+#
+# Approximations (the guide's Definitions and State against what the bot can read):
+# - Energy = stacks(self, 203461) (Necromantic Energy, 0 to 6). Wounds = stacks(target, 203456, own) (the caster of the
+#   wound aura is always the Death Knight). A named condition cannot hold a bare number, so each is a comparison. Free
+#   Coil = the Harbinger of Doom buff 203463 on the bot. Rotten Touch active
+#   = the buff 203462.
+# - Rune pair = value "dk runes ready::bloodfrost": a Blood and a Frost Rune ready in two slots, Death Runes filling
+#   either, never one Death Rune for both (the plain `blood >= 1 and frost >= 1` is true for a lone Death Rune).
+# - Shadow Infusion = stacks("pet target", 203464) on the permanent ghoul (`pet target` is Player::GetPet(); the
+#   guardian ghoul before Master of Ghouls is not it). Transformed = aura("pet target", 203448).
+# - Build test: minion build = known(203442), else plague.
+# - Boss or elite = the existing boss(target) / elite(target). The sim dummy reads as a boss only with
+# DPSSIM_TARGET_RANK
+#   set accordingly (S3b-2 confirms what it reads).
+# - Gargoyle window = no condition reads the Gargoyle itself (entry 27829): Empower Rune Weapon is held only while the
+#   Gargoyle is due within 30 s (cooldown <= 30 s) AND a Gargoyle row can cast it now (`garg_hold` mirrors the cast
+#   gates of both lists), so the hold ends with the cast and can never outlast 30 s of cooldown (L20).
+# - Rune Tap's "a Blood Rune with no Frost or Death Rune to pair it" = a plain Blood Rune ready (`exactblood`) and no
+#   Frost or Death Rune ready.
+# - Army of the Dead: level 60, a boss, 2 s into the fight (the tank has the boss), once per cooldown; the guide's
+# "first
+#   press once the tank has engaged". Never on trash. combat_time() is the clock since the bot's combat engine started.
+# - Raise Dead: the permanent ghoul (Master of Ghouls, 52143) whenever it is missing and the spell is ready, in or out
+# of
+#   combat (nc.yaml has the out-of-combat row); before Master of Ghouls (level 25) the temporary ghoul whenever the
+#   spell
+#   is ready, which is the first global cooldown of a fight. By id with no bot-side cooldown.
+# - Leveling: below level 10 the bot is a Blood-tab bot and plays the Blood shell as a DPS; Heart Strike and Icy Touch
+#   fillers hold until Scourge Strike (15); Death Coil from 4; Death and Decay 30; Dark Transformation 40; Raise
+#   Abomination 50; Summon Gargoyle and Army of the Dead 60.
+#
+# Rune and Runic Power budget (S3b-1 report, L12 / L23; dry model 6 runes x 10 s, 1.5 s GCD, 0 haste, 300 s x 60):
+# plague 18.5 Plague Strikes, 7.6 Scourge Strikes, 9.8 Death Coils, 95% of the global cooldowns, 1% of the time within
+# 5 of the Runic Power cap; minion 14 Scourge Strikes, 4.8 Plague Strikes, 11.8 Death Coils, 81% of the global
+# cooldowns, energy never at 6, 6% of the time near the cap (Dirge 2/2; without it Death Coils drop by 3 a minute).
+#
+# Spell ids (DBC names, DeathKnightData.h): Plague Strike 45462, Icy Touch 45477, Death Coil 47541, Heart Strike
+# 55050, Death Strike 49998, Scourge Strike 55090, Rune Tap 48982, Horn of Winter 57330, Icebound Fortitude 48792, Mind
+# Freeze 47528, Anti-Magic Shell 48707, Lichborne 49039, Empower Rune Weapon 47568, Raise Dead 46584, Army of the Dead
+# 42650, Summon Gargoyle 49206, Raise Abomination 203452, Dark Transformation 203448. Auras: Frost Fever 55095, Blood
+# Plague 55078, Festering Wound 203456, Necromantic Energy 203461, Rotten Touch buff 203462, Harbinger of Doom buff
+# 203463, Shadow Infusion 203464. Talent ranks (known()): All Will Serve rank 2 203442 (Necromancy), Master of Ghouls
+# 52143. The Gargoyle creature is 27829.
+strategy: dk/unholy
+class: dk
+conditions:
+  target_alive: alive(target)
+  rp: value("dk runic power")
+  recent: value("dk recent damage")
+  # Runes: a type counts its Death Runes too; `bloodfrost` is the Scourge Strike cost
+  blood_rune: value("dk runes ready::blood") >= 1
+  frost_rune: value("dk runes ready::frost") >= 1
+  unholy_rune: value("dk runes ready::unholy") >= 1
+  bloodfrost: value("dk runes ready::bloodfrost") >= 1
+  tap_rune: value("dk runes ready::exactblood") >= 1 and value("dk runes ready::frost") == 0
+  # The build, and the state the rows read
+  minion_build: known(203442)
+  plague_build: not minion_build
+  energy_1: stacks(self, 203461) >= 1
+  energy_low: stacks(self, 203461) <= 1
+  wounds_2: stacks(target, 203456, own) >= 2
+  rotten: aura(self, 203462)
+  harbinger: aura(self, 203463)
+  fever_missing: not aura(target, 55095, own)
+  pet_up: alive("pet target")
+  si_full: stacks("pet target", 203464) >= 5
+  si_4: stacks("pet target", 203464) == 4
+  # A pack: the pack lists play (dk/unholy-pack.yaml), the single target rows below give way to them
+  pack: value("dk aoe enabled") and alive(target) and enemies_within(10) >= 3
+  single: alive(target) and not pack
+  plague_single: single and plague_build
+  minion_single: single and minion_build
+  # A boss, or an elite above 30% health (the guide: a boss or elite with life left; no Gargoyle on a dying elite)
+  big: boss(target) or (elite(target) and health_pct(target) > 30)
+  garg_ready: known(49206) and cooldown(49206) == 0
+  # Empower Rune Weapon waits for the Gargoyle only while the Gargoyle is due within 30 s and one of the Gargoyle rows
+  # can cast it now (single: `big`; pack: a boss or two elites near the target, as dk/unholy-pack.yaml row G), so the
+  # wait ends with the cast and can never outlast 30 s of cooldown (L20)
+  garg_hold: >-
+    known(49206) and value("dk gargoyle due in") <= 30000
+    and ((single and big) or (pack and (boss(target) or value("elite enemies near target::10") >= 2)))
+  # Minion build: one Death Coil away from Dark Transformation (4 Shadow Infusion) delays the Gargoyle by that Coil
+  si4_wait: known(203448) and pet_up and si_4 and rp >= 40
+  safe_self_8: value("unsafe aoe units::8;self") == 0
+rows:
+  # ---- Off the global cooldown (guide: checked every update) ----
+  # O1: Dark Transformation at five Shadow Infusion, the ghoul alive and not transformed (the cast consumes the stacks)
+  - do: dk dark transformation
+    when: known(203448) and pet_up and si_full and not aura("pet target", 203448) and target_alive
+    relevance: high + 6
+  # O2: Empower Rune Weapon when no rune pair and no Unholy Rune are ready (U29: pressed when ready, held only for a
+  # Gargoyle due within 30 s on a boss or elite)
+  - do: dk empower rune weapon
+    when: >-
+      known(47568) and cooldown(47568) == 0 and target_alive and not bloodfrost and not unholy_rune and not garg_hold
+    relevance: high + 5
+  # O3: Rune Tap: a plain Blood Rune with no Frost or Death Rune to pair it, 50 Runic Power or less. `recent` is read
+  # first so the damage history is sampled every tick (Icebound Fortitude and Anti-Magic Shell read it)
+  - do: dk rune tap
+    when: recent >= 0 and known(48982) and cooldown(48982) == 0 and tap_rune and rp <= 50 and target_alive
+    relevance: high + 3
+  # O5: Icebound Fortitude below 35% health, or below 50% after a loss of 25% or more
+  - do: dk icebound fortitude
+    when: >-
+      recent >= 0 and known(48792) and cooldown(48792) == 0
+      and (health_pct(self) < 35 or (health_pct(self) < 50 and recent >= 25))
+    relevance: emergency + 2
+  # O6: Anti-Magic Shell below 70% health after a loss of 15% or more (no incoming-magic detector)
+  - do: dk anti magic shell
+    when: recent >= 0 and known(48707) and cooldown(48707) == 0 and health_pct(self) < 70 and recent >= 15
+    relevance: emergency + 1.5
+  # O7: Lichborne after a fear, charm or sleep landed (the stock after-the-fact trigger; the action asks the core's own
+  # cast check, which allows it under a fear, S2b-1 m2)
+  - do: dk lichborne
+    when: known(49039) and cooldown(49039) == 0 and trigger("fear charm sleep")
+    relevance: emergency + 1
+
+  # ---- Setup in combat: Army of the Dead, the ghoul ----
+  # Army of the Dead as the first press once the tank has the boss (level 60); none on trash
+  - do: dk army of the dead
+    when: >-
+      known(42650) and cooldown(42650) == 0 and boss(target) and target_alive and combat_time() >= 2000
+      and health_pct(target) > 30
+    relevance: normal + 9.97
+  # Raise Dead: the permanent ghoul when it is missing, the temporary one before Master of Ghouls (ready = first press)
+  - do: dk raise dead
+    when: >-
+      known(46584) and cooldown(46584) == 0 and target_alive and (not known(52143) or not pet_up)
+    relevance: normal + 9.96
+
+  # ---- Both builds, single target ----
+  # Summon Gargoyle on a boss or elite (0 Runic Power); the minion build waits at most one Death Coil for Dark
+  # Transformation (4 Shadow Infusion)
+  - do: dk summon gargoyle
+    when: garg_ready and single and big and not si4_wait
+    relevance: normal + 9.95
+  - do: dk death coil finish
+    when: known(47541) and garg_ready and single and big and si4_wait
+    relevance: normal + 9.94
+  # Death Strike only below 30% health (it heals; Unholy's rotation does not use it otherwise)
+  - do: dk death strike
+    when: known(49998) and target_alive and health_pct(self) < 30 and rp >= 40
+    relevance: normal + 9.93
+  # Horn of Winter when its buff is missing (RETUNE 2026-10-25, S3b-2-DIAG Q4: the plague rotation fills ~99% of its
+  # global cooldowns, so the "when ready" row below almost never won and Horn lapsed). One global cooldown per 2 min.
+  # Its own qualified name keeps it out of the "when ready" row's basket
+  - do: dk horn of winter::missing
+    when: known(57330) and cooldown(57330) == 0 and target_alive and not aura(self, 57330)
+    relevance: normal + 9.92
+  # Raise Abomination: ready, 40 Runic Power, in melee range, nothing unpulled in the cloud. Falls back to this row
+  # when a
+  # pack stands but fewer than three are within 8 yd (the pack row needs three there)
+  - do: dk raise abomination
+    when: >-
+      known(203452) and cooldown(203452) == 0 and rp >= 40 and target_alive and in_range(target, 5)
+      and (single or enemies_within(8) < 3) and safe_self_8
+    relevance: normal + 9.9
+
+  # ---- Single target, plague build ----
+  # P3: Icy Touch only when this bot's Frost Fever is missing
+  - do: dk icy touch
+    when: known(45477) and plague_single and fever_missing and frost_rune
+    relevance: normal + 9.8
+  # P4: Death Coil at 80 Runic Power, or with Rotten Touch up, two wounds on the target and 40 Runic Power
+  - do: dk death coil
+    when: known(47541) and plague_single and (rp >= 80 or (rotten and wounds_2 and rp >= 40))
+    relevance: normal + 9.75
+  # P5: Plague Strike on an Unholy (or Death) Rune
+  - do: dk plague strike
+    when: known(45462) and plague_single and unholy_rune
+    relevance: normal + 9.7
+  # P6: Scourge Strike on a Blood and a Frost Rune
+  - do: dk scourge strike
+    when: known(55090) and plague_single and bloodfrost
+    relevance: normal + 9.6
+  # P7: Death Coil at 40 Runic Power
+  - do: dk death coil low
+    when: known(47541) and plague_single and rp >= 40
+    relevance: normal + 9.5
+
+  # ---- Single target, minion build (Necromancy) ----
+  # M3: Death Coil when it is free (Harbinger of Doom) or at 90 Runic Power
+  - do: dk death coil
+    when: known(47541) and minion_single and (harbinger or rp >= 90)
+    relevance: normal + 9.75
+  # M4: Scourge Strike with one or more energy on a Blood and a Frost Rune (it raises a Lesser Ghoul)
+  - do: dk scourge strike
+    when: known(55090) and minion_single and energy_1 and bloodfrost
+    relevance: normal + 9.7
+  # M5: Plague Strike with one or no energy on an Unholy Rune (never at two or more: the energy caps at six)
+  - do: dk plague strike
+    when: known(45462) and minion_single and energy_low and unholy_rune
+    relevance: normal + 9.65
+  # M6: Death Coil at 40 Runic Power
+  - do: dk death coil low
+    when: known(47541) and minion_single and rp >= 40
+    relevance: normal + 9.6
+  # M7: Icy Touch when Frost Fever is missing and a Frost Rune is ready
+  - do: dk icy touch
+    when: known(45477) and minion_single and fever_missing and frost_rune
+    relevance: normal + 9.55
+  # M8: Plague Strike as the filler when no Blood and Frost pair is ready and a plain Unholy Rune is (RETUNE 2026-10-25,
+  # S3b-2-DIAG Q2; Unholy doc section 9). Runes, not energy, bind the minion build: the plain Unholy Rune comes back
+  # as a Death Rune, so the next global cooldown has a Death pair for Scourge Strike; energy past 6 is lost (accepted).
+  # A plain Unholy Rune: under `not bloodfrost` at most one Death Rune is ready, so 2 or more Unholy-or-Death means one
+  # is plain. Its own qualified name keeps it out of M5's basket
+  - do: dk plague strike::filler
+    when: >-
+      known(45462) and minion_single and not bloodfrost and rp < 40
+      and (value("dk runes ready::unholy") >= 2 or (unholy_rune and value("dk runes ready::death") == 0))
+    relevance: normal + 9.5
+
+  # ---- Leveling and the last rows of every list (no pack gate) ----
+  # Below Scourge Strike (15): Heart Strike on a Blood Rune, Icy Touch on a Frost Rune (keeps Frost Fever up)
+  - do: dk filler heart strike
+    when: known(55050) and not known(55090) and target_alive and blood_rune
+    relevance: normal + 9.4
+  - do: dk filler icy touch
+    when: known(45477) and not known(55090) and target_alive and frost_rune
+    relevance: normal + 9.38
+  # Pet upkeep also in combat (a ghoul re-raised mid-fight starts with no Claw autocast and no stance; both are cheap
+  # no-ops once set; nc.yaml keeps its copies)
+  - do: toggle pet spell
+    trigger: has pet
+    relevance: raid
+  - do: set pet stance
+    trigger: new pet
+    relevance: raid
+  # Horn of Winter when ready
+  - do: dk horn of winter
+    when: known(57330) and cooldown(57330) == 0 and target_alive
+    relevance: normal + 8.95
+
+  # ---- Interrupts: the stock rows, kept (Mind Freeze is level 18); 20 Runic Power each ----
+  - do: mind freeze
+    when: trigger("mind freeze") and rp >= 20
+    relevance: interrupt
+  - do: mind freeze on enemy healer
+    when: trigger("mind freeze on enemy healer") and rp >= 20
+    relevance: interrupt

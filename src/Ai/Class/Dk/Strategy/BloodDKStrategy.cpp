@@ -107,14 +107,6 @@ void BloodDKStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 
     triggers.push_back(
         new TriggerNode(
-            "hysteria no cd",
-            {
-                NextAction("hysteria", ACTION_NORMAL + 4)
-            }
-        )
-    );
-    triggers.push_back(
-        new TriggerNode(
             "rune strike",
             {
                 NextAction("rune strike", ACTION_NORMAL + 3)

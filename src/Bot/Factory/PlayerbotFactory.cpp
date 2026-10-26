@@ -13,6 +13,7 @@
 #include "ArenaTeamMgr.h"
 #include "DBCStores.h"
 #include "DBCStructure.h"
+#include "DeathKnightReworkUtils.h"
 #include "DruidReworkUtils.h"
 #include "GuildMgr.h"
 #include "InventoryAction.h"
@@ -1748,7 +1749,17 @@ uint32 PlayerbotFactory::InitTalentsTree(bool increment /*false*/, bool use_temp
     uint8 cls = bot->getClass();
     std::map<uint8, uint32> tabs = AiFactory::GetPlayerSpecTabs(bot);
     uint32 total_tabs = tabs[0] + tabs[1] + tabs[2];
-    if (increment && total_tabs != 0)
+    // Rework: a Death Knight keeps its premade slot (6.0 / 6.1 the Blood builds, 6.2 / 6.3 the Frost ones) at any
+    // level, also for the first talent point; the tab (0, 1 or 2) would send every one of them to 6.0 / 6.1 / 6.2
+    uint32 deathKnightSlot = ai::dk_rework::NO_PREMADE_SLOT;
+    if (increment && cls == CLASS_DEATH_KNIGHT)
+        deathKnightSlot = ai::dk_rework::PremadeSlot(bot);
+
+    if (deathKnightSlot != ai::dk_rework::NO_PREMADE_SLOT)
+    {
+        specTab = deathKnightSlot;
+    }
+    else if (increment && total_tabs != 0)
     {
         /// @todo: match current talent with template
         specTab = AiFactory::GetPlayerSpecTab(bot);
@@ -1823,6 +1834,8 @@ uint32 PlayerbotFactory::InitTalentsTree(bool increment /*false*/, bool use_temp
         bot->SetSkill(SKILL_DUAL_WIELD, 0, 1, 1);
         bot->SetCanDualWield(true);
     }
+    // Rework: Dual Wield is baseline for a Death Knight too; a talent reset drops the permission
+    ai::dk_rework::EnsureDualWield(bot);
 
     bot->SendTalentsInfoData(false);
     return sPlayerbotAIConfig.RandomClassSpecIndex[cls][specTab];
@@ -1929,6 +1942,8 @@ void PlayerbotFactory::InitTalentsBySpecNo(Player* bot, int specNo, bool reset)
         bot->SetSkill(SKILL_DUAL_WIELD, 0, 1, 1);
         bot->SetCanDualWield(true);
     }
+    // Rework: Dual Wield is baseline for a Death Knight too; a talent reset drops the permission
+    ai::dk_rework::EnsureDualWield(bot);
 
     bot->SendTalentsInfoData(false);
     sRandomPlayerbotMgr.SetValue(bot->GetGUID().GetCounter(), "specNo", (uint32)specNo + 1);
@@ -3547,8 +3562,8 @@ void PlayerbotFactory::InitSkills()
             SetRandomSkill(SKILL_2H_MACES);
             SetRandomSkill(SKILL_2H_AXES);
             SetRandomSkill(SKILL_POLEARMS);
-            bot->SetSkill(SKILL_DUAL_WIELD, 0, dualWieldLevel, dualWieldLevel);
-            bot->SetCanDualWield(dualWieldLevel);
+            // Rework: Dual Wield is baseline for a Death Knight, at any level (Frost dual wields from level 1)
+            ai::dk_rework::EnsureDualWield(bot);
             break;
         default:
             break;
@@ -3672,15 +3687,13 @@ void PlayerbotFactory::InitClassSpells()
             bot->learnSpell(2098, true);
             break;
         case CLASS_DEATH_KNIGHT:
+            // Rework: the trainer path (InitAvailableSpells) teaches the rest of the kit by level. Blood Strike
+            // (replaced by Heart Strike, which every Death Knight knows from creation), Runeforging, Death Gate (level
+            // 10) and the Deathcharger (level 55) are no longer granted here, and the "leave the starting area" grants
+            // are gone with the Ebon Hold start
             bot->learnSpell(45477, true);
             bot->learnSpell(47541, true);
             bot->learnSpell(45462, true);
-            bot->learnSpell(45902, true);
-            // to leave DK starting area
-            bot->learnSpell(53428, false);
-            bot->learnSpell(50977, false);
-            bot->learnSpell(49142, false);
-            bot->learnSpell(48778, false);
             break;
         case CLASS_HUNTER:
             bot->learnSpell(2973, true);
@@ -3747,11 +3760,6 @@ void PlayerbotFactory::InitSpecialSpells()
     {
         uint32 spellId = *i;
         bot->learnSpell(spellId);
-    }
-    // to leave DK starting area
-    if (bot->getClass() == CLASS_DEATH_KNIGHT)
-    {
-        bot->learnSpell(50977, false);
     }
 }
 
