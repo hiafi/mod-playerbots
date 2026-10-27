@@ -1971,30 +1971,40 @@ Playerbots.PremadeHunterPetLink.2.20 = 30300203202
 # ROGUE
 #
 
-Playerbots.PremadeSpecName.4.0 = as pve
-Playerbots.PremadeSpecGlyph.4.0 = 45768,43379,45761,43380,43378,45766
-Playerbots.PremadeSpecLink.4.0.60 = 005303104352100520103331051
-Playerbots.PremadeSpecLink.4.0.80 = 005303005352100520103331051-005005003-502
-Playerbots.PremadeSpecName.4.1 = combat pve
-Playerbots.PremadeSpecGlyph.4.1 = 42962,43379,45762,43380,43378,42969
-Playerbots.PremadeSpecLink.4.1.60 = -0252051000035015223100501251
-Playerbots.PremadeSpecLink.4.1.80 = 00532000523-0252051000035015223100501251
-Playerbots.PremadeSpecName.4.2 = subtlety pve
-Playerbots.PremadeSpecGlyph.4.2 = 42967,43379,45764,43380,43378,45767
-Playerbots.PremadeSpecLink.4.2.60 = --5022012030321121350115031151
-Playerbots.PremadeSpecLink.4.2.80 = 30532010114--5022012030321121350115031151
-Playerbots.PremadeSpecName.4.3 = as pvp
-Playerbots.PremadeSpecGlyph.4.3 = 42974,43380,45768,43379,43376,42971
-Playerbots.PremadeSpecLink.4.3.60 = 005303103342102522103031--50002
-Playerbots.PremadeSpecLink.4.3.80 = 005303103342102522103031-004-532023203000012
-Playerbots.PremadeSpecName.4.4 = combat pvp
-Playerbots.PremadeSpecGlyph.4.4 = 42972,43380,45762,43376,43378,42971
-Playerbots.PremadeSpecLink.4.4.60 = -3250002050225010223102321251
-Playerbots.PremadeSpecLink.4.4.80 = 305120105-3250002050235010223102521251
-Playerbots.PremadeSpecName.4.5 = subtlety pvp
-Playerbots.PremadeSpecGlyph.4.5 = 42968,43376,45764,43380,43379,42971
-Playerbots.PremadeSpecLink.4.5.60 = --5120212030320121330133221251
-Playerbots.PremadeSpecLink.4.5.80 = 3023031-3-5120212030320121350135231251
+# Reworked Assassination (docs/reworks/bot-strategy/rogue-assassination-bot-guide.md,
+# docs/reworks/rogue-assassination-rework.md). Each string is "<assassination>-<combat>-<subtlety>" with one digit per
+# talent in (row, column) order, trailing zeros dropped and an Assassination-only build written without a hyphen (tab
+# order Assassination-Combat-Subtlety, TalentTab OrderIndex 0/1/2). The Assassination tab has 34 talents; the digit
+# order is the guide's table, confirmed against the S1 talent grid (tab 182). Each link contains the one before it, so
+# no talent is ever unlearned. Playerbots spends a link row by row, so .20 holds Mutilate (the 11th point, level 20)
+# and .50 holds Hunger for Blood (the 41st point, level 50); .80 repeats .60 (the level cap is 60). Bot glyphs are off
+# on this server (Playerbots.BotGlyphs = 0) and glyphs are retired, so the new slots carry no PremadeSpecGlyph.
+# 4.0 "assassination raid": the single target build (Envenom): Puncturing Wounds, Lethality, Cold Blood, Focused
+# Attacks, Toxic Blade. 4.1 "assassination bleed": dungeons, packs and bleeds: Remorseless Attacks, Blood Spatter,
+# Shattering Vial, Venomous Fan, Cut Throat, Indiscriminate Carnage. Slots 4.2 and 4.5 are the stock Combat and
+# Subtlety builds (their stale Assassination segments in .80 are dropped), 4.3 and 4.4 are unused.
+Playerbots.PremadeSpecName.4.0 = assassination raid
+Playerbots.PremadeSpecLink.4.0.20 = 33031001
+Playerbots.PremadeSpecLink.4.0.30 = 330330012022101
+Playerbots.PremadeSpecLink.4.0.42 = 33033031202231100030003
+Playerbots.PremadeSpecLink.4.0.45 = 33033031202231100330003
+Playerbots.PremadeSpecLink.4.0.50 = 3303303120223110033000300310001
+Playerbots.PremadeSpecLink.4.0.60 = 3303303120223110033020300310321021
+Playerbots.PremadeSpecLink.4.0.80 = 3303303120223110033020300310321021
+Playerbots.PremadeSpecName.4.1 = assassination bleed
+Playerbots.PremadeSpecLink.4.1.20 = 33103001
+Playerbots.PremadeSpecLink.4.1.30 = 331032012022101
+Playerbots.PremadeSpecLink.4.1.42 = 33203201202230110032003
+Playerbots.PremadeSpecLink.4.1.45 = 33203201202230110332003
+Playerbots.PremadeSpecLink.4.1.50 = 3320320120223011033200300031001
+Playerbots.PremadeSpecLink.4.1.60 = 3320320120223011033210300032301221
+Playerbots.PremadeSpecLink.4.1.80 = 3320320120223011033210300032301221
+Playerbots.PremadeSpecName.4.2 = combat pve
+Playerbots.PremadeSpecLink.4.2.60 = -0252051000035015223100501251
+Playerbots.PremadeSpecLink.4.2.80 = -0252051000035015223100501251
+Playerbots.PremadeSpecName.4.5 = subtlety pve
+Playerbots.PremadeSpecLink.4.5.60 = --502201230321121350115031151
+Playerbots.PremadeSpecLink.4.5.80 = --502201230321121350115031151
 
 #
 #
@@ -2485,23 +2495,26 @@ Playerbots.RandomClassSpecIndex.3.5 = 5
 # ROGUE
 #
 
-# as pve
-Playerbots.RandomClassSpecProb.4.0 = 40
+# Random rogues split 25 / 20 / 45 / 10 between the Assassination builds (4.0 raid, 4.1 bleed), Combat (4.2) and
+# Subtlety (4.5), weights not percent (the roll is urand(1, sum), once, at the first talent point). Slots 4.3 and 4.4
+# are unused
+# assassination raid
+Playerbots.RandomClassSpecProb.4.0 = 25
 Playerbots.RandomClassSpecIndex.4.0 = 0
-# combat pve
-Playerbots.RandomClassSpecProb.4.1 = 60
+# assassination bleed
+Playerbots.RandomClassSpecProb.4.1 = 20
 Playerbots.RandomClassSpecIndex.4.1 = 1
-# subtlety pve (note: subtlety strategies are not yet implemented)
-Playerbots.RandomClassSpecProb.4.2 = 0
+# combat pve
+Playerbots.RandomClassSpecProb.4.2 = 45
 Playerbots.RandomClassSpecIndex.4.2 = 2
-# as pvp
+# unused
 Playerbots.RandomClassSpecProb.4.3 = 0
 Playerbots.RandomClassSpecIndex.4.3 = 3
-# combat pvp
+# unused
 Playerbots.RandomClassSpecProb.4.4 = 0
 Playerbots.RandomClassSpecIndex.4.4 = 4
-# subtlety pvp (note: subtlety strategies are not yet implemented)
-Playerbots.RandomClassSpecProb.4.5 = 0
+# subtlety pve (note: subtlety strategies are not yet implemented)
+Playerbots.RandomClassSpecProb.4.5 = 10
 Playerbots.RandomClassSpecIndex.4.5 = 5
 
 #

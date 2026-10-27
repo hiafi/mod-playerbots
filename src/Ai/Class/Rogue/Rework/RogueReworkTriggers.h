@@ -14,7 +14,8 @@ class PlayerbotAI;
 
 // The poison slot wants a cast (see PoisonMissing). The stock triggers test the weapon's temporary enchant, which a
 // poison aura never writes, so they fire on every tick. Registered as "main hand weapon no enchant" (the Lethal slot)
-// and "off hand weapon no enchant" (the Non-lethal slot).
+// and "off hand weapon no enchant" (the Non-lethal slot); the second Lethal slot (Master Poisoner's third rank) is
+// "rogue second lethal missing".
 class RoguePoisonMissingTrigger : public Trigger
 {
 public:

@@ -1,0 +1,257 @@
+# The reworked Assassination rogue's rows: "rogue/assassination", appended to the "assassin" combat strategy by
+# RogueReworkAssassinationStrategy::InitTriggers (after MeleeCombatStrategy's walk to melee). The pack list is
+# data/strategies/rogue/assassination-pack.yaml (appended to the "aoe" strategy). Source: the Assassination bot guide
+# (docs/reworks/bot-strategy/rogue-assassination-bot-guide.md; the Assassination rework doc wins over it, and the S1
+# handoff section 2 wins over both). Each row queues its action at the relevance when its condition holds (`when`, the
+# expression language of StrategyExpression.h) or when an existing C++ trigger fires (`trigger`). Execution order is by
+# relevance, not by position in this file. Actions named "assn ..." are RowCheckedAction (they re-check their own row
+# before casting); the poison rows, the kicks and Tricks of the Trade are the stock actions. Rows that can hold in the
+# same tick never share an action name (they would merge into one basket and only the first row would be re-checked).
+#
+# The guide's lists, as relevance bands. Off the global cooldown (checked every update; the engine skips a GCD-blocked
+# row, so these still fire between presses): Hunger for Blood high + 6, Cold Blood high + 5, Vanish high + 4, Stealth
+# high + 3, Sprint high + 2, the poison recasts high + 6 .. 5.5, the kicks interrupt + 2 / + 1. Defensive, ahead of the
+# lists: Evasion emergency + 1, Cloak of Shadows emergency + 2. Then the lists, on the global cooldown, in the normal
+# band: the stealthed opener normal + 9.99 / 9.98, Tricks of the Trade 9.97, the before-42 Slice and Dice 9.75, the
+# single target list 9.9 .. 9.2, the before-42 Eviscerate 9.55, the leveling builders 9.1 / 9.0 and the stall breakers
+# 8.95 / 8.9. The pack list (assassination-pack.yaml) is 9.995 .. 9.4. Nothing is at or above the pull sequence (105);
+# Assassination does not pull (the pull strategy is the tank's).
+#
+# Spell ids (DBC names; the strategy casts by name where the spellbook has one castable spell of that name, else by id):
+# Stealth 1784, Vanish 1856 (aura 11327), Garrote 703, Ambush 8676, Mutilate 1329, Sinister Strike 1752 (ranked),
+# Eviscerate 2098 (ranked), Envenom 32645 (also its self buff), Rupture 1943, Slice and Dice 5171, Fan of Knives 51723,
+# Deadly Throw 26679, Cold Blood 14177 (also its self buff), Hunger for Blood 51662 (also its self buff), Kingsbane
+# 203822 (the debuff on the target 203842), Poison Bomb 203807, Shiv 203725 (stock Shiv 5938 shares the name),
+# Cloak of Shadows 31224, Tricks of the Trade 57934, Master Poisoner third rank 58410 (the second Lethal slot), Deadly
+# Poison on the target 2818, the Blindside buff 203831. Talent ranks (known() reads the talent): Toxic Blade 203816 /
+# 203817, Cut Throat 203814 / 203815, Overkill 203825 / 203826.
+#
+# Definitions against what the bot can read (the guide's "State the bot needs"; open questions Q1-Q8 are answered in the
+# S1b report):
+# - Combo points and energy: value("combo::current target") (0 unless the combo target is the current target) and
+#   value("energy::self target") (absolute energy).
+# - Stealthed = Stealth 1784 or the Vanish aura 11327 on the bot.
+# - Envenom up = the bot's own buff 32645; Slice and Dice up = its own 5171; Kingsbane up = its own debuff 203842 on the
+#   target, its second half = 7 s or less left; Kingsbane soon = known and 4 s or less of cooldown.
+# - Long-lived target = a boss, or more than 20 s of estimated life (the guide's fallback needs no health maximum).
+# - The tank has held the target = the target's victim is a tank player other than the bot (`rogue tank holds`) for 5 s
+#   of the bot's own target (time_since_target_change). The guide's "or 2 s after the tank's first hit" is not built.
+# - The opener may start = `rogue may open`: the tank holds the target, or the bot has no group, or its group has no
+#   tank to wait for.
+# - Poison Bomb never on an unengaged enemy = `rogue target engaged` (the target fights the bot or its group).
+# - Own Deadly Poison on N enemies within 8 yd (Q4) = value("attackers with aura id::2818;1;8"): no new C++.
+# - Evasion's "being meleed" = value("my attacker count") >= 1 (every unit whose victim is the bot).
+# - Cloak of Shadows' "harmful magic effect" = `rogue magic debuff` (a dispellable negative aura on the bot); the
+#   guide's "or a large magic hit is incoming" has no detector and is not built.
+# - Execute (below 30% health) changes no priority and is not a condition.
+#
+# Never (guide), as row conditions: no Slice and Dice once Envenom is known (the before-42 rows hold `not
+# known("envenom")`); no Rupture with 2 s or more left (`rupture_due`); no Mutilate at 4 or 5 combo points (cp <= 3); no
+# Fan of Knives below three enemies (the pack list); no Poison Bomb on an unengaged enemy; no Expose Armor (no row casts
+# it, so Sunder is moot); no Ambush in melee range (out of reach only); no Hunger for Blood with neither a Rupture nor a
+# Deadly Poison of this bot on the target (`hfb_ok`); no Enforcer Stance, no Shroud (nothing casts them); no Feint (no
+# row). Deviations (reported): the Envenom / Sinister Strike "stall breakers" at 4 combo points (rows S1 and S2), which
+# keep a bot from idling when nothing else is pressable; Shiv before Kingsbane is known (the guide's Kingsbane-cooldown
+# test reads 0 for an unknown spell).
+strategy: rogue/assassination
+class: rogue
+conditions:
+  target_alive: alive(target)
+  cp: value("combo::current target")
+  en: value("energy::self target")
+  stealthed: aura(self, "1784,11327")
+  # The rotation rows (every GCD row but the stealthed opener and the pack Poison Bomb). While stealthed the bot waits
+  # for its opener (Garrote, Ambush) and for the tank; it gives up on the opener once it may open and 6 s of combat have
+  # passed (it never got behind the target, or lacked the energy), so a stealthed bot cannot stall
+  rot: alive(target) and (not stealthed or (combat_time() >= 6000 and value("rogue may open")))
+  # Three or more enemies within 8 yd with Fan of Knives learned (below 24 the single list plays); `co -aoe` turns the
+  # pack rows off. Mirrors assassination-pack.yaml
+  pack: value("rogue aoe enabled") and enemies_within(8) >= 3 and known("fan of knives")
+  single: rot and not pack
+  envenom_up: aura(self, 32645, own)
+  snd_up: aura(self, 5171, own)
+  ks_up: aura(target, 203842, own)
+  ks_second_half: aura(target, 203842, own) and remaining(target, 203842, own) <= 7000
+  ks_soon: known(203822) and cooldown(203822) <= 4000
+  blindside: aura(self, 203831)
+  rupture_on: aura(target, 1943, own)
+  deadly_on: aura(target, 2818, own)
+  # Rupture is due when this bot's is missing or has under 2 s left (remaining() reads 0 for a missing aura)
+  rupture_due: remaining(target, 1943, own) < 2000
+  long_lived: boss(target) or lifetime(target) > 20
+  toxic_blade: known(203816) or known(203817)
+  cut_throat: known(203814) or known(203815)
+  overkill: known(203825) or known(203826)
+  tank_held: value("rogue tank holds") and time_since_target_change() >= 5000
+  hfb_ok: rupture_on or deadly_on
+rows:
+  # ---- Setup: the poisons (out of combat too: the non-combat strategy has the same rows) ----
+  # The Lethal poison (Instant below 30, Deadly from 30), the second Lethal once Master Poisoner has three ranks (Wound
+  # for the bleed build, else Instant) and the Non-lethal poison (Crippling). The triggers fire only for a missing pick,
+  # and in combat only into a free place, so a poison is never swapped for another mid-fight and two never evict each
+  # other (ai::rogue_rework::PoisonMissing)
+  - do: use instant poison on main hand
+    trigger: main hand weapon no enchant
+    relevance: high + 6
+  - do: rogue second lethal
+    trigger: rogue second lethal missing
+    relevance: high + 5.75
+  - do: use deadly poison on off hand
+    trigger: off hand weapon no enchant
+    relevance: high + 5.5
+
+  # ---- Off the global cooldown (guide: checked every update) ----
+  # O1: Hunger for Blood. In Kingsbane's second half with this bot's Rupture up; on a pack once its Deadly Poison is on
+  # three enemies; before level 60 with Rupture and Deadly Poison on a long-lived target; and as the catch-up when
+  # Kingsbane's cooldown has over 30 s left (the window was missed)
+  - do: assn hunger for blood
+    when: >-
+      known(51662) and cooldown(51662) == 0 and not aura(self, 51662) and rot and hfb_ok
+      and ((ks_second_half and rupture_on)
+        or value("attackers with aura id::2818;1;8") >= 3
+        or (rupture_on and deadly_on and long_lived and not ks_up and (not known(203822) or cooldown(203822) > 30000)))
+    relevance: high + 6
+  # O2: Cold Blood at five combo points with 35 energy and Kingsbane up (before Kingsbane is known: whenever the next
+  # press is Envenom or Eviscerate). A due Rupture goes first; the buff waits for the Envenom
+  - do: assn cold blood
+    when: >-
+      known(14177) and cooldown(14177) == 0 and not aura(self, 14177) and rot and cp == 5 and en >= 35
+      and (ks_up or not known(203822)) and not (known("rupture") and long_lived and rupture_due)
+    relevance: high + 5
+  # O3: Vanish in combat, outside Kingsbane, with the tank holding the boss for 5 s, 3 combo points or fewer and 60
+  # energy or less; with Overkill known, or in the bleed build with no Cut Throat Garrote on the target (a Garrote
+  # follows from stealth). Q5: allowed only after the tank has held the target
+  - do: assn vanish
+    when: >-
+      known("vanish") and cooldown("vanish") == 0 and rot and not stealthed and value("combat::self target")
+      and long_lived and tank_held
+      and not ks_up and cp <= 3 and en <= 60
+      and (overkill or (cut_throat and not aura(target, 703, own)))
+    relevance: high + 4
+  # O4: Stealth before the pull while the enemy is out of reach and the bot is out of combat. The stock action checks
+  # the distance and the battleground flags
+  - do: assn stealth
+    when: >-
+      known(1784) and cooldown(1784) == 0 and target_alive and not stealthed and not value("combat::self target")
+      and not in_range(target, 5)
+    relevance: high + 3
+  # O6: Sprint when the bot must move more than 20 yd
+  - do: assn sprint
+    when: known("sprint") and cooldown("sprint") == 0 and target_alive and not in_range(target, 20) and moving(self)
+    relevance: high + 2
+  # O4b: Kick (the stock triggers: an interruptible cast on the target, or on an enemy healer)
+  - do: kick
+    trigger: kick
+    relevance: interrupt + 2
+  - do: kick on enemy healer
+    trigger: kick on enemy healer
+    relevance: interrupt + 1
+
+  # ---- Defensive ----
+  # O5: Evasion below 35% health while the bot is being meleed
+  - do: assn evasion
+    when: known("evasion") and cooldown("evasion") == 0 and health_pct(self) < 35 and value("my attacker count") >= 1
+    relevance: emergency + 1
+  # Cloak of Shadows with a harmful magic effect on the bot below 50% health. On the global cooldown; ahead of the lists
+  - do: assn cloak of shadows
+    when: known(31224) and cooldown(31224) == 0 and health_pct(self) < 50 and value("rogue magic debuff")
+    relevance: emergency + 2
+
+  # ---- The stealthed opener (opener or after Vanish) ----
+  # Garrote when behind the target with 50 energy, once the tank has the target (or there is no tank). The pack's Poison
+  # Bomb (assassination-pack.yaml, normal + 9.995) goes before it
+  - do: assn garrote
+    when: >-
+      known("garrote") and target_alive and stealthed and value("behind::current target") and en >= 50
+      and value("rogue may open")
+    relevance: normal + 9.99
+  # Ambush only when the target is out of reach (it teleports behind it); never in melee range from the opener
+  - do: assn ambush
+    when: >-
+      known("ambush") and target_alive and stealthed and not in_range(target, 5) and en >= 45
+      and value("rogue may open")
+    relevance: normal + 9.98
+
+  # Tricks of the Trade on the tank in the first 3 s of combat (once per pull: its cooldown), both lists. The stock
+  # action asks the main tank and checks the distance
+  - do: tricks of the trade on main tank
+    when: known(57934) and cooldown(57934) == 0 and combat_time() < 3000 and target_alive
+    relevance: normal + 9.97
+
+  # ---- Before level 42 (no Envenom): Slice and Dice and Eviscerate, in both lists ----
+  # Slice and Dice at 4+ combo points when missing or under 3 s, above Rupture (never once Envenom is known: Envenom
+  # applies it)
+  - do: assn slice and dice
+    when: >-
+      known("slice and dice") and not known("envenom") and rot and cp >= 4 and remaining(self, 5171, own) < 3000
+    relevance: normal + 9.75
+  # Eviscerate at 5 combo points in Envenom's place
+  - do: assn eviscerate
+    when: known("eviscerate") and not known("envenom") and rot and cp == 5
+    relevance: normal + 9.55
+
+  # ---- Single target (two enemies or fewer, or Fan of Knives not learned, or `co -aoe`) ----
+  # 2: Kingsbane at 70 energy with Slice and Dice up (before Envenom is known: just the energy)
+  - do: assn kingsbane
+    when: known(203822) and cooldown(203822) == 0 and single and en >= 70 and (snd_up or not known("envenom"))
+    relevance: normal + 9.9
+  # 3: Poison Bomb with Kingsbane up (before level 60: on a long-lived target), engaged enemies only
+  - do: assn poison bomb
+    when: >-
+      known(203807) and cooldown(203807) == 0 and single and value("rogue target engaged")
+      and (ks_up or (not known(203822) and long_lived))
+    relevance: normal + 9.8
+  # 4: Rupture at 5 combo points on a long-lived target when this bot's is missing or has under 2 s left
+  - do: assn rupture
+    when: known("rupture") and single and cp == 5 and long_lived and rupture_due
+    relevance: normal + 9.7
+  # Exactly two enemies: keep Rupture on both if both are long-lived (the other one within reach, not the target)
+  - do: assn pair rupture::1943;1;2000;20;5;notarget
+    when: >-
+      known("rupture") and single and enemies_within(8) == 2 and cp == 5 and not (long_lived and rupture_due)
+      and alive("attacker without aura id::1943;1;2000;20;5;notarget")
+    relevance: normal + 9.65
+  # 5: Envenom at 5 combo points, or at 4 when Envenom's buff is down
+  - do: assn envenom
+    when: known("envenom") and single and (cp == 5 or (cp == 4 and not envenom_up))
+    relevance: normal + 9.6
+  # 6: Shiv at 2 combo points or fewer (4 without Toxic Blade) in Kingsbane's second half or with Kingsbane's cooldown
+  # over 20 s (before Kingsbane is known: whenever it is ready)
+  - do: assn shiv
+    when: >-
+      known(203725) and cooldown(203725) == 0 and single and (cp <= 2 or (cp <= 4 and not toxic_blade))
+      and (not known(203822) or ks_second_half or cooldown(203822) > 20000)
+    relevance: normal + 9.5
+  # 7: Sinister Strike when the bot has the Blindside buff (it is free) and 3 combo points or fewer
+  - do: assn blindside
+    when: known("sinister strike") and single and blindside and cp <= 3
+    relevance: normal + 9.4
+  # 8: Mutilate at 3 combo points or fewer and 45 energy (80 with Kingsbane soon: pool for it)
+  - do: assn mutilate
+    when: known(1329) and single and cp <= 3 and en >= 45 and (not ks_soon or en >= 80)
+    relevance: normal + 9.3
+  # 9: Deadly Throw at 5 combo points, out of reach, with a thrown weapon equipped
+  - do: assn deadly throw
+    when: >-
+      known("deadly throw") and single and cp == 5 and not in_range(target, 5) and value("rogue thrown equipped")
+    relevance: normal + 9.2
+
+  # ---- Leveling builders (before Mutilate at 20): Backstab behind the target with a dagger, else Sinister Strike ----
+  # Backstab needs a dagger: without one the cast is refused and the Sinister Strike row below plays
+  - do: assn backstab
+    when: known("backstab") and not known(1329) and single and cp <= 4 and value("behind::current target")
+    relevance: normal + 9.1
+  - do: assn leveling strike
+    when: known("sinister strike") and not known(1329) and single and cp <= 4
+    relevance: normal + 9.0
+
+  # ---- Stall breakers (deviation): 4 combo points, nothing else pressable ----
+  # S1: Envenom at 4 combo points with its buff up (the guide presses it at 5, or at 4 with the buff down; a Mutilate
+  # at 2 combo points leaves 4 and nothing builds one point). Not while Kingsbane is soon (the energy is pooled for it)
+  - do: assn stall envenom
+    when: known("envenom") and single and cp == 4 and not ks_soon
+    relevance: normal + 8.95
+  # S2: before Envenom (20-41) the same at 4 combo points with Slice and Dice up: a one point Sinister Strike makes five
+  - do: assn stall strike
+    when: known("sinister strike") and known(1329) and not known("envenom") and single and cp == 4
+    relevance: normal + 8.9

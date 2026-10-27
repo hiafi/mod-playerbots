@@ -18,7 +18,9 @@
 #include "RogueFinishingActions.h"
 #include "RogueOpeningActions.h"
 #include "RogueReworkActions.h"
+#include "RogueReworkStrategies.h"
 #include "RogueReworkTriggers.h"
+#include "RogueReworkValues.h"
 #include "RogueTriggers.h"
 
 class RogueStrategyFactoryInternal : public NamedObjectContext<Strategy>
@@ -37,7 +39,8 @@ public:
 
 private:
     static Strategy* boost(PlayerbotAI* botAI) { return new RogueBoostStrategy(botAI); }
-    static Strategy* aoe(PlayerbotAI* botAI) { return new RogueAoeStrategy(botAI); }
+    // Rework: an Assassination bot gets the reworked pack list, every other rogue the stock aoe rows
+    static Strategy* aoe(PlayerbotAI* botAI) { return new RogueReworkAoeStrategy(botAI); }
     static Strategy* nc(PlayerbotAI* botAI) { return new GenericRogueNonCombatStrategy(botAI); }
     static Strategy* pull(PlayerbotAI* botAI) { return new PullStrategy(botAI, "shoot"); }
     static Strategy* stealthed(PlayerbotAI* botAI) { return new StealthedRogueStrategy(botAI); }
@@ -52,13 +55,15 @@ public:
     {
         creators["combat"] = &RogueCombatStrategyFactoryInternal::combat;
         creators["assassin"] = &RogueCombatStrategyFactoryInternal::assassin;
-        // creators["subtlety"] = &RogueCombatStrategyFactoryInternal::subtlety;
+        creators["subtlety"] = &RogueCombatStrategyFactoryInternal::subtlety;
     }
 
 private:
     static Strategy* combat(PlayerbotAI* botAI) { return new CombatRogueStrategy(botAI); }
-    static Strategy* assassin(PlayerbotAI* botAI) { return new AssassinationRogueStrategy(botAI); }
-    // static Strategy* subtlety(PlayerbotAI* botAI) { return new SubtletyRogueStrategy(botAI); }
+    // Rework: "assassin" is the reworked Assassination rotation; the stock AssassinationRogueStrategy stays compiled
+    // and is what "subtlety" runs until the Subtlety rework (the stock SubtletyRogueStrategy is still unimplemented)
+    static Strategy* assassin(PlayerbotAI* botAI) { return new RogueReworkAssassinationStrategy(botAI); }
+    static Strategy* subtlety(PlayerbotAI* botAI) { return new RogueReworkSubtletyStrategy(botAI); }
 };
 
 class RogueTriggerFactoryInternal : public NamedObjectContext<Trigger>
@@ -87,6 +92,7 @@ public:
             &RogueTriggerFactoryInternal::tricks_of_the_trade_on_main_tank;
         creators["adrenaline rush"] = &RogueTriggerFactoryInternal::adrenaline_rush;
         creators["blade flurry"] = &RogueTriggerFactoryInternal::blade_flurry;
+        creators["rogue second lethal missing"] = &RogueTriggerFactoryInternal::second_lethal_missing;
     }
 
 private:
@@ -117,6 +123,12 @@ private:
     {
         return new RoguePoisonMissingTrigger(botAI, "off hand weapon no enchant",
                                              ai::rogue_rework::POISON_SLOT_NON_LETHAL);
+    }
+    // Rework: Master Poisoner's third rank gives a second Lethal slot; the trigger is silent without it
+    static Trigger* second_lethal_missing(PlayerbotAI* botAI)
+    {
+        return new RoguePoisonMissingTrigger(botAI, "rogue second lethal missing",
+                                             ai::rogue_rework::POISON_SLOT_LETHAL_SECOND);
     }
     static Trigger* tricks_of_the_trade_on_main_tank(PlayerbotAI* botAI)
     {
@@ -171,6 +183,7 @@ public:
         creators["fan of knives"] = &RogueAiObjectContextInternal::fan_of_knives;
         creators["killing spree"] = &RogueAiObjectContextInternal::killing_spree;
         creators["cold blood"] = &RogueAiObjectContextInternal::cold_blood;
+        creators["rogue second lethal"] = &RogueAiObjectContextInternal::second_lethal;
     }
 
 private:
@@ -239,6 +252,12 @@ private:
         return new RoguePoisonAction(botAI, "use instant poison on off hand",
                                      ai::rogue_rework::POISON_SLOT_NON_LETHAL);
     }
+    // Rework: the second Lethal pick (Master Poisoner's third rank); the first Lethal pick is the action "use instant
+    // poison on main hand"
+    static Action* second_lethal(PlayerbotAI* botAI)
+    {
+        return new RoguePoisonAction(botAI, "rogue second lethal", ai::rogue_rework::POISON_SLOT_LETHAL_SECOND);
+    }
     static Action* fan_of_knives(PlayerbotAI* botAI) { return new FanOfKnivesAction(botAI); }
     static Action* killing_spree(PlayerbotAI* botAI) { return new CastKillingSpreeAction(botAI); }
     static Action* cold_blood(PlayerbotAI* botAI) { return new CastColdBloodAction(botAI); }
@@ -276,6 +295,7 @@ void RogueAiObjectContext::BuildSharedActionContexts(
 {
     AiObjectContext::BuildSharedActionContexts(actionContexts);
     actionContexts.Add(new RogueAiObjectContextInternal());
+    actionContexts.Add(new RogueReworkActionFactory());
 }
 
 void RogueAiObjectContext::BuildSharedTriggerContexts(
@@ -289,4 +309,5 @@ void RogueAiObjectContext::BuildSharedValueContexts(
     SharedNamedObjectContextList<UntypedValue>& valueContexts)
 {
     AiObjectContext::BuildSharedValueContexts(valueContexts);
+    valueContexts.Add(new RogueReworkValueFactory());
 }

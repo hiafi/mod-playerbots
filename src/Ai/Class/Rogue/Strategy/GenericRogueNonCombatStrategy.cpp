@@ -44,6 +44,11 @@ void GenericRogueNonCombatStrategy::InitTriggers(std::vector<TriggerNode*>& trig
         new TriggerNode("main hand weapon no enchant",
                         { NextAction("use instant poison on main hand", ACTION_HIGH) }));
 
+    // Rework: the second Lethal slot (Master Poisoner's third rank); the trigger is silent without it
+    triggers.push_back(
+        new TriggerNode("rogue second lethal missing",
+                        { NextAction("rogue second lethal", ACTION_HIGH - 0.5f) }));
+
     triggers.push_back(
         new TriggerNode("off hand weapon no enchant",
                         { NextAction("use deadly poison on off hand", ACTION_HIGH - 1) }));
