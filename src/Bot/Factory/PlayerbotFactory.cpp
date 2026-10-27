@@ -37,6 +37,7 @@
 #include "RandomItemMgr.h"
 #include "RandomPlayerbotFactory.h"
 #include "ReputationMgr.h"
+#include "RogueReworkUtils.h"
 #include "ShamanReworkIds.h"
 #include "ShamanReworkUtils.h"
 #include "SharedDefines.h"
@@ -1729,9 +1730,19 @@ uint32 PlayerbotFactory::InitTalentsTree(bool increment /*false*/, bool use_temp
     if (increment && cls == CLASS_DEATH_KNIGHT)
         deathKnightSlot = ai::dk_rework::PremadeSlot(bot);
 
+    // Rework: a Rogue keeps its premade slot (4.0 / 4.1 Assassination, 4.2 Combat, 4.5 / 4.6 Subtlety) at any level;
+    // the tab (0, 1 or 2) would send every Subtlety bot to the Combat link and every bleed bot to 4.0
+    uint32 rogueSlot = ai::rogue_rework::NO_PREMADE_SLOT;
+    if (increment && cls == CLASS_ROGUE)
+        rogueSlot = ai::rogue_rework::PremadeSlot(bot);
+
     if (deathKnightSlot != ai::dk_rework::NO_PREMADE_SLOT)
     {
         specTab = deathKnightSlot;
+    }
+    else if (rogueSlot != ai::rogue_rework::NO_PREMADE_SLOT)
+    {
+        specTab = rogueSlot;
     }
     else if (increment && total_tabs != 0)
     {

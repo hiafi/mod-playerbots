@@ -28,6 +28,22 @@ enum PoisonSlot : uint8
 // a bot below level 10 plays the Assassination shell too (the guide's leveling table starts at level 1).
 bool IsAssassinationBuild(Player* bot);
 
+// The bot is a Subtlety-tab rogue: the tab with the most points is the third (tab 183). A bot with no talent points
+// is an Assassination one (IsAssassinationBuild), so this is false below level 10.
+bool IsSubtletyBuild(Player* bot);
+
+// The premade slot (4.<slot>) a rogue levels up on: 4.0 / 4.1 Assassination, 4.2 Combat, 4.5 / 4.6 Subtlety. The
+// factory's level-up path picks the slot by the leading tab (0, 1 or 2), which would send every Subtlety bot to the
+// Combat link and every bleed bot to 4.0, so a rogue keeps the slot stored in "specNo" (slot + 1, written at creation
+// and on a spec change) while it belongs to the leading tab, else the tab's first slot. NO_PREMADE_SLOT for a bot that
+// is no rogue, and for a rogue with no talent yet whose stored slot is no premade (the factory then rolls one).
+constexpr uint32 NO_PREMADE_SLOT = 0xFFFFFFFF;
+constexpr uint32 ASSASSINATION_SLOT = 0;  // 4.0 raid, 4.1 bleed
+constexpr uint32 COMBAT_SLOT = 2;         // 4.2 (4.3 and 4.4 are unused)
+constexpr uint32 SUBTLETY_SLOT = 5;       // 4.5 raid, 4.6 packs
+constexpr uint32 LAST_PREMADE_SLOT = 6;
+uint32 PremadeSlot(Player* bot);
+
 // The interim poison picks (RG0a); the spec stages replace them with spec-specific ones. Lethal: Instant Poison for a
 // Combat-spec bot, else Deadly Poison once known, else Instant Poison. Second Lethal (S1, only with Master Poisoner's
 // third rank, else 0): Wound Poison for the bleed build (Cut Throat or Indiscriminate Carnage), else Instant Poison,

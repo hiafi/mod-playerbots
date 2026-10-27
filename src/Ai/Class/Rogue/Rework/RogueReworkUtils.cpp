@@ -8,6 +8,8 @@
 #include "AiFactory.h"
 #include "Player.h"
 #include "PlayerbotAI.h"
+#include "PlayerbotAIConfig.h"
+#include "RandomPlayerbotMgr.h"
 #include "RogueReworkIds.h"
 #include <array>
 #include <initializer_list>
@@ -77,6 +79,39 @@ uint32 SlotCount(Player* bot, PoisonSlot slot)
 }  // namespace
 
 bool IsAssassinationBuild(Player* bot) { return bot && AiFactory::GetPlayerSpecTab(bot) == ROGUE_TAB_ASSASSINATION; }
+
+bool IsSubtletyBuild(Player* bot) { return bot && AiFactory::GetPlayerSpecTab(bot) == ROGUE_TAB_SUBTLETY; }
+
+uint32 PremadeSlot(Player* bot)
+{
+    if (!bot || bot->getClass() != CLASS_ROGUE)
+        return NO_PREMADE_SLOT;
+
+    // The stored value is the premade slot + 1; only a slot with a premade name counts (4.3 and 4.4 are unused)
+    uint32 const specNo = sRandomPlayerbotMgr.GetValue(bot, "specNo");
+    uint32 slot = specNo >= 1 && specNo - 1 <= LAST_PREMADE_SLOT ? specNo - 1 : NO_PREMADE_SLOT;
+    if (slot != NO_PREMADE_SLOT && sPlayerbotAIConfig.PremadeSpecName[CLASS_ROGUE][slot].empty())
+        slot = NO_PREMADE_SLOT;
+
+    std::map<uint8, uint32> const tabs = AiFactory::GetPlayerSpecTabs(bot);
+    uint32 points = 0;
+    for (auto const& [tab, spent] : tabs)
+        points += spent;
+
+    // No talent yet: the first point takes the slot the bot rolled
+    if (!points)
+        return slot;
+
+    switch (AiFactory::GetPlayerSpecTab(bot))
+    {
+        case ROGUE_TAB_ASSASSINATION:
+            return slot != NO_PREMADE_SLOT && slot < COMBAT_SLOT ? slot : ASSASSINATION_SLOT;
+        case ROGUE_TAB_COMBAT:
+            return slot != NO_PREMADE_SLOT && slot >= COMBAT_SLOT && slot < SUBTLETY_SLOT ? slot : COMBAT_SLOT;
+        default:
+            return slot != NO_PREMADE_SLOT && slot >= SUBTLETY_SLOT ? slot : SUBTLETY_SLOT;
+    }
+}
 
 uint32 PickLethalPoison(Player* bot)
 {
