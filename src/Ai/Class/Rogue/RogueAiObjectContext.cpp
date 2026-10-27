@@ -17,6 +17,8 @@
 #include "RogueComboActions.h"
 #include "RogueFinishingActions.h"
 #include "RogueOpeningActions.h"
+#include "RogueReworkActions.h"
+#include "RogueReworkTriggers.h"
 #include "RogueTriggers.h"
 
 class RogueStrategyFactoryInternal : public NamedObjectContext<Strategy>
@@ -104,13 +106,17 @@ private:
     static Trigger* no_stealth(PlayerbotAI* botAI) { return new NoStealthTrigger(botAI); }
     static Trigger* stealth(PlayerbotAI* botAI) { return new StealthTrigger(botAI); }
     static Trigger* sprint(PlayerbotAI* botAI) { return new SprintTrigger(botAI); }
+    // Rework: the poisons are self auras, so the stock weapon-enchant tests are always true. Main hand = the Lethal
+    // slot, off hand = the Non-lethal slot (the names are kept so the strategies stay as they are)
     static Trigger* main_hand_weapon_no_enchant(PlayerbotAI* botAI)
     {
-        return new MainHandWeaponNoEnchantTrigger(botAI);
+        return new RoguePoisonMissingTrigger(botAI, "main hand weapon no enchant",
+                                             ai::rogue_rework::POISON_SLOT_LETHAL);
     }
     static Trigger* off_hand_weapon_no_enchant(PlayerbotAI* botAI)
     {
-        return new OffHandWeaponNoEnchantTrigger(botAI);
+        return new RoguePoisonMissingTrigger(botAI, "off hand weapon no enchant",
+                                             ai::rogue_rework::POISON_SLOT_NON_LETHAL);
     }
     static Trigger* tricks_of_the_trade_on_main_tank(PlayerbotAI* botAI)
     {
@@ -216,17 +222,22 @@ private:
     {
         return new CastTricksOfTheTradeOnMainTankAction(botAI);
     }
+    // Rework: the poisons are self auras cast by id (the stock actions apply a poison item). The names are kept so
+    // the strategies stay as they are: main hand = the Lethal pick, both off hand names = the Non-lethal pick (the
+    // "deadly" action's instant alternative then casts the same pick)
     static Action* use_instant_poison(PlayerbotAI* botAI)
     {
-        return new UseInstantPoisonAction(botAI);
+        return new RoguePoisonAction(botAI, "use instant poison on main hand", ai::rogue_rework::POISON_SLOT_LETHAL);
     }
     static Action* use_deadly_poison(PlayerbotAI* botAI)
     {
-        return new UseDeadlyPoisonAction(botAI);
+        return new RoguePoisonAction(botAI, "use deadly poison on off hand",
+                                     ai::rogue_rework::POISON_SLOT_NON_LETHAL);
     }
     static Action* use_instant_poison_off_hand(PlayerbotAI* botAI)
     {
-        return new UseInstantPoisonOffHandAction(botAI);
+        return new RoguePoisonAction(botAI, "use instant poison on off hand",
+                                     ai::rogue_rework::POISON_SLOT_NON_LETHAL);
     }
     static Action* fan_of_knives(PlayerbotAI* botAI) { return new FanOfKnivesAction(botAI); }
     static Action* killing_spree(PlayerbotAI* botAI) { return new CastKillingSpreeAction(botAI); }

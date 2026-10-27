@@ -1308,32 +1308,6 @@ void PlayerbotFactory::InitConsumables()
             }
             break;
         }
-        case CLASS_ROGUE:
-        {
-            std::vector<uint32> instant_poisons = {
-                INSTANT_POISON_IX, INSTANT_POISON_VIII, INSTANT_POISON_VII, INSTANT_POISON_VI, INSTANT_POISON_V,
-                INSTANT_POISON_IV, INSTANT_POISON_III, INSTANT_POISON_II, INSTANT_POISON };
-            std::vector<uint32> deadly_poisons = {
-                DEADLY_POISON_IX, DEADLY_POISON_VIII, DEADLY_POISON_VII, DEADLY_POISON_VI, DEADLY_POISON_V,
-                DEADLY_POISON_IV, DEADLY_POISON_III, DEADLY_POISON_II, DEADLY_POISON };
-            for (uint32 itemId : deadly_poisons)
-            {
-                ItemTemplate const* proto = sObjectMgr->GetItemTemplate(itemId);
-                if (proto->RequiredLevel > level)
-                    continue;
-                items.push_back({itemId, 20});
-                break;
-            }
-            for (uint32 itemId : instant_poisons)
-            {
-                ItemTemplate const* proto = sObjectMgr->GetItemTemplate(itemId);
-                if (proto->RequiredLevel > level)
-                    continue;
-                items.push_back({itemId, 20});
-                break;
-            }
-            break;
-        }
         default:
             break;
     }
