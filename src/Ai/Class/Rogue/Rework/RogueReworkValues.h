@@ -63,6 +63,15 @@ public:
     bool Calculate() override;
 };
 
+// A dagger is in the main hand (Backstab needs one: the Subtlety rows pick Backstab or Ghostly Strike by it).
+class RogueDaggerMainHandValue : public BoolCalculatedValue
+{
+public:
+    RogueDaggerMainHandValue(PlayerbotAI* botAI) : BoolCalculatedValue(botAI, "rogue dagger main hand", 1000) {}
+
+    bool Calculate() override;
+};
+
 // A harmful magic effect is on the bot (a dispellable negative aura): Cloak of Shadows' trigger.
 class RogueMagicDebuffValue : public BoolCalculatedValue
 {

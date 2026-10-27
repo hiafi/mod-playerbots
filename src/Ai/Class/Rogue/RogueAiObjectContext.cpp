@@ -6,7 +6,6 @@
 
 #include "RogueAiObjectContext.h"
 #include "AiObjectContext.h"
-#include "AssassinationRogueStrategy.h"
 #include "CombatRogueStrategy.h"
 #include "GenericRogueNonCombatStrategy.h"
 #include "GenericRogueStrategy.h"
@@ -19,6 +18,8 @@
 #include "RogueOpeningActions.h"
 #include "RogueReworkActions.h"
 #include "RogueReworkStrategies.h"
+#include "RogueReworkSubtletyActions.h"
+#include "RogueReworkSubtletyStrategy.h"
 #include "RogueReworkTriggers.h"
 #include "RogueReworkValues.h"
 #include "RogueTriggers.h"
@@ -60,8 +61,8 @@ public:
 
 private:
     static Strategy* combat(PlayerbotAI* botAI) { return new CombatRogueStrategy(botAI); }
-    // Rework: "assassin" is the reworked Assassination rotation; the stock AssassinationRogueStrategy stays compiled
-    // and is what "subtlety" runs until the Subtlety rework (the stock SubtletyRogueStrategy is still unimplemented)
+    // Rework: "assassin" is the reworked Assassination rotation and "subtlety" the reworked Subtlety one. The stock
+    // AssassinationRogueStrategy and SubtletyRogueStrategy stay compiled and registered under no name
     static Strategy* assassin(PlayerbotAI* botAI) { return new RogueReworkAssassinationStrategy(botAI); }
     static Strategy* subtlety(PlayerbotAI* botAI) { return new RogueReworkSubtletyStrategy(botAI); }
 };
@@ -296,6 +297,7 @@ void RogueAiObjectContext::BuildSharedActionContexts(
     AiObjectContext::BuildSharedActionContexts(actionContexts);
     actionContexts.Add(new RogueAiObjectContextInternal());
     actionContexts.Add(new RogueReworkActionFactory());
+    actionContexts.Add(new RogueSubtletyActionFactory());
 }
 
 void RogueAiObjectContext::BuildSharedTriggerContexts(

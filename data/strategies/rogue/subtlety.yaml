@@ -1,0 +1,270 @@
+# The reworked Subtlety rogue's rows: "rogue/subtlety", appended to the "subtlety" combat strategy by
+# RogueReworkSubtletyStrategy::InitTriggers (after MeleeCombatStrategy's walk to melee). The pack list is
+# data/strategies/rogue/subtlety-pack.yaml (appended to the "aoe" strategy). Source: the Subtlety bot guide
+# (docs/reworks/bot-strategy/rogue-subtlety-bot-guide.md; the Subtlety rework doc wins over it, and the S2 handoff
+# section 2 wins over both). Each row queues its action at the relevance when its condition holds (`when`, the
+# expression language of StrategyExpression.h) or when an existing C++ trigger fires (`trigger`). Execution order is by
+# relevance, not by position in this file. Actions named "subt ..." are RowCheckedAction (they re-check their own row
+# before casting); the poison rows and the kicks are the stock actions. Rows that can hold in the same tick never share
+# an action name (they would merge into one basket and only the first row would be re-checked).
+#
+# The guide's lists, as relevance bands. Off the global cooldown (checked every update; the engine skips a GCD-blocked
+# row, so these still fire between presses): Shadow Dance high + 6.5 / 6.4 / 6.3 (late in the flight, the pack's, the
+# "otherwise" one), the poison recasts high + 6 / 5.5, Vanish high + 4, Stealth high + 3, Shadowstep high + 2.5, Sprint
+# high + 2, the kicks interrupt + 2 / + 1. Defensive, ahead of the lists: Evasion emergency + 1, Cloak of Shadows
+# emergency + 2. Then the lists, on the global cooldown, in the normal band: Preparation normal + 9.999 (the utility
+# line, before the lists), the stealthed opener 9.99 / 9.985, Death from Above 9.95 (both lists), the pack list
+# (subtlety-pack.yaml) 9.94 .. 9.9, the "while Shadowed" list 9.9 .. 9.75, the "otherwise" list 9.7 .. 9.4 and the
+# leveling Sinister Strike 9.35. Nothing is at or above the pull sequence (105); Subtlety does not pull (the pull
+# strategy is the tank's).
+#
+# Spell ids (DBC names; the strategy casts by name where the spellbook has one castable spell of that name, else by id):
+# Shadow Dance 51713 (also the Shadowed self buff), Death from Above 204148 (by id), Stealth 1784, Vanish 1856 (aura
+# 11327), Ambush 8676, Garrote 703, Backstab 53 (ranked), Ghostly Strike 14278, Sinister Strike 1752 (ranked),
+# Eviscerate 2098 (ranked), Rupture 1943, Slice and Dice 5171, Deadly Throw 26679, Fan of Knives 51723, Shiv 203725
+# (by id: stock Shiv 5938 shares the name), Shadowstep 36554, Preparation 14185, Evasion 5277, Sprint 2983, Cloak of
+# Shadows 31224. Auras: Lingering Shadow's buff 204156 (stacks = Backstabs that award an extra combo point).
+# Talent ranks (known() reads the talent): Throwing Specialization's second rank 51679 (Deadly Throw hits three
+# targets), Premeditation 204153.
+#
+# Definitions against what the bot can read (the guide's "State the bot needs"; open questions Q1-Q8 are answered in the
+# S2b report):
+# - Combo points and energy: value("combo::current target") (0 unless the combo target is the current target) and
+#   value("energy::self target") (absolute energy).
+# - Shadowed = the bot's Shadow Dance aura 51713; stealthed = Stealth 1784 or the Vanish aura 11327; Hidden = either.
+# - Airborne = Death from Above was cast under 1.5 s ago (`ms_since_cast`, stamped by the bot's own casts; the flight
+#   lasts 1.2-1.5 s); late in the flight = 0.8 s or more since the cast. A GCD row never plays while airborne (the core
+#   pacifies the rogue in the air: no attacks, no casts).
+# - Dance soon = Shadow Dance, or Death from Above, has 4 s or less of cooldown (each only when the bot knows it:
+#   `cooldown()` reads 0 for an unknown spell).
+# - Behind = `value("behind::current target")`; dagger = `rogue dagger main hand` (Backstab needs one).
+# - Long-lived target = a boss, or more than 20 s of estimated life (the guide's fallback needs no health maximum).
+# - Execute (below 35% health) changes no priority and is not a condition (the guide: no priority change; Executioner
+#   only shortens Shadow Dance's cooldown, which the cooldown reads already).
+# - The tank has held the target = `rogue tank holds` and 5 s of the bot's own target (`time_since_target_change`);
+#   the opener may start = `rogue may open` (the tank holds, or no group, or no tank to wait for): "let the tank pull".
+# - Never Ambush from range into an unengaged pack (the teleport pulls) = `enemies_near_target(8) >= 3` with the target
+#   out of reach and `rogue target engaged` false.
+#
+# Never (guide), as row conditions: no Backstab while Shadowed (`not shadowed`); no Shadow Dance with 4 or 5 combo
+# points (`cp <= 3`; the pack row alone may, with Death from Above ready); no Death from Above below 5 combo points
+# unless the target dies first (`dfa` row: lifetime under 3 s, approximate); no Rupture with 6 s or more left while
+# Shadowed and 2 s or more otherwise; no Ambush from range into an unengaged pack; no Deadly Throw in melee on a single
+# target (out of reach only); no Enforcer Stance (no row casts it); no Shroud (no row; AttackAction keeps a shrouded
+# group out of fights). Deviations (reported): `not stealthed` on the "otherwise" Dance and Preparation (Ambush from
+# Stealth goes first); the Rupture worth clause while Shadowed; Slice and Dice's and Preparation's gates; Fan of Knives
+# needs 4 combo points or fewer (assassination.yaml D4).
+strategy: rogue/subtlety
+class: rogue
+conditions:
+  target_alive: alive(target)
+  cp: value("combo::current target")
+  en: value("energy::self target")
+  in_combat: value("combat::self target")
+  # Shadow Dance's aura (Shadowed); Stealth or Vanish (stealthed)
+  shadowed: aura(self, 51713)
+  stealthed: aura(self, "1784,11327")
+  # The Death from Above flight lasts 1.2-1.5 s from the cast; the bot cannot read its own flight, so the cast stamp
+  # stands in for it (guide Q1: yes)
+  airborne: ms_since_cast(204148) < 1500
+  late_flight: ms_since_cast(204148) >= 800 and ms_since_cast(204148) < 1500
+  # Shadow Dance with Death from Above (guide Q1 / rework doc Q6). ACTIVE: Dance late in the flight, so the landing is
+  # Hidden (single target order: Death from Above, then Dance in the air). FALLBACK, if part 2 finds the bot cannot cast
+  # in the air: replace the line below by
+  #   dfa_dance: known(204148) and cooldown(204148) == 0 and cp == 5
+  # (Dance in the same update as Death from Above, about a second of Shadowed lost)
+  dfa_dance: late_flight
+  # The GCD rows: a live target, not in the air, and while stealthed only once the opener has had its chance (the
+  # stealthed rows come first; the bot gives up on the opener once it may open and 6 s of combat have passed, so a
+  # stealthed bot cannot stall)
+  rot: alive(target) and not airborne and (not stealthed or (combat_time() >= 6000 and value("rogue may open")))
+  # Three or more enemies within 8 yd with Fan of Knives learned (below 24 the single list plays); `co -aoe` turns the
+  # pack rows off. Mirrors subtlety-pack.yaml
+  pack: value("rogue aoe enabled") and enemies_within(8) >= 3 and known("fan of knives")
+  single: rot and not pack
+  dance_ready: known(51713) and cooldown(51713) == 0
+  dfa_ready: known(204148) and cooldown(204148) == 0
+  dance_soon: (known(51713) and cooldown(51713) <= 4000) or (known(204148) and cooldown(204148) <= 4000)
+  behind: value("behind::current target")
+  dagger: value("rogue dagger main hand")
+  long_lived: boss(target) or lifetime(target) > 20
+  # A Rupture is worth its combo points on anything that lives long enough to tick (the guide's Shadowed list has no
+  # such clause; the "otherwise" list needs a long-lived target)
+  dot_worth: boss(target) or lifetime(target) > 8
+  tank_held: value("rogue tank holds") and time_since_target_change() >= 5000
+  snd_up: aura(self, 5171, own)
+  lingering: stacks(self, 204156, own) > 0
+rows:
+  # ---- Setup: the poisons (out of combat too: the non-combat strategy has the same rows) ----
+  # One Lethal (Instant below 30, Deadly from 30: PickLethalPoison) and one Non-lethal (Crippling): Subtlety has no
+  # Master Poisoner, so no second Lethal row. The triggers fire only for a missing pick, and in combat only into a free
+  # place, so a poison is never swapped for another mid-fight (ai::rogue_rework::PoisonMissing)
+  - do: use instant poison on main hand
+    trigger: main hand weapon no enchant
+    relevance: high + 6
+  - do: use deadly poison on off hand
+    trigger: off hand weapon no enchant
+    relevance: high + 5.5
+
+  # ---- Off the global cooldown (guide: checked every update) ----
+  # O1a: Shadow Dance late in the Death from Above flight (the single target order), not Shadowed
+  - do: subt dance flight
+    when: dance_ready and dfa_dance and not shadowed and in_combat
+    relevance: high + 6.5
+  # (O1b, the pack's Dance before Death from Above, is in subtlety-pack.yaml)
+  # O1c: otherwise: not Shadowed, not stealthed (Ambush from Stealth goes first), not airborne, 3 combo points or fewer
+  # (Premeditation's 2 would be wasted at 4-5), 60 energy, and Death from Above not within 2 s (the Dance waits for it)
+  # or not learned
+  - do: subt dance
+    when: >-
+      dance_ready and in_combat and target_alive and not shadowed and not stealthed and not airborne
+      and cp <= 3 and en >= 60 and (not known(204148) or cooldown(204148) > 2000 or cp <= 2)
+    relevance: high + 6.3
+  # O2: Vanish in combat, not Shadowed, Shadow Dance's cooldown over 8 s, 3 combo points or fewer, 45 energy, on a
+  # long-lived target; Ambush follows (the stealthed row). Q5: allowed only after the tank has held the target 5 s
+  - do: subt vanish
+    when: >-
+      known("vanish") and cooldown("vanish") == 0 and rot and not stealthed and in_combat and not shadowed
+      and known(51713) and cooldown(51713) > 8000 and cp <= 3 and en >= 45 and long_lived and tank_held
+    relevance: high + 4
+  # O?: Stealth before the pull while the enemy is out of reach and the bot is out of combat. The stock action checks
+  # the distance and the battleground flags
+  - do: subt stealth
+    when: >-
+      known(1784) and cooldown(1784) == 0 and target_alive and not stealthed and not in_combat
+      and not in_range(target, 5)
+    relevance: high + 3
+  # O5: Shadowstep when the target is over 10 yd away, in combat and not stealthed
+  - do: subt shadowstep
+    when: >-
+      known(36554) and cooldown(36554) == 0 and target_alive and in_combat and not stealthed and not airborne
+      and not in_range(target, 10)
+    relevance: high + 2.5
+  # O6: Sprint when the bot must move over 20 yd and no other movement tool (Shadowstep) is ready
+  - do: subt sprint
+    when: >-
+      known("sprint") and cooldown("sprint") == 0 and target_alive and not in_range(target, 20) and moving(self)
+      and not (known(36554) and cooldown(36554) == 0)
+    relevance: high + 2
+  # O3: Kick (the stock triggers: an interruptible cast on the target, or on an enemy healer)
+  - do: kick
+    trigger: kick
+    relevance: interrupt + 2
+  - do: kick on enemy healer
+    trigger: kick on enemy healer
+    relevance: interrupt + 1
+
+  # ---- Defensive ----
+  # O4: Evasion below 35% health while the bot is being meleed
+  - do: subt evasion
+    when: known("evasion") and cooldown("evasion") == 0 and health_pct(self) < 35 and value("my attacker count") >= 1
+    relevance: emergency + 1
+  # Cloak of Shadows with a harmful magic effect on the bot below 50% health. On the global cooldown; ahead of the lists
+  - do: subt cloak of shadows
+    when: known(31224) and cooldown(31224) == 0 and health_pct(self) < 50 and value("rogue magic debuff")
+    relevance: emergency + 2
+
+  # ---- Utility on the global cooldown (before the lists) ----
+  # U1: Preparation when Vanish has over 60 s of cooldown left and Shadow Dance over 8 s. Not while stealthed (the
+  # Ambush burst after a Vanish goes first)
+  - do: subt preparation
+    when: >-
+      known(14185) and cooldown(14185) == 0 and in_combat and not stealthed and known("vanish")
+      and cooldown("vanish") > 60000 and known(51713) and cooldown(51713) > 8000
+    relevance: normal + 9.999
+
+  # ---- The stealthed opener (opener or after Vanish) ----
+  # Ambush when energy is 45 or more, once the tank has the target (or there is no tank). It teleports from range and
+  # crits with Mark of the Master Assassin. Never from range into a pack the tank has not engaged: the teleport pulls
+  - do: subt ambush opener
+    when: >-
+      known("ambush") and target_alive and stealthed and en >= 45 and value("rogue may open")
+      and not (not in_range(target, 5) and enemies_near_target(8) >= 3 and not value("rogue target engaged"))
+    relevance: normal + 9.99
+  # Garrote opener (leveling): only while Ambush is not learned (levels 14-17), behind the target with 50 energy
+  - do: subt garrote
+    when: >-
+      known("garrote") and not known("ambush") and target_alive and stealthed and behind and en >= 50
+      and value("rogue may open")
+    relevance: normal + 9.985
+
+  # ---- Death from Above (both lists) ----
+  # S1 / O1: when ready and combo points are 5; below 5 only when the target will die before 5 are reached
+  # (approximate: under 3 s of estimated life on a non-boss, 4 s into the fight). Shadow Dance comes from the off-GCD
+  # rows (late in the flight on a single target, first on a pack)
+  - do: subt death from above
+    when: >-
+      rot and dfa_ready
+      and (cp == 5 or (cp >= 1 and not boss(target) and lifetime(target) < 3 and combat_time() >= 4000))
+    relevance: normal + 9.95
+
+  # ---- Single target, while Shadowed ----
+  # 2: Rupture at 4+ combo points when this bot's is missing or has under 6 s left
+  - do: subt rupture shadowed
+    when: >-
+      known("rupture") and single and shadowed and cp >= 4 and remaining(target, 1943, own) < 6000
+      and dot_worth
+    relevance: normal + 9.9
+  # 3: Slice and Dice at 4+ combo points when missing
+  - do: subt snd shadowed
+    when: known("slice and dice") and single and shadowed and cp >= 4 and not snd_up
+    relevance: normal + 9.85
+  # 4: Eviscerate at 4+ combo points
+  - do: subt eviscerate shadowed
+    when: known("eviscerate") and single and shadowed and cp >= 4
+    relevance: normal + 9.8
+  # 5: Ambush at 45 energy and 3 combo points or fewer (Ambush gives three times Backstab's points for the energy)
+  - do: subt ambush shadowed
+    when: known("ambush") and single and shadowed and cp <= 3 and en >= 45
+    relevance: normal + 9.75
+
+  # ---- Single target, otherwise (not Shadowed) ----
+  # 2: Slice and Dice at 4+ combo points when missing or under 3 s
+  - do: subt snd
+    when: known("slice and dice") and single and not shadowed and cp >= 4 and remaining(self, 5171, own) < 3000
+    relevance: normal + 9.7
+  # 3: Rupture at 5 combo points on a long-lived target when this bot's is missing or has under 2 s left
+  - do: subt rupture
+    when: >-
+      known("rupture") and single and not shadowed and cp == 5 and long_lived
+      and remaining(target, 1943, own) < 2000
+    relevance: normal + 9.65
+  # 4: Deadly Throw at 5 combo points when the target is out of reach and a thrown weapon is equipped
+  - do: subt deadly throw
+    when: >-
+      known("deadly throw") and single and not shadowed and cp == 5 and not in_range(target, 5)
+      and value("rogue thrown equipped")
+    relevance: normal + 9.6
+  # 5: Eviscerate at 5 combo points unless Death from Above is ready within 3 s
+  - do: subt eviscerate
+    when: >-
+      known("eviscerate") and single and not shadowed and cp == 5
+      and not (known(204148) and cooldown(204148) <= 3000)
+    relevance: normal + 9.55
+  # 6: Backstab behind the target with a dagger, 4 combo points or fewer, 45 energy (85 when Dance is soon, unless
+  # Lingering Shadow stacks are up: those Backstabs award an extra point and come first)
+  - do: subt backstab
+    when: >-
+      known("backstab") and single and not shadowed and cp <= 4 and behind and dagger and en >= 45
+      and (not dance_soon or en >= 85 or lingering)
+    relevance: normal + 9.5
+  # 7: Ghostly Strike when not behind or without a dagger, 4 combo points or fewer, 40 energy (80 when Dance is soon)
+  - do: subt ghostly strike
+    when: >-
+      known(14278) and single and not shadowed and cp <= 4 and (not behind or not dagger) and en >= 40
+      and (not dance_soon or en >= 80)
+    relevance: normal + 9.45
+  # 8: Shiv at 60 energy and 4 combo points or fewer, Dance not soon (level 50: the button is not learned before)
+  - do: subt shiv
+    when: >-
+      known(203725) and cooldown(203725) == 0 and single and not shadowed and cp <= 4 and en >= 60
+      and not dance_soon
+    relevance: normal + 9.4
+
+  # ---- Leveling builder (before Ghostly Strike at level 10): Backstab behind the target with a dagger, else Sinister
+  # Strike. The Backstab row above plays when it can (it needs the dagger and the position); this plays the rest ----
+  - do: subt leveling strike
+    when: >-
+      known("sinister strike") and not known(14278) and single and cp <= 4
+      and (not known("backstab") or not behind or not dagger)
+    relevance: normal + 9.35

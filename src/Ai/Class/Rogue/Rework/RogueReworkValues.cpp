@@ -69,6 +69,13 @@ bool RogueThrownEquippedValue::Calculate()
     return proto && proto->Class == ITEM_CLASS_WEAPON && proto->SubClass == ITEM_SUBCLASS_WEAPON_THROWN;
 }
 
+bool RogueDaggerMainHandValue::Calculate()
+{
+    Item* mainHand = bot->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_MAINHAND);
+    ItemTemplate const* proto = mainHand ? mainHand->GetTemplate() : nullptr;
+    return proto && proto->Class == ITEM_CLASS_WEAPON && proto->SubClass == ITEM_SUBCLASS_WEAPON_DAGGER;
+}
+
 bool RogueMagicDebuffValue::Calculate() { return botAI->HasAuraToDispel(bot, DISPEL_MAGIC); }
 
 RogueReworkValueFactory::RogueReworkValueFactory()
@@ -80,6 +87,8 @@ RogueReworkValueFactory::RogueReworkValueFactory()
     creators["rogue aoe enabled"] = [](PlayerbotAI* botAI) -> UntypedValue* { return new RogueAoeEnabledValue(botAI); };
     creators["rogue thrown equipped"] = [](PlayerbotAI* botAI) -> UntypedValue*
     { return new RogueThrownEquippedValue(botAI); };
+    creators["rogue dagger main hand"] = [](PlayerbotAI* botAI) -> UntypedValue*
+    { return new RogueDaggerMainHandValue(botAI); };
     creators["rogue magic debuff"] = [](PlayerbotAI* botAI) -> UntypedValue*
     { return new RogueMagicDebuffValue(botAI); };
 }

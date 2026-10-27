@@ -1981,8 +1981,16 @@ Playerbots.PremadeHunterPetLink.2.20 = 30300203202
 # on this server (Playerbots.BotGlyphs = 0) and glyphs are retired, so the new slots carry no PremadeSpecGlyph.
 # 4.0 "assassination raid": the single target build (Envenom): Puncturing Wounds, Lethality, Cold Blood, Focused
 # Attacks, Toxic Blade. 4.1 "assassination bleed": dungeons, packs and bleeds: Remorseless Attacks, Blood Spatter,
-# Shattering Vial, Venomous Fan, Cut Throat, Indiscriminate Carnage. Slots 4.2 and 4.5 are the stock Combat and
-# Subtlety builds (their stale Assassination segments in .80 are dropped), 4.3 and 4.4 are unused.
+# Shattering Vial, Venomous Fan, Cut Throat, Indiscriminate Carnage. Slot 4.2 is the Combat build (re-encoded for the
+# S2 grid: Throwing Specialization left the Combat tab for the Subtlety tab, which shifts every later Combat digit; the
+# same 51 points), 4.3 and 4.4 are unused, 4.5 and 4.6 are the reworked Subtlety builds.
+# Reworked Subtlety (docs/reworks/bot-strategy/rogue-subtlety-bot-guide.md, docs/reworks/rogue-subtlety-rework.md): a
+# Subtlety-only link starts with two hyphens. The 31 talents are in (row, column) order and each link contains the one
+# before it. The spine arrives on time at every level: Shadow Dance at level 20 (.20, the 11th point), Preparation at
+# 30, Master of Subtlety at 40 (.40), Shadowstep at 50 (.50) and Death from Above at 60. The .20 / .40 / .50 links are
+# intermediate (the guide's .30 / .45 / .60 land Master of Subtlety at 43 and Shadowstep at 54). 4.5 "subtlety raid":
+# the single target build (Shadow Resolve, Improved Ambush, Waylay, Honor Among Thieves). 4.6 "subtlety packs":
+# dungeons and packs (Camouflage, Second Volley, Throwing Specialization, Sinister Calling).
 Playerbots.PremadeSpecName.4.0 = assassination raid
 Playerbots.PremadeSpecLink.4.0.20 = 33031001
 Playerbots.PremadeSpecLink.4.0.30 = 330330012022101
@@ -2000,11 +2008,24 @@ Playerbots.PremadeSpecLink.4.1.50 = 3320320120223011033200300031001
 Playerbots.PremadeSpecLink.4.1.60 = 3320320120223011033210300032301221
 Playerbots.PremadeSpecLink.4.1.80 = 3320320120223011033210300032301221
 Playerbots.PremadeSpecName.4.2 = combat pve
-Playerbots.PremadeSpecLink.4.2.60 = -0252051000035015223100501251
-Playerbots.PremadeSpecLink.4.2.80 = -0252051000035015223100501251
-Playerbots.PremadeSpecName.4.5 = subtlety pve
-Playerbots.PremadeSpecLink.4.5.60 = --502201230321121350115031151
-Playerbots.PremadeSpecLink.4.5.80 = --502201230321121350115031151
+Playerbots.PremadeSpecLink.4.2.60 = -025205100003501522310501251
+Playerbots.PremadeSpecLink.4.2.80 = -025205100003501522310501251
+Playerbots.PremadeSpecName.4.5 = subtlety raid
+Playerbots.PremadeSpecLink.4.5.20 = --23302001
+Playerbots.PremadeSpecLink.4.5.30 = --2330300103230001
+Playerbots.PremadeSpecLink.4.5.40 = --23303001332302012110001
+Playerbots.PremadeSpecLink.4.5.45 = --23303021332302012120003
+Playerbots.PremadeSpecLink.4.5.50 = --2330302133230201212031300001
+Playerbots.PremadeSpecLink.4.5.60 = --2330302133230201212031302021321
+Playerbots.PremadeSpecLink.4.5.80 = --2330302133230201212031302021321
+Playerbots.PremadeSpecName.4.6 = subtlety packs
+Playerbots.PremadeSpecLink.4.6.20 = --23320001
+Playerbots.PremadeSpecLink.4.6.30 = --2333000103032001
+Playerbots.PremadeSpecLink.4.6.40 = --23330001330322012101001
+Playerbots.PremadeSpecLink.4.6.45 = --23330021330322012102003
+Playerbots.PremadeSpecLink.4.6.50 = --2333002133032201210231300001
+Playerbots.PremadeSpecLink.4.6.60 = --2333002133032201212231300321021
+Playerbots.PremadeSpecLink.4.6.80 = --2333002133032201212231300321021
 
 #
 #
@@ -2495,9 +2516,9 @@ Playerbots.RandomClassSpecIndex.3.5 = 5
 # ROGUE
 #
 
-# Random rogues split 25 / 20 / 45 / 10 between the Assassination builds (4.0 raid, 4.1 bleed), Combat (4.2) and
-# Subtlety (4.5), weights not percent (the roll is urand(1, sum), once, at the first talent point). Slots 4.3 and 4.4
-# are unused
+# Random rogues split 25 / 20 / 45 / 5 / 5 between the Assassination builds (4.0 raid, 4.1 bleed), Combat (4.2) and the
+# Subtlety builds (4.5 raid, 4.6 packs), weights not percent (the roll is urand(1, sum), once, at the first talent
+# point). Slots 4.3 and 4.4 are unused
 # assassination raid
 Playerbots.RandomClassSpecProb.4.0 = 25
 Playerbots.RandomClassSpecIndex.4.0 = 0
@@ -2513,9 +2534,12 @@ Playerbots.RandomClassSpecIndex.4.3 = 3
 # unused
 Playerbots.RandomClassSpecProb.4.4 = 0
 Playerbots.RandomClassSpecIndex.4.4 = 4
-# subtlety pve (note: subtlety strategies are not yet implemented)
-Playerbots.RandomClassSpecProb.4.5 = 10
+# subtlety raid
+Playerbots.RandomClassSpecProb.4.5 = 5
 Playerbots.RandomClassSpecIndex.4.5 = 5
+# subtlety packs
+Playerbots.RandomClassSpecProb.4.6 = 5
+Playerbots.RandomClassSpecIndex.4.6 = 6
 
 #
 #

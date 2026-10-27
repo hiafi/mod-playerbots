@@ -27,6 +27,8 @@ void RogueReworkAoeStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     // strategy (a respec resets them) follows the new spec
     if (ai::rogue_rework::IsAssassinationBuild(botAI->GetBot()))
         ai::data::AppendRows("rogue/assassination-pack", triggers);
+    else if (ai::rogue_rework::IsSubtletyBuild(botAI->GetBot()))
+        ai::data::AppendRows("rogue/subtlety-pack", triggers);
     else
         RogueAoeStrategy::InitTriggers(triggers);
 }

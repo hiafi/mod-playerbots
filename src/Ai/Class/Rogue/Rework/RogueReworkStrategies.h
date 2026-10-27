@@ -7,7 +7,6 @@
 #ifndef PLAYERBOTS_ROGUEREWORKSTRATEGIES_H
 #define PLAYERBOTS_ROGUEREWORKSTRATEGIES_H
 
-#include "AssassinationRogueStrategy.h"
 #include "GenericRogueStrategy.h"
 #include "MeleeCombatStrategy.h"
 
@@ -34,20 +33,10 @@ public:
     uint32 GetType() const override { return CombatStrategy::GetType() | STRATEGY_TYPE_DPS | STRATEGY_TYPE_MELEE; }
 };
 
-// The strategy a Subtlety-tab bot runs until the Subtlety rework (S2): the stock Assassination one, which is what these
-// bots ran before the Assassination rework took the "assassin" name. Registered as "subtlety" and named so, so
-// `co +/-subtlety` and the sibling swap act on it.
-class RogueReworkSubtletyStrategy : public AssassinationRogueStrategy
-{
-public:
-    RogueReworkSubtletyStrategy(PlayerbotAI* botAI) : AssassinationRogueStrategy(botAI) {}
-
-    std::string const getName() override { return "subtlety"; }
-};
-
-// The "aoe" strategy: an Assassination bot gets the pack list of "rogue/assassination-pack" (which gates itself on
-// `value("rogue aoe enabled")`, so `co -aoe` turns it off), every other rogue the stock rows (a Blade Flurry and a Fan
-// of Knives on the stock aoe triggers).
+// The "aoe" strategy: an Assassination bot gets the pack list of "rogue/assassination-pack" and a Subtlety bot that of
+// "rogue/subtlety-pack" (each gates itself on `value("rogue aoe enabled")`, so `co -aoe` turns it off), every other
+// rogue the stock rows (a Blade Flurry and a Fan of Knives on the stock aoe triggers). The Subtlety shell is
+// RogueReworkSubtletyStrategy (RogueReworkSubtletyStrategy.h).
 class RogueReworkAoeStrategy : public RogueAoeStrategy
 {
 public:
