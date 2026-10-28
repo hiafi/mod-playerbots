@@ -47,6 +47,7 @@
 #include "RaceMgr.h"
 #include "RandomPlayerbotMgr.h"
 #include "ReactionEngine.h"
+#include "RogueReworkUtils.h"
 #include "SayAction.h"
 #include "ScriptMgr.h"
 #include "ServerFacade.h"
@@ -2428,6 +2429,11 @@ bool PlayerbotAI::IsTank(Player* player, bool bySpec)
             if (ai::shaman_rework::IsTankBuild(player))
                 return true;
             break;
+        case CLASS_ROGUE:
+            // Rework: the Combat tank build (a bot by its talents or tank premade slot, a human by Enforcer Stance)
+            if (ai::rogue_rework::IsTankBuild(player))
+                return true;
+            break;
     }
     return false;
 }
@@ -2481,8 +2487,10 @@ bool PlayerbotAI::IsDps(Player* player, bool bySpec)
         case CLASS_MAGE:
         case CLASS_WARLOCK:
         case CLASS_HUNTER:
-        case CLASS_ROGUE:
             return true;
+        case CLASS_ROGUE:
+            // Rework: the mirror of IsTank, so the Combat tank build is not a DPS
+            return !ai::rogue_rework::IsTankBuild(player);
         case CLASS_PRIEST:
             if (tab == PRIEST_TAB_SHADOW)
             {

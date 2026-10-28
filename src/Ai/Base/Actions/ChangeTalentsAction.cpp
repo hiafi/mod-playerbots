@@ -125,7 +125,7 @@ std::string ChangeTalentsAction::SpecList()
     {
         if (sPlayerbotAIConfig.PremadeSpecName[cls][specNo].size() == 0)
         {
-            break;
+            continue;
         }
         specFound++;
         std::ostringstream out;
@@ -152,7 +152,7 @@ std::string ChangeTalentsAction::SpecPick(std::string param)
     {
         if (sPlayerbotAIConfig.PremadeSpecName[cls][specNo].size() == 0)
         {
-            break;
+            continue;
         }
         if (sPlayerbotAIConfig.PremadeSpecName[cls][specNo] == param)
         {

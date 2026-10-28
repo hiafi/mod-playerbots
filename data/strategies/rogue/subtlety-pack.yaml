@@ -1,0 +1,67 @@
+# The reworked Subtlety rogue's pack list: "rogue/subtlety-pack", appended to the "aoe" strategy by
+# RogueReworkAoeStrategy::InitTriggers for a Subtlety bot (any other rogue gets the stock aoe rows, an Assassination
+# bot its own pack list). Source: the guide's "AoE or packs" list
+# (docs/reworks/bot-strategy/rogue-subtlety-bot-guide.md)
+# and its off-the-global-cooldown line 1 (the pack's Shadow Dance). Each row queues its action at the relevance when its
+# condition holds. The pack is three or more enemies within 8 yd of the bot with Fan of Knives learned (level 24; below
+# it the single target list plays), while "aoe" is on (`co -aoe` takes this list away, and the single target rows of
+# subtlety.yaml, which carry `not pack`, take over). With two enemies the single target list plays.
+#
+# Relevance: the pack's Shadow Dance high + 5.9 (the off-the-global-cooldown band of subtlety.yaml: late-flight Dance
+# 6.5, pack Dance 6.4, otherwise Dance 6.3), then normal + 9.94 .. 9.9 under Death from Above (normal + 9.95, in
+# subtlety.yaml, both lists). Death from Above's Shadow Dance on a pack comes FIRST (Dance, then Death from Above, so
+# the area hit is Hidden), which is the single list's order reversed: the Dance row below fires while Death from Above
+# is ready (or within 1 s) at 3 to 5 combo points, and Death from Above follows at 5.
+#
+# Ids: Shadow Dance 51713, Death from Above 204148, Slice and Dice 5171, Deadly Throw 26679, Eviscerate 2098, Rupture
+# 1943, Fan of Knives 51723; Throwing Specialization's capstone rank 51679 (Deadly Throw hits three targets).
+#
+# Guide line 7 (Ambush while Shadowed at 2 combo points or fewer, "only with 2 enemies") is the single list's Shadowed
+# Ambush (subtlety.yaml): this list plays at three or more enemies, where the guide says Fan of Knives instead.
+# Deviations (reported): Rupture (line 5) goes above Deadly Throw / Eviscerate, because both of those hold at every five
+# combo point press and the guide's order would leave Rupture dead; Eviscerate also plays when the capstone is known but
+# no thrown weapon is equipped (Deadly Throw is impossible); Fan of Knives needs 4 combo points or fewer (the points
+# would be lost at five; Death from Above, Deadly Throw and Eviscerate spend them).
+strategy: rogue/subtlety-pack
+class: rogue
+conditions:
+  cp: value("combo::current target")
+  en: value("energy::self target")
+  in_combat: value("combat::self target")
+  shadowed: aura(self, 51713)
+  stealthed: aura(self, "1784,11327")
+  airborne: ms_since_cast(204148) < 1500
+  # Mirrors the `rot` of subtlety.yaml
+  rot: alive(target) and not airborne and (not stealthed or (combat_time() >= 6000 and value("rogue may open")))
+  # Mirrors the `pack` of subtlety.yaml
+  pack: value("rogue aoe enabled") and enemies_within(8) >= 3 and known("fan of knives")
+  long_lived: boss(target) or lifetime(target) > 20
+  capstone: known(51679) and value("rogue thrown equipped")
+rows:
+  # O1b: Shadow Dance first, when Death from Above is ready (or within 1 s), the bot has 3 to 5 combo points (Death from
+  # Above follows once they reach 5) and is not Shadowed. Both hits of Death from Above are then Hidden
+  - do: subt dance pack
+    when: >-
+      pack and in_combat and alive(target) and not shadowed and not airborne and known(51713)
+      and cooldown(51713) == 0 and known(204148) and cooldown(204148) <= 1000 and cp >= 3
+    relevance: high + 6.4
+  # 2: Slice and Dice at 4+ combo points when missing or under 3 s
+  - do: subt pack snd
+    when: pack and rot and known("slice and dice") and cp >= 4 and remaining(self, 5171, own) < 3000
+    relevance: normal + 9.94
+  # 5: Rupture at 5 combo points on a long-lived target that has none of this bot's
+  - do: subt pack rupture
+    when: pack and rot and known("rupture") and cp == 5 and long_lived and not aura(target, 1943, own)
+    relevance: normal + 9.935
+  # 3: Deadly Throw at 5 combo points with Throwing Specialization's capstone (it hits 3 targets)
+  - do: subt pack deadly throw
+    when: pack and rot and known("deadly throw") and cp == 5 and capstone
+    relevance: normal + 9.93
+  # 4: Eviscerate at 5 combo points without the capstone (or without a thrown weapon to use it with)
+  - do: subt pack eviscerate
+    when: pack and rot and known("eviscerate") and cp == 5 and not capstone
+    relevance: normal + 9.92
+  # 6: Fan of Knives at 50 energy (not at five combo points: the points are lost)
+  - do: subt pack fan of knives
+    when: pack and rot and known("fan of knives") and en >= 50 and cp <= 4
+    relevance: normal + 9.9

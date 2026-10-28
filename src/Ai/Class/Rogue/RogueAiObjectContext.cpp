@@ -6,7 +6,6 @@
 
 #include "RogueAiObjectContext.h"
 #include "AiObjectContext.h"
-#include "AssassinationRogueStrategy.h"
 #include "CombatRogueStrategy.h"
 #include "GenericRogueNonCombatStrategy.h"
 #include "GenericRogueStrategy.h"
@@ -17,6 +16,15 @@
 #include "RogueComboActions.h"
 #include "RogueFinishingActions.h"
 #include "RogueOpeningActions.h"
+#include "RogueReworkActions.h"
+#include "RogueReworkCombatActions.h"
+#include "RogueReworkCombatStrategy.h"
+#include "RogueReworkStrategies.h"
+#include "RogueReworkSubtletyActions.h"
+#include "RogueReworkSubtletyStrategy.h"
+#include "RogueReworkTriggers.h"
+#include "RogueReworkUtils.h"
+#include "RogueReworkValues.h"
 #include "RogueTriggers.h"
 
 class RogueStrategyFactoryInternal : public NamedObjectContext<Strategy>
@@ -34,10 +42,16 @@ public:
     }
 
 private:
-    static Strategy* boost(PlayerbotAI* botAI) { return new RogueBoostStrategy(botAI); }
-    static Strategy* aoe(PlayerbotAI* botAI) { return new RogueAoeStrategy(botAI); }
+    // Rework: empty, every rogue bot's rework rows own its cooldowns (RogueReworkStrategies.h). The stock
+    // RogueBoostStrategy stays compiled and registered under no name
+    static Strategy* boost(PlayerbotAI* botAI) { return new RogueReworkBoostStrategy(botAI); }
+    // Rework: every spec's bot gets its reworked pack list (the Combat tank its own), any other rogue the stock aoe
+    // rows
+    static Strategy* aoe(PlayerbotAI* botAI) { return new RogueReworkAoeStrategy(botAI); }
     static Strategy* nc(PlayerbotAI* botAI) { return new GenericRogueNonCombatStrategy(botAI); }
-    static Strategy* pull(PlayerbotAI* botAI) { return new PullStrategy(botAI, "shoot"); }
+    // Rework: only the Combat tank build pulls (AiFactory adds the strategy to it alone): Pistol Shot, else Insult,
+    // else the stock pull
+    static Strategy* pull(PlayerbotAI* botAI) { return new RoguePullStrategy(botAI); }
     static Strategy* stealthed(PlayerbotAI* botAI) { return new StealthedRogueStrategy(botAI); }
     static Strategy* stealth(PlayerbotAI* botAI) { return new StealthStrategy(botAI); }
     static Strategy* cc(PlayerbotAI* botAI) { return new RogueCcStrategy(botAI); }
@@ -49,14 +63,21 @@ public:
     RogueCombatStrategyFactoryInternal() : NamedObjectContext<Strategy>(false, true)
     {
         creators["combat"] = &RogueCombatStrategyFactoryInternal::combat;
+        creators["combat tank"] = &RogueCombatStrategyFactoryInternal::combat_tank;
         creators["assassin"] = &RogueCombatStrategyFactoryInternal::assassin;
-        // creators["subtlety"] = &RogueCombatStrategyFactoryInternal::subtlety;
+        creators["subtlety"] = &RogueCombatStrategyFactoryInternal::subtlety;
     }
 
 private:
-    static Strategy* combat(PlayerbotAI* botAI) { return new CombatRogueStrategy(botAI); }
-    static Strategy* assassin(PlayerbotAI* botAI) { return new AssassinationRogueStrategy(botAI); }
-    // static Strategy* subtlety(PlayerbotAI* botAI) { return new SubtletyRogueStrategy(botAI); }
+    // Rework: "combat" is the reworked Combat DPS rotation and "combat tank" the tank build's (AiFactory picks the name
+    // by ai::rogue_rework::IsBotTankBuild). Two names, not one creator that picks: the context caches a strategy per
+    // name, so only a second name lets a respec's ResetStrategies swap the shell. "assassin" is the reworked
+    // Assassination rotation and "subtlety" the reworked Subtlety one. The stock CombatRogueStrategy,
+    // AssassinationRogueStrategy and SubtletyRogueStrategy stay compiled and registered under no name
+    static Strategy* combat(PlayerbotAI* botAI) { return new RogueReworkCombatStrategy(botAI); }
+    static Strategy* combat_tank(PlayerbotAI* botAI) { return new RogueReworkCombatTankStrategy(botAI); }
+    static Strategy* assassin(PlayerbotAI* botAI) { return new RogueReworkAssassinationStrategy(botAI); }
+    static Strategy* subtlety(PlayerbotAI* botAI) { return new RogueReworkSubtletyStrategy(botAI); }
 };
 
 class RogueTriggerFactoryInternal : public NamedObjectContext<Trigger>
@@ -85,6 +106,7 @@ public:
             &RogueTriggerFactoryInternal::tricks_of_the_trade_on_main_tank;
         creators["adrenaline rush"] = &RogueTriggerFactoryInternal::adrenaline_rush;
         creators["blade flurry"] = &RogueTriggerFactoryInternal::blade_flurry;
+        creators["rogue second lethal missing"] = &RogueTriggerFactoryInternal::second_lethal_missing;
     }
 
 private:
@@ -104,13 +126,23 @@ private:
     static Trigger* no_stealth(PlayerbotAI* botAI) { return new NoStealthTrigger(botAI); }
     static Trigger* stealth(PlayerbotAI* botAI) { return new StealthTrigger(botAI); }
     static Trigger* sprint(PlayerbotAI* botAI) { return new SprintTrigger(botAI); }
+    // Rework: the poisons are self auras, so the stock weapon-enchant tests are always true. Main hand = the Lethal
+    // slot, off hand = the Non-lethal slot (the names are kept so the strategies stay as they are)
     static Trigger* main_hand_weapon_no_enchant(PlayerbotAI* botAI)
     {
-        return new MainHandWeaponNoEnchantTrigger(botAI);
+        return new RoguePoisonMissingTrigger(botAI, "main hand weapon no enchant",
+                                             ai::rogue_rework::POISON_SLOT_LETHAL);
     }
     static Trigger* off_hand_weapon_no_enchant(PlayerbotAI* botAI)
     {
-        return new OffHandWeaponNoEnchantTrigger(botAI);
+        return new RoguePoisonMissingTrigger(botAI, "off hand weapon no enchant",
+                                             ai::rogue_rework::POISON_SLOT_NON_LETHAL);
+    }
+    // Rework: Master Poisoner's third rank gives a second Lethal slot; the trigger is silent without it
+    static Trigger* second_lethal_missing(PlayerbotAI* botAI)
+    {
+        return new RoguePoisonMissingTrigger(botAI, "rogue second lethal missing",
+                                             ai::rogue_rework::POISON_SLOT_LETHAL_SECOND);
     }
     static Trigger* tricks_of_the_trade_on_main_tank(PlayerbotAI* botAI)
     {
@@ -165,6 +197,7 @@ public:
         creators["fan of knives"] = &RogueAiObjectContextInternal::fan_of_knives;
         creators["killing spree"] = &RogueAiObjectContextInternal::killing_spree;
         creators["cold blood"] = &RogueAiObjectContextInternal::cold_blood;
+        creators["rogue second lethal"] = &RogueAiObjectContextInternal::second_lethal;
     }
 
 private:
@@ -216,17 +249,28 @@ private:
     {
         return new CastTricksOfTheTradeOnMainTankAction(botAI);
     }
+    // Rework: the poisons are self auras cast by id (the stock actions apply a poison item). The names are kept so
+    // the strategies stay as they are: main hand = the Lethal pick, both off hand names = the Non-lethal pick (the
+    // "deadly" action's instant alternative then casts the same pick)
     static Action* use_instant_poison(PlayerbotAI* botAI)
     {
-        return new UseInstantPoisonAction(botAI);
+        return new RoguePoisonAction(botAI, "use instant poison on main hand", ai::rogue_rework::POISON_SLOT_LETHAL);
     }
     static Action* use_deadly_poison(PlayerbotAI* botAI)
     {
-        return new UseDeadlyPoisonAction(botAI);
+        return new RoguePoisonAction(botAI, "use deadly poison on off hand",
+                                     ai::rogue_rework::POISON_SLOT_NON_LETHAL);
     }
     static Action* use_instant_poison_off_hand(PlayerbotAI* botAI)
     {
-        return new UseInstantPoisonOffHandAction(botAI);
+        return new RoguePoisonAction(botAI, "use instant poison on off hand",
+                                     ai::rogue_rework::POISON_SLOT_NON_LETHAL);
+    }
+    // Rework: the second Lethal pick (Master Poisoner's third rank); the first Lethal pick is the action "use instant
+    // poison on main hand"
+    static Action* second_lethal(PlayerbotAI* botAI)
+    {
+        return new RoguePoisonAction(botAI, "rogue second lethal", ai::rogue_rework::POISON_SLOT_LETHAL_SECOND);
     }
     static Action* fan_of_knives(PlayerbotAI* botAI) { return new FanOfKnivesAction(botAI); }
     static Action* killing_spree(PlayerbotAI* botAI) { return new CastKillingSpreeAction(botAI); }
@@ -265,6 +309,9 @@ void RogueAiObjectContext::BuildSharedActionContexts(
 {
     AiObjectContext::BuildSharedActionContexts(actionContexts);
     actionContexts.Add(new RogueAiObjectContextInternal());
+    actionContexts.Add(new RogueReworkActionFactory());
+    actionContexts.Add(new RogueSubtletyActionFactory());
+    actionContexts.Add(new RogueCombatActionFactory());
 }
 
 void RogueAiObjectContext::BuildSharedTriggerContexts(
@@ -278,4 +325,5 @@ void RogueAiObjectContext::BuildSharedValueContexts(
     SharedNamedObjectContextList<UntypedValue>& valueContexts)
 {
     AiObjectContext::BuildSharedValueContexts(valueContexts);
+    valueContexts.Add(new RogueReworkValueFactory());
 }

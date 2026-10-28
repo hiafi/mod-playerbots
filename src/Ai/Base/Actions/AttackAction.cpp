@@ -16,6 +16,12 @@
 #include "Unit.h"
 #include "WaitForAttackStrategy.h"
 
+namespace
+{
+// Shroud of Concealment, the rogue's group stealth cloak (keep in sync with core RogueData.h)
+constexpr uint32 SPELL_SHROUD_OF_CONCEALMENT = 203724;
+}  // namespace
+
 bool AttackAction::Execute(Event /*event*/)
 {
     Unit* target = GetTarget();
@@ -80,6 +86,17 @@ bool AttackAction::Attack(Unit* target, bool /*with_pet*/ /*true*/)
         if (verbose)
             botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                 "attack_in_flight_error", "I cannot attack in flight", {}));
+
+        return false;
+    }
+
+    // A group sneaking past a pack under Shroud of Concealment: no bot opens a fight while it wears the cloak out of
+    // combat. Every way a bot starts an attack (dps assist, attack my target, grind) ends in this method. Joining a
+    // fight someone else already started is fine: the target is then in combat.
+    if (bot->HasAura(SPELL_SHROUD_OF_CONCEALMENT) && !bot->IsInCombat() && !target->IsInCombat())
+    {
+        if (verbose)
+            botAI->TellError("I'm under Shroud of Concealment");
 
         return false;
     }

@@ -1,0 +1,28 @@
+# Out of combat (appended to the rogue non-combat strategy of a Combat tank bot by
+# GenericRogueNonCombatStrategy::InitTriggers when ai::rogue_rework::IsBotTankBuild holds): Enforcer Stance on before
+# the pull (+105% threat; the toggle is off the global cooldown), recast if it drops. No Stealth (a tank never stealths:
+# the Stealth rows are the DPS shell's, in its combat strategy). The poisons are the non-combat strategy's own rows.
+# Source: the Combat bot guide's Setup (docs/reworks/bot-strategy/rogue-combat-bot-guide.md).
+#
+# Ids: Enforcer Stance 203720 (a self cast by id, the stance aura carries the same id; taught at level 10).
+strategy: rogue/nc-combat-tank
+class: rogue
+conditions:
+  stance_up: aura(self, 203720)
+rows:
+  # The stance, whenever it is missing and known (level 10); never while mounted (the stance cast would dismount the
+  # bot)
+  - do: cmbt enforcer stance
+    when: known(203720) and cooldown(203720) == 0 and not stance_up and not value("mounted::self target")
+    relevance: high + 2
+---
+# Out of combat, every rogue bot that is not the Combat tank build (appended by GenericRogueNonCombatStrategy::
+# InitTriggers when ai::rogue_rework::IsBotTankBuild is false): leave Enforcer Stance. A tank bot that a master
+# re-specs keeps the saved aura (it survives death and relog), which costs 10% damage and adds 105% threat; the client
+# cancel of the bot's own aura, out of combat only (the DK "dk/nc-dps" precedent).
+strategy: rogue/nc-not-tank
+class: rogue
+rows:
+  - do: cmbt cancel enforcer stance
+    when: aura(self, 203720, own)
+    relevance: high + 2

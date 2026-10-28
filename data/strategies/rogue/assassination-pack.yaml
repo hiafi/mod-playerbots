@@ -1,0 +1,58 @@
+# The reworked Assassination rogue's pack list: "rogue/assassination-pack", appended to the "aoe" strategy by
+# RogueReworkAoeStrategy::InitTriggers for an Assassination bot (any other rogue gets the stock aoe rows). Source: the
+# guide's "AoE or packs" list (docs/reworks/bot-strategy/rogue-assassination-bot-guide.md). Each row queues its action
+# at the relevance when its condition holds. The pack is three or more enemies within 8 yd of the bot with Fan of Knives
+# learned (level 24; below it the single target list plays), while "aoe" is on (`co -aoe` takes this list away, and the
+# single target rows of assassination.yaml, which carry `not pack`, take over). With exactly two enemies the single
+# target list plays and keeps Rupture on both (assassination.yaml).
+#
+# Relevance: Poison Bomb normal + 9.995 (above the stealthed Garrote: a pack opens with Poison Bomb), then 9.8 .. 9.4 in
+# the guide's order. The off-the-global-cooldown rows (Hunger for Blood on a pack: Deadly Poison on three enemies), the
+# stealthed opener, Tricks of the Trade, the before-42 Slice and Dice / Eviscerate, the poisons and the defensives are
+# in assassination.yaml and play in both lists.
+#
+# "attacker without aura id::ids;owned;refreshMs;minLifetimeSec;range" picks the highest-health attacker lacking this
+# bot's aura (or with under refreshMs left) that is expected to live minLifetimeSec: the guide's "longest-lived enemy"
+# and "a long-lived enemy without this bot's Rupture". The qualifier is written in the `do:` name and in the condition,
+# the same literal in both places. Range 5 is melee: the cast needs it.
+#
+# Ids: Poison Bomb 203807, Envenom 32645, Slice and Dice 5171, Rupture 1943, Kingsbane 203822 (debuff 203842), Fan of
+# Knives 51723.
+strategy: rogue/assassination-pack
+class: rogue
+conditions:
+  cp: value("combo::current target")
+  en: value("energy::self target")
+  stealthed: aura(self, "1784,11327")
+  # Mirrors the `rot` of assassination.yaml: stealthed, the bot waits for its opener and the tank, up to 6 s of combat
+  rot: alive(target) and (not stealthed or (combat_time() >= 6000 and value("rogue may open")))
+  # Mirrors the `pack` of assassination.yaml
+  pack: value("rogue aoe enabled") and enemies_within(8) >= 3 and known("fan of knives")
+rows:
+  # 1: Poison Bomb when ready, aimed at the bot's target inside the pack (guide Q6: the target is usually in the pack),
+  # engaged enemies only: a bomb on an unengaged pack does nothing and the bot should not open on one
+  - do: assn pack poison bomb
+    when: pack and alive(target) and known(203807) and cooldown(203807) == 0 and value("rogue target engaged")
+    relevance: normal + 9.995
+  # 2: Envenom at 4+ combo points when Slice and Dice is missing or under 3 s
+  - do: assn pack envenom snd
+    when: pack and rot and known("envenom") and cp >= 4 and remaining(self, 5171, own) < 3000
+    relevance: normal + 9.8
+  # 3: Rupture at 5 combo points on a long-lived enemy that has none of this bot's (Indiscriminate Carnage copies it)
+  - do: assn pack rupture::1943;1;2000;20;5
+    when: >-
+      pack and rot and known("rupture") and cp == 5 and alive("attacker without aura id::1943;1;2000;20;5")
+    relevance: normal + 9.7
+  # 4: Kingsbane when ready, on the longest-lived enemy without this bot's
+  - do: assn pack kingsbane::203842;1;0;0;5
+    when: >-
+      pack and rot and known(203822) and cooldown(203822) == 0 and alive("attacker without aura id::203842;1;0;0;5")
+    relevance: normal + 9.6
+  # 5: Envenom at 5 combo points
+  - do: assn pack envenom
+    when: pack and rot and known("envenom") and cp == 5
+    relevance: normal + 9.5
+  # 6: Fan of Knives at 50 energy (not at five combo points: the points are lost; Envenom or Eviscerate spend them)
+  - do: assn pack fan of knives
+    when: pack and rot and known("fan of knives") and en >= 50 and cp <= 4
+    relevance: normal + 9.4

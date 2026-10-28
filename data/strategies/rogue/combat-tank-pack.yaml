@@ -1,0 +1,42 @@
+# The reworked Combat tank rogue's pack list: "rogue/combat-tank-pack", appended to the "aoe" strategy by
+# RogueReworkAoeStrategy::InitTriggers for a Combat tank bot (ai::rogue_rework::IsBotTankBuild). Source: the guide's
+# "Tank (Enforcer Stance)" Packs list (docs/reworks/bot-strategy/rogue-combat-bot-guide.md). It ADDS to the tank's
+# single list (combat-tank.yaml), whose rows keep playing on a pack ("then single target lines 4 to 11 on the main
+# target"): the guide's pack line 2 (En Garde, Riposte, Feint) is the single list's lines 1 to 3, which are not gated on
+# `pack` (Feint fires on any 3+ enemies attacking the bot). The pack is three or more enemies within 8 yd of the bot,
+# while "aoe" is on (`co -aoe` takes this list away).
+#
+# Relevance: Blade Flurry normal + 9.995 (the guide's line 1, above En Garde 9.99), the loose caster shots 9.96 / 9.955
+# (the guide's line 3: between Feint 9.97 and Slice and Dice 9.9) and Fan of Knives 9.58, below the finishers and above
+# the Ghostly Strike filler (9.55). Deviation (reported): the guide puts Fan of Knives (line 4) ahead of the single
+# list's lines 4 to 11; at 50 energy it would fire every time the bot reaches 50 and starve Slice and Dice, Killing
+# Spree and the finishers, so it replaces the filler builder instead (Fan of Knives is the pack's builder, Ghostly
+# Strike the Veil's). The tank's threat on a pack is Enforcer Stance's +105% on every hit.
+#
+# Ids: Blade Flurry 13877, Between the Eyes 203959 (by id), Pistol Shot 203958 (by id), Fan of Knives 51723. Auras:
+# Opportunity 203983 (stacks), Anticipation 203997 (stacks). The loose caster is `rogue loose caster`: a loose enemy (an
+# enemy within 20 yd attacking a group member that is not the bot and not another tank, not taunt-immune) that is
+# casting; the shot at it is for threat (the stance's), so Pistol Shot needs Opportunity and Between the Eyes 4+ points.
+# Known concern for the playtest: combo points are the main target's, a finisher cast at another enemy may not use them
+# (the guide's line). Never Fan of Knives on fewer than 6 enemies while Blade Flurry is up (guide, Never).
+strategy: rogue/combat-tank-pack
+class: rogue
+conditions:
+  cp: value("combo::current target")
+  en: value("energy::self target")
+  pack: value("rogue aoe enabled") and enemies_within(8) >= 3
+  room: cp <= 4 or (known(203965) and stacks(self, 203997) < 2)
+  bf_up: aura(self, 13877)
+rows:
+  # 1: Blade Flurry when ready and not active
+  - do: cmbt blade flurry
+    when: known(13877) and cooldown(13877) == 0 and pack and alive(target) and not bf_up
+    relevance: normal + 9.995
+  # 3 (dropped, harness 2026-10-27): the guide's Between the Eyes / Pistol Shot at a casting loose enemy. Combo points
+  # live on the rogue but count only on the combo target (the selection): a finisher at another unit is refused
+  # server-side, and a builder there moves every held point onto it. Insult covers loose enemies instead.
+  # 4: Fan of Knives at 50 energy (6+ enemies, or Blade Flurry not up), when Anticipation or a free point can take it
+  - do: cmbt pack fan of knives
+    when: >-
+      known("fan of knives") and pack and alive(target) and en >= 50 and (enemies_within(8) >= 6 or not bf_up) and room
+    relevance: normal + 9.58

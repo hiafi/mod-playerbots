@@ -1,0 +1,222 @@
+# The reworked Combat DPS rogue's rows: "rogue/combat", appended to the "combat" combat strategy by
+# RogueReworkCombatStrategy::InitTriggers (after MeleeCombatStrategy's walk to melee) for a bot that is not a tank (the
+# 4.2 raid and 4.3 packs builds). The pack list is data/strategies/rogue/combat-pack.yaml (appended to the "aoe"
+# strategy); the tank's rows are combat-tank.yaml / combat-tank-pack.yaml / nc-combat-tank.yaml. Source: the Combat bot
+# guide (docs/reworks/bot-strategy/rogue-combat-bot-guide.md; the Combat rework doc wins over it, and the S3 handoff
+# section 2 wins over both). Each row queues its action at the relevance when its condition holds (`when`, the
+# expression language of StrategyExpression.h) or when an existing C++ trigger fires (`trigger`). Execution order is by
+# relevance, not by position in this file. Actions named "cmbt ..." are RowCheckedAction (they re-check their own row
+# before casting); the poison rows and the kicks are the stock actions. Rows that can hold in the same tick never share
+# an action name (they would merge into one basket and only the first row would be re-checked).
+#
+# The guide's lists, as relevance bands. Off the global cooldown (checked every update; the engine skips a GCD-blocked
+# row, so these still fire between presses): Adrenaline Rush high + 6.5, the poison recasts high + 6 / 5.5, Grappling
+# Hook high + 4, Stealth high + 3, Sprint high + 2, the kicks interrupt + 2 / + 1. Defensive, ahead of the lists:
+# Evasion emergency + 1, Cloak of Shadows emergency + 2. Then the lists, on the global cooldown, in the normal band: the
+# stealthed opener 9.99, the pack list (combat-pack.yaml) 9.995 .. 9.9, the two-enemy Blade Flurry 9.88, the single
+# target list 9.9 .. 9.4. Nothing is at or above the pull sequence (105); a Combat DPS does not pull (the pull strategy
+# is the tank's).
+#
+# Spell ids (DBC names; the strategy casts by name where the spellbook has one castable spell of that name, else by id):
+# Sinister Strike 1752 (ranked), Eviscerate 2098 (ranked), Slice and Dice 5171, Pistol Shot 203958 (by id), Between the
+# Eyes 203959 (by id), Blade Rush 203980 (by id), Grappling Hook 203963 (C++ action, ground cast), Blade Flurry 13877
+# (also its self buff), Adrenaline Rush 13750 (also its self buff; Celerity's copy 203996), Killing Spree 51690, Kick
+# 1766, Evasion 5277, Sprint 2983, Cloak of Shadows 31224, Ambush 8676, Stealth 1784, Vanish aura 11327, Fan of Knives
+# 51723 (pack list). Auras on the bot: Opportunity 203983 (stacks, 3), Primed Powder 203985 (stacks, 5), Hair Trigger
+# 203987, Blade Rush's buff 203990 ("Rush empowered"), Anticipation 203997 (stacks, 2). Talent ranks (known() reads the
+# talent): Restless Blades 203965 (it brings Anticipation).
+#
+# Definitions against what the bot can read (the guide's "State the bot needs"; open questions Q1-Q8 are answered in the
+# S3b report):
+# - Combo points and energy: value("combo::current target") (0 unless the combo target is the current target) and
+#   value("energy::self target") (absolute energy). Points held = combo points + Anticipation's stacks.
+# - Stealthed = Stealth 1784 or the Vanish aura 11327 on the bot. Long-lived target = a boss, or more than 20 s of
+#   estimated life (the guide's fallback needs no health maximum).
+# - Out of reach = more than 5 yd away (`in_range`, reach-adjusted); moving = the bot's own movement (`moving(self)`,
+# the   existing value: no new primitive).
+# - Adrenaline Rush up = either aura id (13750, or Celerity's 203996). Spree soon = Killing Spree known with 6 s or less
+#   of cooldown. Rush empowered = Blade Rush's buff.
+# - The tank has held the target = `rogue tank holds`; the opener may start = `rogue may open` (the tank holds, or no
+#   group, or no tank to wait for): "let the tank pull". Engaged = `rogue target engaged`.
+# - Never Ambush from range into an unengaged pack (the teleport pulls) = `enemies_near_target(8) >= 3` with the target
+#   out of reach and `rogue target engaged` false.
+#
+# Never (guide), as row conditions: no Pistol Shot without Opportunity in melee of a stationary target (rows P2 / P3
+# need a free shot, an expiring Hair Trigger, or out of reach / moving); no finisher below 5 combo points unless the
+# target dies first (the dying Eviscerate below is the exception); no Fan of Knives on fewer than 6 enemies while Blade
+# Flurry is up (the pack list); no Grappling Hook, Blade Rush or Ambush into an enemy the tank has not engaged; no
+# Enforcer Stance (no row casts it for a DPS); no Feint (no row); never hold Adrenaline Rush more than 6 s for Killing
+# Spree (BOUND below). Builders also wait when they would lose a point past 7 (`room`: no builder at 5 points unless
+# Anticipation can store it).
+#
+# BOUNDED WAITS (S2b F1: a row that waits for a cooldown or a resource states how long):
+# - Adrenaline Rush holds only while Killing Spree's cooldown is between 0 and 6 s (`spree_hold`): a cooldown that runs
+#   down, so at most 6 s; at 0 (ready now) or above 6 s the row fires.
+# - Killing Spree waits only while Adrenaline Rush is neither up nor more than 20 s from ready: so at most 20 s, and
+# only   because Adrenaline Rush (pressed at once when Killing Spree is ready) is itself on a cooldown that runs down.
+# - Between the Eyes never waits for Powder: the loaded rows fire at Powder 5 (or 4 with Rush empowered), the ranged row
+#   when out of reach or moving, and Eviscerate fires at 5 points otherwise: a 5 point bot always has a press.
+# Deviations (reported): the dying Eviscerate row; `room` on the builders; the Stealth-before-pull row; the 2-enemy
+# Blade Flurry checks only the target's life (the guide: both enemies).
+strategy: rogue/combat
+class: rogue
+conditions:
+  target_alive: alive(target)
+  cp: value("combo::current target")
+  en: value("energy::self target")
+  in_combat: value("combat::self target")
+  stealthed: aura(self, "1784,11327")
+  # The GCD rows: a live target, and while stealthed only once the opener has had its chance (the stealthed row comes
+  # first; the bot gives up on the opener once it may open and 6 s of combat have passed, so a stealthed bot cannot
+  # stall)
+  rot: alive(target) and (not stealthed or (combat_time() >= 6000 and value("rogue may open")))
+  # Three or more enemies within 8 yd; `co -aoe` turns the pack rows off. Mirrors combat-pack.yaml
+  pack: value("rogue aoe enabled") and enemies_within(8) >= 3
+  single: rot and not pack
+  # A builder at 5 points is only safe when Anticipation (Restless Blades) can store the point; below 5 always
+  room: cp <= 4 or (known(203965) and stacks(self, 203997) < 2)
+  rush_emp: aura(self, 203990)
+  bf_up: aura(self, 13877)
+  snd_up: aura(self, 5171, own)
+  long_lived: boss(target) or lifetime(target) > 20
+  far_or_moving: not in_range(target, 5) or moving(self)
+  # Killing Spree is known and between 0 and 6 s from ready: Adrenaline Rush waits (bounded: the cooldown runs down)
+  spree_hold: known(51690) and cooldown(51690) > 0 and cooldown(51690) <= 6000
+  # Killing Spree's gate: Adrenaline Rush is up, not learned, or more than 20 s from ready (else it waits, bounded)
+  spree_go: aura(self, "13750,203996") or not known(13750) or cooldown(13750) > 20000
+  grapple_ready: known(203963) and cooldown(203963) == 0
+rows:
+  # ---- Setup: the poisons (out of combat too: the non-combat strategy has the same rows) ----
+  # Instant Poison in the Lethal slot (Combat has no poison talents: PickLethalPoison) and Crippling Poison in the
+  # Non-lethal slot. The triggers fire only for a missing pick, and in combat only into a free place, so a poison is
+  # never swapped for another mid-fight (ai::rogue_rework::PoisonMissing)
+  - do: use instant poison on main hand
+    trigger: main hand weapon no enchant
+    relevance: high + 6
+  - do: use deadly poison on off hand
+    trigger: off hand weapon no enchant
+    relevance: high + 5.5
+
+  # ---- Off the global cooldown (guide: checked every update) ----
+  # O1: Adrenaline Rush in combat on a long-lived target or a pack, unless Killing Spree is 1-6 s from ready (BOUND: 6
+  # s). Before Killing Spree (level 60) it is pressed on cooldown (`spree_hold` is false while it is unknown)
+  - do: cmbt adrenaline rush
+    when: >-
+      known(13750) and cooldown(13750) == 0 and in_combat and target_alive and (long_lived or enemies_within(8) >= 3)
+      and not spree_hold
+    relevance: high + 6.5
+  # O3: Kick (the stock triggers: an interruptible cast on the target, or on an enemy healer)
+  - do: kick
+    trigger: kick
+    relevance: interrupt + 2
+  - do: kick on enemy healer
+    trigger: kick on enemy healer
+    relevance: interrupt + 1
+  # O4: Grappling Hook when the target is over 15 yd away (and within the hook's 40), the bot is in combat and the
+  # target is engaged by the bot or its group (never into an enemy the tank has not engaged). The action finds the
+  # ground point 3 yd short of the target and refuses when it is not in line of sight, not on the ground or far above /
+  # below
+  - do: cmbt grappling hook
+    when: >-
+      known(203963) and cooldown(203963) == 0 and target_alive and in_combat and not in_range(target, 15)
+      and in_range(target, 40) and value("rogue target engaged")
+    relevance: high + 4
+  # Stealth before the pull while the enemy is out of reach and the bot is out of combat. The stock action checks the
+  # distance and the battleground flags
+  - do: cmbt stealth
+    when: >-
+      known(1784) and cooldown(1784) == 0 and target_alive and not stealthed and not in_combat
+      and not in_range(target, 5)
+    relevance: high + 3
+  # O6: Sprint when the bot must move over 20 yd and Grappling Hook is not ready
+  - do: cmbt sprint
+    when: >-
+      known("sprint") and cooldown("sprint") == 0 and target_alive and not in_range(target, 20) and moving(self)
+      and not grapple_ready
+    relevance: high + 2
+
+  # ---- Defensive ----
+  # O5: Evasion below 35% health while the bot is being meleed
+  - do: cmbt evasion
+    when: known("evasion") and cooldown("evasion") == 0 and health_pct(self) < 35 and value("my attacker count") >= 1
+    relevance: emergency + 1
+  # Cloak of Shadows with a harmful magic effect on the bot below 50% health. On the global cooldown; ahead of the lists
+  - do: cmbt cloak of shadows
+    when: known(31224) and cooldown(31224) == 0 and health_pct(self) < 50 and value("rogue magic debuff")
+    relevance: emergency + 2
+
+  # ---- The stealthed opener ----
+  # Ambush when energy is 45 or more, once the tank has the target (or there is no tank). It teleports from range. Never
+  # from range into a pack the tank has not engaged: the teleport pulls
+  - do: cmbt ambush opener
+    when: >-
+      known("ambush") and target_alive and stealthed and en >= 45 and value("rogue may open")
+      and not (not in_range(target, 5) and enemies_near_target(8) >= 3 and not value("rogue target engaged"))
+    relevance: normal + 9.99
+
+  # ---- Two enemies: the single list plus Blade Flurry (copies at 40%; Deft Maneuvers does nothing) ----
+  # Guide: ready, not active, both enemies expected to live 8 s or more (approximated on the target's life)
+  - do: cmbt blade flurry pair
+    when: >-
+      known(13877) and cooldown(13877) == 0 and single and enemies_within(8) == 2 and not bf_up
+      and value("rogue aoe enabled") and (boss(target) or lifetime(target) > 8)
+    relevance: normal + 9.88
+
+  # ---- Single target, otherwise ----
+  # 1: Slice and Dice at 1+ points when missing, or at 4+ points with under 3 s left
+  - do: cmbt snd
+    when: >-
+      known("slice and dice") and single and ((not snd_up and cp >= 1)
+      or (cp >= 4 and remaining(self, 5171, own) < 3000))
+    relevance: normal + 9.9
+  # 2: Killing Spree at 5 points and 25 energy while Adrenaline Rush is up or far (BOUND: waits at most 20 s)
+  - do: cmbt killing spree
+    when: >-
+      known(51690) and cooldown(51690) == 0 and single and cp == 5 and en >= 25 and spree_go
+    relevance: normal + 9.85
+  # 3: Blade Rush when ready and the target is within 20 yd; out of melee reach only when the tank has the target (the
+  # charge pulls). In reach it does not move the rogue (U71)
+  - do: cmbt blade rush
+    when: >-
+      known(203980) and cooldown(203980) == 0 and single and in_range(target, 20)
+      and (in_range(target, 5) or value("rogue may open"))
+    relevance: normal + 9.8
+  # 4: Between the Eyes at 5 points with Powder 5, or Powder 4 and Rush empowered
+  - do: cmbt bte loaded
+    when: >-
+      known(203959) and single and cp == 5 and (stacks(self, 203985) >= 5 or (stacks(self, 203985) >= 4 and rush_emp))
+    relevance: normal + 9.75
+  # 5: Between the Eyes at 5 points when the target is out of reach or the bot is moving (no Eviscerate from there)
+  - do: cmbt bte ranged
+    when: known(203959) and single and cp == 5 and far_or_moving
+    relevance: normal + 9.7
+  # The exception to "never below 5 points": a non-boss about to die, 4 s into the fight (approximate: under 3 s of
+  # estimated life), spends what it has on Eviscerate
+  - do: cmbt dying eviscerate
+    when: >-
+      known("eviscerate") and single and cp >= 2 and cp <= 4 and not boss(target) and lifetime(target) < 3
+      and combat_time() >= 4000
+    relevance: normal + 9.67
+  # 6: Eviscerate at 5 points
+  - do: cmbt eviscerate
+    when: known("eviscerate") and single and cp == 5
+    relevance: normal + 9.65
+  # 7: Pistol Shot while Opportunity has a charge (free and empowered)
+  # S3b part 2 tune: at 90+ energy the free shot waits (a builder that spends energy goes first; energy sat at the cap
+  # 14% of the fight in the sims). Not a wait that can stall: the shot fires again as soon as energy is under 90.
+  - do: cmbt pistol shot opportunity
+    when: known(203958) and single and stacks(self, 203983) >= 1 and room and en < 90
+    relevance: normal + 9.6
+  # 8: Pistol Shot with Hair Trigger up and under 3 s left (spend it before it expires), at 30 energy
+  - do: cmbt pistol shot hair trigger
+    when: >-
+      known(203958) and single and aura(self, 203987) and remaining(self, 203987, own) < 3000 and en >= 30 and room
+    relevance: normal + 9.55
+  # 9: Pistol Shot when the target is out of reach or the bot is moving, 4 points or fewer, 30 energy
+  - do: cmbt pistol shot ranged
+    when: known(203958) and single and far_or_moving and cp <= 4 and en >= 30
+    relevance: normal + 9.5
+  # 10: Sinister Strike at 40 energy (the builder; below level 20 the only one)
+  - do: cmbt sinister strike
+    when: known("sinister strike") and single and en >= 40 and room
+    relevance: normal + 9.4

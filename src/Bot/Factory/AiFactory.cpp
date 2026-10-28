@@ -22,6 +22,7 @@
 #include "PriestAiObjectContext.h"
 #include "ReactionEngine.h"
 #include "RogueAiObjectContext.h"
+#include "RogueReworkUtils.h"
 #include "ShamanAiObjectContext.h"
 #include "ShamanReworkUtils.h"
 #include "SharedDefines.h"
@@ -187,6 +188,11 @@ BotRoles AiFactory::GetPlayerRoles(Player* player)
                 role = (BotRoles)(BOT_ROLE_TANK | BOT_ROLE_DPS);
             else if (tab == DRUID_TAB_RESTORATION)
                 role = BOT_ROLE_HEALER;
+            break;
+        case CLASS_ROGUE:
+            // Rework: the Combat tank build (a bot by Riposte / En Garde or the tank premade slot, a human by Enforcer
+            // Stance)
+            role = ai::rogue_rework::IsTankBuild(player) ? BOT_ROLE_TANK : BOT_ROLE_DPS;
             break;
         default:
             role = BOT_ROLE_DPS;
@@ -392,12 +398,22 @@ void AiFactory::AddDefaultCombatStrategies(Player* player, PlayerbotAI* const fa
             break;
 
         case CLASS_ROGUE:
+        {
+            // Rework: the Combat tank build gets its own rotation ("combat tank", a sibling of "combat", so a respec's
+            // ResetStrategies swaps the shell) and tanks like the other tanks
+            bool const isTank = ai::rogue_rework::IsBotTankBuild(player);
             if (tab == ROGUE_TAB_COMBAT)
-                engine->addStrategiesNoInit("combat", nullptr);
-            else // if (tab == ROGUE_TAB_ASSASSINATION || tab == ROGUE_TAB_SUBTLETY)
+                engine->addStrategiesNoInit(isTank ? "combat tank" : "combat", nullptr);
+            else if (tab == ROGUE_TAB_SUBTLETY)
+                engine->addStrategiesNoInit("subtlety", nullptr);
+            else // if (tab == ROGUE_TAB_ASSASSINATION)
                 engine->addStrategiesNoInit("assassin", nullptr);
-            engine->addStrategiesNoInit("dps assist", "aoe", nullptr);
+            if (isTank)
+                engine->addStrategiesNoInit("tank assist", "pull", "pull back", "aoe", nullptr);
+            else
+                engine->addStrategiesNoInit("dps assist", "aoe", nullptr);
             break;
+        }
 
         case CLASS_WARLOCK:
             if (tab == WARLOCK_TAB_AFFLICTION)
@@ -587,6 +603,13 @@ void AiFactory::AddDefaultNonCombatStrategies(Player* player, PlayerbotAI* const
             break;
         case CLASS_WARRIOR:
             if (tab == WARRIOR_TAB_PROTECTION)
+                nonCombatEngine->addStrategiesNoInit("tank assist", "pull", nullptr);
+            else
+                nonCombatEngine->addStrategy("dps assist", false);
+            break;
+        case CLASS_ROGUE:
+            // Rework: the Combat tank build
+            if (ai::rogue_rework::IsBotTankBuild(player))
                 nonCombatEngine->addStrategiesNoInit("tank assist", "pull", nullptr);
             else
                 nonCombatEngine->addStrategy("dps assist", false);

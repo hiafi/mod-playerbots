@@ -12,6 +12,7 @@
 #include "Opcodes.h"
 #include "Playerbots.h"
 #include "RandomPlayerbotMgr.h"
+#include "RogueReworkUtils.h"
 #include "World.h"
 #include "WorldPacket.h"
 
@@ -94,6 +95,13 @@ uint32 LfgJoinAction::GetRoles()
         case CLASS_DEATH_KNIGHT:
             // Rework: the tank Death Knight (Blood tab from level 10, or Blood Presence on)
             if (ai::dk_rework::IsTankBuild(bot))
+                return PLAYER_ROLE_TANK;
+            else
+                return PLAYER_ROLE_DAMAGE;
+            break;
+        case CLASS_ROGUE:
+            // Rework: the Combat tank build
+            if (ai::rogue_rework::IsTankBuild(bot))
                 return PLAYER_ROLE_TANK;
             else
                 return PLAYER_ROLE_DAMAGE;
