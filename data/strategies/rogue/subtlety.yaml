@@ -32,8 +32,8 @@
 # - Combo points and energy: value("combo::current target") (0 unless the combo target is the current target) and
 #   value("energy::self target") (absolute energy).
 # - Shadowed = the bot's Shadow Dance aura 51713; stealthed = Stealth 1784 or the Vanish aura 11327; Hidden = either.
-# - Airborne = Death from Above was cast under 1.8 s ago (`ms_since_cast`, stamped by the bot's own casts; the flight
-#   lasts about 1.75 s: rise, slow fall, dive); late in the flight = the dive, 1.2 s or more since the cast. A GCD row
+# - Airborne = Death from Above was cast under 1.55 s ago (`ms_since_cast`, stamped by the bot's own casts; the flight
+#   lasts about 1.3 s: rise, slow fall, dive); late in the flight = the dive, 0.9 s or more since the cast. A GCD row
 #   never plays while airborne (the core pacifies the rogue in the air: no attacks, no casts).
 # - Dance soon = Shadow Dance, or Death from Above, has 4 s or less of cooldown (each only when the bot knows it:
 #   `cooldown()` reads 0 for an unknown spell).
@@ -64,10 +64,10 @@ conditions:
   # Shadow Dance's aura (Shadowed); Stealth or Vanish (stealthed)
   shadowed: aura(self, 51713)
   stealthed: aura(self, "1784,11327")
-  # The Death from Above flight lasts about 1.75 s from the cast; the bot cannot read its own flight, so the cast stamp
-  # stands in for it (guide Q1: yes)
-  airborne: ms_since_cast(204148) < 1800
-  late_flight: ms_since_cast(204148) >= 1200 and ms_since_cast(204148) < 1750
+  # The Death from Above flight lasts about 1.3 to 1.45 s from the cast (the dive starts at 0.9 s); the bot cannot read
+  # its own flight, so the cast stamp stands in for it (guide Q1: yes)
+  airborne: ms_since_cast(204148) < 1550
+  late_flight: ms_since_cast(204148) >= 900 and ms_since_cast(204148) < 1350
   # Shadow Dance with Death from Above (guide Q1 / rework doc Q6). ACTIVE: Dance late in the flight, so the landing is
   # Hidden (single target order: Death from Above, then Dance in the air). FALLBACK, if part 2 finds the bot cannot cast
   # in the air: replace the line below by
