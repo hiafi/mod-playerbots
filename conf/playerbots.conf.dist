@@ -2007,9 +2007,32 @@ Playerbots.PremadeSpecLink.4.1.45 = 33203201202230110332003
 Playerbots.PremadeSpecLink.4.1.50 = 3320320120223011033200300031001
 Playerbots.PremadeSpecLink.4.1.60 = 3320320120223011033210300032301221
 Playerbots.PremadeSpecLink.4.1.80 = 3320320120223011033210300032301221
-Playerbots.PremadeSpecName.4.2 = combat pve
-Playerbots.PremadeSpecLink.4.2.60 = -025205100003501522310501251
-Playerbots.PremadeSpecLink.4.2.80 = -025205100003501522310501251
+Playerbots.PremadeSpecName.4.2 = combat raid
+Playerbots.PremadeSpecLink.4.2.20 = -2230000301
+Playerbots.PremadeSpecLink.4.2.30 = -323300030100101301
+Playerbots.PremadeSpecLink.4.2.40 = -32332003010010333101100001
+Playerbots.PremadeSpecLink.4.2.45 = -32332003010010333121100031
+Playerbots.PremadeSpecLink.4.2.50 = -32332003010010333121102031020001
+Playerbots.PremadeSpecLink.4.2.60 = -323320030100103331311020310220010331
+Playerbots.PremadeSpecLink.4.2.80 = -323320030100103331311020310220010331
+Playerbots.PremadeSpecName.4.3 = combat packs
+Playerbots.PremadeSpecLink.4.3.20 = -2230000301
+Playerbots.PremadeSpecLink.4.3.30 = -323300030100101301
+Playerbots.PremadeSpecLink.4.3.40 = -32332003010010333101100001
+Playerbots.PremadeSpecLink.4.3.45 = -323320030100103331011000312
+Playerbots.PremadeSpecLink.4.3.50 = -32332003010010333101102031220001
+Playerbots.PremadeSpecLink.4.3.60 = -323320030100103331311020312220011301
+Playerbots.PremadeSpecLink.4.3.80 = -323320030100103331311020312220011301
+Playerbots.PremadeSpecName.4.4 = combat tank
+Playerbots.PremadeSpecLink.4.4.20 = -303103000001
+Playerbots.PremadeSpecLink.4.4.21 = -303103000101
+Playerbots.PremadeSpecLink.4.4.30 = -303303002101103001
+Playerbots.PremadeSpecLink.4.4.35 = -303303002131103001010001
+Playerbots.PremadeSpecLink.4.4.40 = -30330300213110303101100101
+Playerbots.PremadeSpecLink.4.4.45 = -303323002131103031011201010001
+Playerbots.PremadeSpecLink.4.4.50 = -30332300213110303101130131000101
+Playerbots.PremadeSpecLink.4.4.60 = -303323002131103331011321310001212001
+Playerbots.PremadeSpecLink.4.4.80 = -303323002131103331011321310001212001
 Playerbots.PremadeSpecName.4.5 = subtlety raid
 Playerbots.PremadeSpecLink.4.5.20 = --23302001
 Playerbots.PremadeSpecLink.4.5.30 = --2330300103230001
@@ -2516,29 +2539,29 @@ Playerbots.RandomClassSpecIndex.3.5 = 5
 # ROGUE
 #
 
-# Random rogues split 25 / 20 / 45 / 5 / 5 between the Assassination builds (4.0 raid, 4.1 bleed), Combat (4.2) and the
-# Subtlety builds (4.5 raid, 4.6 packs), weights not percent (the roll is urand(1, sum), once, at the first talent
-# point). Slots 4.3 and 4.4 are unused
+# Random rogues split 25 / 20 / 45 / 5 / 5 between the Assassination builds (4.0 raid, 4.1 bleed), Combat (4.2 raid 25,
+# 4.3 packs 15, 4.4 tank 5) and the Subtlety builds (4.5 raid, 4.6 packs), weights not percent (the roll is urand(1,
+# sum), once, at the first talent point)
 # assassination raid
-Playerbots.RandomClassSpecProb.4.0 = 25
+Playerbots.RandomClassSpecProb.4.0 = 18
 Playerbots.RandomClassSpecIndex.4.0 = 0
 # assassination bleed
-Playerbots.RandomClassSpecProb.4.1 = 20
+Playerbots.RandomClassSpecProb.4.1 = 15
 Playerbots.RandomClassSpecIndex.4.1 = 1
-# combat pve
-Playerbots.RandomClassSpecProb.4.2 = 45
+# combat raid
+Playerbots.RandomClassSpecProb.4.2 = 17
 Playerbots.RandomClassSpecIndex.4.2 = 2
-# unused
-Playerbots.RandomClassSpecProb.4.3 = 0
+# combat packs
+Playerbots.RandomClassSpecProb.4.3 = 12
 Playerbots.RandomClassSpecIndex.4.3 = 3
-# unused
-Playerbots.RandomClassSpecProb.4.4 = 0
+# combat tank
+Playerbots.RandomClassSpecProb.4.4 = 5
 Playerbots.RandomClassSpecIndex.4.4 = 4
 # subtlety raid
-Playerbots.RandomClassSpecProb.4.5 = 5
+Playerbots.RandomClassSpecProb.4.5 = 17
 Playerbots.RandomClassSpecIndex.4.5 = 5
 # subtlety packs
-Playerbots.RandomClassSpecProb.4.6 = 5
+Playerbots.RandomClassSpecProb.4.6 = 16
 Playerbots.RandomClassSpecIndex.4.6 = 6
 
 #

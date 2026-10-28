@@ -6,6 +6,8 @@
 
 #include "GenericRogueNonCombatStrategy.h"
 #include "Playerbots.h"
+#include "RogueReworkUtils.h"
+#include "StrategyData.h"
 
 class GenericRogueNonCombatStrategyActionNodeFactory : public NamedObjectFactory<ActionNode>
 {
@@ -54,4 +56,10 @@ void GenericRogueNonCombatStrategy::InitTriggers(std::vector<TriggerNode*>& trig
                         { NextAction("use deadly poison on off hand", ACTION_HIGH - 1) }));
 
     triggers.push_back(new TriggerNode("often", { NextAction("unstealth", 30.0f) }));
+
+    // Rework: the Combat tank build keeps Enforcer Stance on out of combat (and takes no Stealth); the rows are the
+    // "rogue/nc-combat-tank" YAML. Any other rogue bot cancels a stance a respec left up ("rogue/nc-not-tank"). Read
+    // here, not in the constructor, so a rebuilt strategy follows a respec
+    bool const isTank = ai::rogue_rework::IsBotTankBuild(botAI->GetBot());
+    ai::data::AppendRows(isTank ? "rogue/nc-combat-tank" : "rogue/nc-not-tank", triggers);
 }

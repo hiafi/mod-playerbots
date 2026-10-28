@@ -9,6 +9,8 @@
 #include "Item.h"
 #include "ItemTemplate.h"
 #include "Playerbots.h"
+#include "RogueReworkUtils.h"
+#include "TargetTypeUtils.h"
 
 bool RogueTankHoldsValue::Calculate()
 {
@@ -78,6 +80,87 @@ bool RogueDaggerMainHandValue::Calculate()
 
 bool RogueMagicDebuffValue::Calculate() { return botAI->HasAuraToDispel(bot, DISPEL_MAGIC); }
 
+namespace
+{
+// Insult's range: the loose enemy search radius
+constexpr float LOOSE_ENEMY_RANGE = 20.0f;
+// A boss counts as meleeing the bot inside this distance (its melee reach plus the bot's, with a margin)
+constexpr float BOSS_MELEE_RANGE = 8.0f;
+
+// The unit is casting a spell with a cast time or a channel (not an instant one)
+bool IsCasting(Unit* unit)
+{
+    return unit->HasUnitState(UNIT_STATE_CASTING) || unit->GetCurrentSpell(CURRENT_CHANNELED_SPELL) != nullptr;
+}
+
+// A boss attacker is casting
+bool IsCastingBoss(Unit* unit) { return unit && unit->IsAlive() && ai::target::IsBoss(unit) && IsCasting(unit); }
+}  // namespace
+
+ObjectGuid RogueLooseEnemyValue::CalculateGuid()
+{
+    Unit* nearest = nullptr;
+    float nearestDistance = 0.0f;
+    for (ObjectGuid const guid : AI_VALUE(GuidVector, "attackers"))
+    {
+        Unit* unit = botAI->GetUnit(guid);
+        if (!unit || !unit->IsAlive())
+            continue;
+
+        // Attacking a group member who is not the bot and not another tank (a second tank holds its own enemy)
+        Unit* victim = unit->GetVictim();
+        Player* player = victim ? victim->ToPlayer() : nullptr;
+        if (!player || player == bot || !bot->IsInSameRaidWith(player) || PlayerbotAI::IsTank(player))
+            continue;
+
+        float const distance = bot->GetDistance(unit);
+        if (distance > LOOSE_ENEMY_RANGE || (nearest && distance >= nearestDistance) ||
+            (_casterOnly && !IsCasting(unit)) || !ai::rogue_rework::CanInsult(bot, unit))
+            continue;
+
+        nearest = unit;
+        nearestDistance = distance;
+    }
+
+    return nearest ? nearest->GetGUID() : ObjectGuid::Empty;
+}
+
+bool RogueRiposteLitValue::Calculate() { return bot->HasAuraState(AURA_STATE_DEFENSE); }
+
+bool RogueBossCastingValue::Calculate()
+{
+    for (ObjectGuid const guid : AI_VALUE(GuidVector, "attackers"))
+        if (IsCastingBoss(botAI->GetUnit(guid)))
+            return true;
+
+    return false;
+}
+
+bool RogueBossCastingAtMeValue::Calculate()
+{
+    for (ObjectGuid const guid : AI_VALUE(GuidVector, "attackers"))
+    {
+        Unit* unit = botAI->GetUnit(guid);
+        if (IsCastingBoss(unit) && unit->GetVictim() == bot)
+            return true;
+    }
+
+    return false;
+}
+
+bool RogueBossMeleesMeValue::Calculate()
+{
+    for (ObjectGuid const guid : AI_VALUE(GuidVector, "attackers"))
+    {
+        Unit* unit = botAI->GetUnit(guid);
+        if (unit && unit->IsAlive() && ai::target::IsBoss(unit) && unit->GetVictim() == bot &&
+            bot->GetDistance(unit) <= BOSS_MELEE_RANGE)
+            return true;
+    }
+
+    return false;
+}
+
 RogueReworkValueFactory::RogueReworkValueFactory()
 {
     creators["rogue tank holds"] = [](PlayerbotAI* botAI) -> UntypedValue* { return new RogueTankHoldsValue(botAI); };
@@ -91,4 +174,16 @@ RogueReworkValueFactory::RogueReworkValueFactory()
     { return new RogueDaggerMainHandValue(botAI); };
     creators["rogue magic debuff"] = [](PlayerbotAI* botAI) -> UntypedValue*
     { return new RogueMagicDebuffValue(botAI); };
+    creators["rogue loose enemy"] = [](PlayerbotAI* botAI) -> UntypedValue*
+    { return new RogueLooseEnemyValue(botAI, "rogue loose enemy", false); };
+    creators["rogue loose caster"] = [](PlayerbotAI* botAI) -> UntypedValue*
+    { return new RogueLooseEnemyValue(botAI, "rogue loose caster", true); };
+    creators["rogue riposte lit"] = [](PlayerbotAI* botAI) -> UntypedValue*
+    { return new RogueRiposteLitValue(botAI); };
+    creators["rogue boss casting"] = [](PlayerbotAI* botAI) -> UntypedValue*
+    { return new RogueBossCastingValue(botAI); };
+    creators["rogue boss casting at me"] = [](PlayerbotAI* botAI) -> UntypedValue*
+    { return new RogueBossCastingAtMeValue(botAI); };
+    creators["rogue boss melees me"] = [](PlayerbotAI* botAI) -> UntypedValue*
+    { return new RogueBossMeleesMeValue(botAI); };
 }

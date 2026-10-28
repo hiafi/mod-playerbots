@@ -1,0 +1,77 @@
+# The reworked Combat DPS rogue's pack list: "rogue/combat-pack", appended to the "aoe" strategy by
+# RogueReworkAoeStrategy::InitTriggers for a Combat bot that is not a tank (any other rogue gets its own pack list or
+# the stock aoe rows; the tank's is combat-tank-pack.yaml). Source: the guide's "AoE or packs" list
+# (docs/reworks/bot-strategy/rogue-combat-bot-guide.md). Each row queues its action at the relevance when its condition
+# holds. The pack is three or more enemies within 8 yd of the bot, while "aoe" is on (`co -aoe` takes this list away,
+# and the single target rows of combat.yaml, which carry `not pack`, take over). With two enemies the single target list
+# plays, plus its own Blade Flurry row.
+#
+# Relevance: normal + 9.995 .. 9.9, above the single list's normal + 9.9 .. 9.4 (which does not hold in a pack) and
+# under the stealthed opener (normal + 9.99, which is not gated on `pack`: an Ambush from Stealth on the pull goes
+# first; `rot` keeps a stealthed bot out of the pack rows until it has had its chance).
+#
+# Ids: Blade Flurry 13877, Blade Rush 203980, Slice and Dice 5171, Killing Spree 51690, Between the Eyes 203959, Pistol
+# Shot 203958, Fan of Knives 51723. Auras: Opportunity 203983, Primed Powder 203985, Anticipation 203997.
+#
+# Guide lines, in order: 1 Blade Flurry, 2 Blade Rush, 3 Slice and Dice (the single line 1), 4 Killing Spree at 5 points
+# and 25 energy (no Adrenaline Rush condition: it hops), 5 Between the Eyes at 5 points with Powder 4 or more, 6
+# Eviscerate at 5 points, 7 Pistol Shot with Opportunity, 8 Fan of Knives at 50 energy on a big pack (6+) or without
+# Blade Flurry up, 9 Sinister Strike at 40 energy. Never Fan of Knives on fewer than 6 enemies while Blade Flurry is up.
+# Deviations (reported): `room` on Pistol Shot, Fan of Knives and Sinister Strike (no builder at 5 points unless
+# Anticipation can store the point: a point past 7 is lost); Blade Rush out of melee reach only when the tank has the
+# target. No wait row here: every row fires on its condition or is skipped (no BOUND needed).
+strategy: rogue/combat-pack
+class: rogue
+conditions:
+  cp: value("combo::current target")
+  en: value("energy::self target")
+  stealthed: aura(self, "1784,11327")
+  # Mirrors the `rot` of combat.yaml
+  rot: alive(target) and (not stealthed or (combat_time() >= 6000 and value("rogue may open")))
+  # Mirrors the `pack` of combat.yaml
+  pack: value("rogue aoe enabled") and enemies_within(8) >= 3
+  room: cp <= 4 or (known(203965) and stacks(self, 203997) < 2)
+  bf_up: aura(self, 13877)
+  snd_up: aura(self, 5171, own)
+rows:
+  # 1: Blade Flurry when ready and not active (Deft Maneuvers grants 3 to 5 combo points on a pack)
+  - do: cmbt blade flurry
+    when: known(13877) and cooldown(13877) == 0 and pack and rot and not bf_up
+    relevance: normal + 9.995
+  # 2: Blade Rush when ready, within 20 yd; out of melee reach only when the tank has the target (the charge pulls)
+  - do: cmbt pack blade rush
+    when: >-
+      known(203980) and cooldown(203980) == 0 and pack and rot and in_range(target, 20)
+      and (in_range(target, 5) or value("rogue may open"))
+    relevance: normal + 9.99
+  # 3: Slice and Dice as the single list's line 1
+  - do: cmbt pack snd
+    when: >-
+      known("slice and dice") and pack and rot and ((not snd_up and cp >= 1)
+      or (cp >= 4 and remaining(self, 5171, own) < 3000))
+    relevance: normal + 9.985
+  # 4: Killing Spree at 5 points and 25 energy (it hops between enemies)
+  - do: cmbt pack killing spree
+    when: known(51690) and cooldown(51690) == 0 and pack and rot and cp == 5 and en >= 25
+    relevance: normal + 9.98
+  # 5: Between the Eyes at 5 points with Powder 4 or more
+  - do: cmbt pack bte
+    when: known(203959) and pack and rot and cp == 5 and stacks(self, 203985) >= 4
+    relevance: normal + 9.97
+  # 6: Eviscerate at 5 points
+  - do: cmbt pack eviscerate
+    when: known("eviscerate") and pack and rot and cp == 5
+    relevance: normal + 9.96
+  # 7: Pistol Shot while Opportunity has a charge
+  - do: cmbt pack pistol shot
+    when: known(203958) and pack and rot and stacks(self, 203983) >= 1 and room
+    relevance: normal + 9.95
+  # 8: Fan of Knives at 50 energy on a big pack (6 or more enemies) or while Blade Flurry is not up
+  - do: cmbt pack fan of knives
+    when: >-
+      known("fan of knives") and pack and rot and en >= 50 and (enemies_within(8) >= 6 or not bf_up) and room
+    relevance: normal + 9.94
+  # 9: Sinister Strike at 40 energy
+  - do: cmbt pack sinister strike
+    when: known("sinister strike") and pack and rot and en >= 40 and room
+    relevance: normal + 9.9

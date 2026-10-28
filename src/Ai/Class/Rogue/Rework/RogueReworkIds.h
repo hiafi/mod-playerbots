@@ -102,6 +102,51 @@ constexpr uint32 SPELL_INITIATIVE_R1 = 13976;
 constexpr uint32 SPELL_INITIATIVE_R2 = 13979;
 constexpr uint32 SPELL_INITIATIVE_R3 = 13980;
 
+// S3 Combat (keep in sync with core Generated/RogueData.h; the S3a id map). The data/strategies/rogue/combat*.yaml
+// write the same ids as numbers with their DBC names in comments. Buttons cast by id: Pistol Shot, Between the Eyes,
+// Grappling Hook, En Garde, Blade Rush, Enforcer Stance and Insult (the new castables); the rest by name (the
+// spellbook has one castable spell of each name: Sinister Strike, Eviscerate, Slice and Dice, Ghostly Strike, Riposte,
+// Feint, Blade Flurry, Adrenaline Rush, Killing Spree, Kick, Evasion, Sprint, Cloak of Shadows, Fan of Knives).
+constexpr uint32 SPELL_SINISTER_STRIKE = 1752;
+constexpr uint32 SPELL_RIPOSTE = 14251;
+constexpr uint32 SPELL_FEINT = 1966;
+constexpr uint32 SPELL_BLADE_FLURRY = 13877;       // Also the self buff
+constexpr uint32 SPELL_ADRENALINE_RUSH = 13750;    // Also the self buff
+constexpr uint32 SPELL_KILLING_SPREE = 51690;
+constexpr uint32 SPELL_PISTOL_SHOT = 203958;       // Taught with Between the Eyes (a LEARN_SPELL talent rank)
+constexpr uint32 SPELL_BETWEEN_THE_EYES = 203959;
+constexpr uint32 SPELL_GRAPPLING_HOOK = 203963;    // Ground targeted
+constexpr uint32 SPELL_EN_GARDE = 203969;          // Also the self buff the finisher leaves
+constexpr uint32 SPELL_BLADE_RUSH = 203980;
+constexpr uint32 SPELL_ENFORCER_STANCE = 203720;   // Also the stance aura (the tank build's marker)
+constexpr uint32 SPELL_INSULT = 203722;            // The taunt: Enforcer Stance only, shares category 82
+
+// Buffs the rows read: stacks (Opportunity 3, Primed Powder 5, Anticipation 2) or presence
+constexpr uint32 SPELL_OPPORTUNITY_BUFF = 203983;          // Stacks = free empowered Pistol Shots
+constexpr uint32 SPELL_PRIMED_POWDER = 203985;             // Stacks = Between the Eyes' bonus
+constexpr uint32 SPELL_HAIR_TRIGGER_BUFF = 203987;         // The next Pistol Shot deals more (charged)
+constexpr uint32 SPELL_BLADE_RUSH_BUFF = 203990;           // Rush empowered: the next damaging finisher
+constexpr uint32 SPELL_ADRENALINE_RUSH_CELERITY = 203996;  // Celerity's 4 s Adrenaline Rush (a second aura id)
+constexpr uint32 SPELL_ANTICIPATION = 203997;              // Stacks = combo points stored past 5
+constexpr uint32 SPELL_GHOSTLY_VEIL = 203723;              // Charges = Ghostly Strike's absorbs
+
+// Rank spells the rows gate on with known() (a passive talent rank is never in the spellbook). The Between the Eyes
+// marker is the passive that comes with the talent; Deft Maneuvers, Hair Trigger and Improved Riposte are the ranks.
+constexpr uint32 SPELL_BETWEEN_THE_EYES_MARKER = 203957;
+constexpr uint32 SPELL_QUICK_DRAW = 203964;
+constexpr uint32 SPELL_RESTLESS_BLADES = 203965;
+constexpr uint32 SPELL_IMPROVED_RIPOSTE_R1 = 203966;
+constexpr uint32 SPELL_IMPROVED_RIPOSTE_R2 = 203967;
+constexpr uint32 SPELL_IMPROVED_RIPOSTE_R3 = 203968;
+constexpr uint32 SPELL_DEFT_MANEUVERS_R1 = 203973;
+constexpr uint32 SPELL_DEFT_MANEUVERS_R2 = 203974;
+constexpr uint32 SPELL_HAIR_TRIGGER_R1 = 203975;
+constexpr uint32 SPELL_HAIR_TRIGGER_R2 = 203976;
+constexpr uint32 SPELL_IMPROVED_FEINT = 203979;
+
+// Grappling Hook: the bot casts it at a ground point this far short of the target, on the line from the bot
+constexpr float GRAPPLE_STOP_SHORT_YD = 3.0f;
+
 }  // namespace ai::rogue_rework
 
 #endif

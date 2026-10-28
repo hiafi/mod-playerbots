@@ -33,10 +33,11 @@ public:
     uint32 GetType() const override { return CombatStrategy::GetType() | STRATEGY_TYPE_DPS | STRATEGY_TYPE_MELEE; }
 };
 
-// The "aoe" strategy: an Assassination bot gets the pack list of "rogue/assassination-pack" and a Subtlety bot that of
-// "rogue/subtlety-pack" (each gates itself on `value("rogue aoe enabled")`, so `co -aoe` turns it off), every other
-// rogue the stock rows (a Blade Flurry and a Fan of Knives on the stock aoe triggers). The Subtlety shell is
-// RogueReworkSubtletyStrategy (RogueReworkSubtletyStrategy.h).
+// The "aoe" strategy: an Assassination bot gets the pack list of "rogue/assassination-pack", a Subtlety bot that of
+// "rogue/subtlety-pack", a Combat DPS bot "rogue/combat-pack" and the Combat tank "rogue/combat-tank-pack" (each gates
+// itself on `value("rogue aoe enabled")`, so `co -aoe` turns it off), every other rogue the stock rows (a Blade Flurry
+// and a Fan of Knives on the stock aoe triggers). The Subtlety shell is RogueReworkSubtletyStrategy, the Combat ones
+// RogueReworkCombatStrategy / RogueReworkCombatTankStrategy (RogueReworkCombatStrategy.h).
 class RogueReworkAoeStrategy : public RogueAoeStrategy
 {
 public:

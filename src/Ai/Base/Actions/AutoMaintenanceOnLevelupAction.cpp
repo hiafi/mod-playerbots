@@ -11,6 +11,7 @@
 #include "PlayerbotAIConfig.h"
 #include "PlayerbotFactory.h"
 #include "RandomPlayerbotMgr.h"
+#include "RogueReworkUtils.h"
 #include "SharedDefines.h"
 #include "SpellMgr.h"
 
@@ -21,6 +22,12 @@ bool AutoMaintenanceOnLevelupAction::Execute(Event /*event*/)
     // Rework: a Blood Death Knight becomes a tank at level 10 (Blood Presence). The engines cache the strategy type
     // when they start, so rebuild the strategies once, now that the talents are picked
     if (bot->getClass() == CLASS_DEATH_KNIGHT && bot->GetLevel() == ai::dk_rework::TANK_MIN_LEVEL &&
+        sRandomPlayerbotMgr.IsRandomBot(bot))
+        botAI->ResetStrategies();
+
+    // Rework: a rogue's spec, and with it the tank role of the Combat tank build, starts with its first talent point.
+    // The engines cache the strategy type when they start, so rebuild the strategies once, now that it is picked
+    if (bot->getClass() == CLASS_ROGUE && bot->GetLevel() == ai::rogue_rework::FIRST_TALENT_LEVEL &&
         sRandomPlayerbotMgr.IsRandomBot(bot))
         botAI->ResetStrategies();
 

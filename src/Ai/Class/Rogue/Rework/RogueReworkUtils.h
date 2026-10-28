@@ -10,6 +10,7 @@
 #include "Common.h"
 
 class Player;
+class Unit;
 
 namespace ai::rogue_rework
 {
@@ -32,14 +33,42 @@ bool IsAssassinationBuild(Player* bot);
 // is an Assassination one (IsAssassinationBuild), so this is false below level 10.
 bool IsSubtletyBuild(Player* bot);
 
-// The premade slot (4.<slot>) a rogue levels up on: 4.0 / 4.1 Assassination, 4.2 Combat, 4.5 / 4.6 Subtlety. The
+// The bot is a Combat-tab rogue: the tab with the most points is the second (tab 181). A bot with no talent points is
+// an Assassination one (IsAssassinationBuild), so this is false below level 10.
+bool IsCombatBuild(Player* bot);
+
+// The rogue tanks: the rework's one answer to "is this rogue a tank", read by PlayerbotAI::IsTank / IsDps, AiFactory's
+// roles and the LFG roles. A human (no PlayerbotAI) is a tank only in Enforcer Stance (203720), the explicit opt-in;
+// never by talents (Riposte is also a DPS's solo button). A bot is one by IsBotTankBuild.
+bool IsTankBuild(Player* player);
+
+// The bot's build tanks: read where the caller knows the player is a bot (the strategy lists in AiFactory, which the
+// PlayerbotAI constructor runs before the bot is registered, the non-combat, aoe and pull strategies). True for
+//  - a Combat-tab rogue that knows Riposte (14251) or En Garde (203969): the two talents only the tank build takes
+//    early (the DPS links hold neither), the build's mark from level 20;
+//  - a Combat-tab rogue whose stored premade slot is 4.4 (specNo 5): the levels before those talents arrive, and the
+//    tick of the level-up itself when the factory decides which link to top up. The stored slot is rewritten on a spec
+//    change, so a respec leaves the clause.
+// Enforcer Stance is no clause: a respec keeps the saved aura, and a non-tank bot cancels it out of combat ("rogue/
+// nc-not-tank"). The Combat-tab test reads the talent map, so it comes last.
+bool IsBotTankBuild(Player* bot);
+
+// The target is one Insult (203722) would land on: alive, not a player, a valid attack target for the spell, and not
+// immune to its taunt effects (a raid boss, the sim's Raid Boss: the stock taunt-immunity pre-check). The loose enemy
+// value and the pull use it.
+bool CanInsult(Player* bot, Unit* target);
+
+// The premade slot (4.<slot>) a rogue levels up on: 4.0 / 4.1 Assassination, 4.2 / 4.3 / 4.4 Combat, 4.5 / 4.6
+// Subtlety. The
 // factory's level-up path picks the slot by the leading tab (0, 1 or 2), which would send every Subtlety bot to the
 // Combat link and every bleed bot to 4.0, so a rogue keeps the slot stored in "specNo" (slot + 1, written at creation
 // and on a spec change) while it belongs to the leading tab, else the tab's first slot. NO_PREMADE_SLOT for a bot that
 // is no rogue, and for a rogue with no talent yet whose stored slot is no premade (the factory then rolls one).
+constexpr uint8 FIRST_TALENT_LEVEL = 10;  // The level of a rogue's first talent point: its spec (and role) starts here
 constexpr uint32 NO_PREMADE_SLOT = 0xFFFFFFFF;
 constexpr uint32 ASSASSINATION_SLOT = 0;  // 4.0 raid, 4.1 bleed
-constexpr uint32 COMBAT_SLOT = 2;         // 4.2 (4.3 and 4.4 are unused)
+constexpr uint32 COMBAT_SLOT = 2;         // 4.2 raid; 4.3 packs and 4.4 tank follow it (any slot below Subtlety's)
+constexpr uint32 COMBAT_TANK_SLOT = 4;    // 4.4 (stored as specNo 5): the tank build, IsBotTankBuild's slot clause
 constexpr uint32 SUBTLETY_SLOT = 5;       // 4.5 raid, 4.6 packs
 constexpr uint32 LAST_PREMADE_SLOT = 6;
 uint32 PremadeSlot(Player* bot);

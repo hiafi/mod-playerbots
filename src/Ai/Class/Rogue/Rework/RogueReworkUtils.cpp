@@ -9,8 +9,11 @@
 #include "Player.h"
 #include "PlayerbotAI.h"
 #include "PlayerbotAIConfig.h"
+#include "Playerbots.h"
 #include "RandomPlayerbotMgr.h"
 #include "RogueReworkIds.h"
+#include "SpellInfo.h"
+#include "SpellMgr.h"
 #include <array>
 #include <initializer_list>
 
@@ -82,12 +85,72 @@ bool IsAssassinationBuild(Player* bot) { return bot && AiFactory::GetPlayerSpecT
 
 bool IsSubtletyBuild(Player* bot) { return bot && AiFactory::GetPlayerSpecTab(bot) == ROGUE_TAB_SUBTLETY; }
 
+bool IsCombatBuild(Player* bot) { return bot && AiFactory::GetPlayerSpecTab(bot) == ROGUE_TAB_COMBAT; }
+
+bool IsBotTankBuild(Player* bot)
+{
+    if (!bot || bot->getClass() != CLASS_ROGUE)
+        return false;
+
+    // The build alone: the two talents or the stored slot, then the Combat tab. Enforcer Stance is no clause for a bot:
+    // it is the tank rows' output, not their input, and a respec keeps the saved aura (a non-tank bot cancels it, the
+    // "rogue/nc-not-tank" row). A spec-tab lookup walks the talent map, so a rogue that is not a candidate (no Riposte,
+    // no En Garde, not stored on 4.4) never pays for it. HasSpell: both are castable talents
+    bool const knowsTankTalent = bot->HasSpell(SPELL_RIPOSTE) || bot->HasSpell(SPELL_EN_GARDE) ||
+                                 bot->HasTalent(SPELL_RIPOSTE, bot->GetActiveSpec()) ||
+                                 bot->HasTalent(SPELL_EN_GARDE, bot->GetActiveSpec());
+
+    // The stored slot is the premade slot + 1 (PremadeSlot); 4.4 before the build's talents arrive
+    if (!knowsTankTalent && sRandomPlayerbotMgr.GetValue(bot, "specNo") != COMBAT_TANK_SLOT + 1)
+        return false;
+
+    return IsCombatBuild(bot);
+}
+
+bool IsTankBuild(Player* player)
+{
+    if (!player || player->getClass() != CLASS_ROGUE)
+        return false;
+
+    // A human: Enforcer Stance only, the explicit opt-in. Never by talents: Riposte is also a DPS's solo button, and a
+    // human is not bound to the premade links
+    if (!GET_PLAYERBOT_AI(player))
+        return player->HasAura(SPELL_ENFORCER_STANCE);
+
+    return IsBotTankBuild(player);
+}
+
+bool CanInsult(Player* bot, Unit* target)
+{
+    if (!bot || !target || !target->IsAlive() || target->IsPlayer() || !target->IsInWorld())
+        return false;
+
+    SpellInfo const* taunt = sSpellMgr->GetSpellInfo(SPELL_INSULT);
+    if (!taunt || !bot->IsValidAttackTarget(target, taunt))
+        return false;
+
+    // The taunt's ATTACK_ME effect or its MOD_TAUNT aura: an immune target ignores the taunt (raid bosses, the sim's
+    // Raid Boss), as the core's own pre-check sees it
+    for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+    {
+        SpellEffectInfo const& effect = taunt->Effects[i];
+        if (effect.Effect != SPELL_EFFECT_ATTACK_ME && effect.ApplyAuraName != SPELL_AURA_MOD_TAUNT)
+            continue;
+
+        if (target->IsImmunedToSpellEffect(taunt, i, bot))
+            return false;
+    }
+
+    return true;
+}
+
 uint32 PremadeSlot(Player* bot)
 {
     if (!bot || bot->getClass() != CLASS_ROGUE)
         return NO_PREMADE_SLOT;
 
-    // The stored value is the premade slot + 1; only a slot with a premade name counts (4.3 and 4.4 are unused)
+    // The stored value is the premade slot + 1; only a slot with a premade name counts (a stale value from before the
+    // rework, or a slot no link names, falls back to the tab's first slot)
     uint32 const specNo = sRandomPlayerbotMgr.GetValue(bot, "specNo");
     uint32 slot = specNo >= 1 && specNo - 1 <= LAST_PREMADE_SLOT ? specNo - 1 : NO_PREMADE_SLOT;
     if (slot != NO_PREMADE_SLOT && sPlayerbotAIConfig.PremadeSpecName[CLASS_ROGUE][slot].empty())

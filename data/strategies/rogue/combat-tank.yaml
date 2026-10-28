@@ -1,0 +1,195 @@
+# The reworked Combat tank rogue's rows (the 4.4 build, Enforcer Stance): "rogue/combat-tank", appended to the "combat
+# tank" combat strategy by RogueReworkCombatTankStrategy::InitTriggers (after MeleeCombatStrategy's walk to melee),
+# which AiFactory adds when ai::rogue_rework::IsBotTankBuild holds. The pack list is
+# data/strategies/rogue/combat-tank-pack.yaml (appended to the "aoe" strategy) and the out-of-combat rows are
+# nc-combat-tank.yaml (appended to the rogue non-combat strategy). Source: the Combat bot guide's "Tank (Enforcer
+# Stance)", "Pulling" and "Leveling" sections and the tank lines of "Off the global cooldown" and "Defensive"
+# (docs/reworks/bot-strategy/rogue-combat-bot-guide.md; the Combat rework doc wins over it, and the S3 handoff section 2
+# wins over both). Each row queues its action at the relevance when its condition holds (`when`, the expression language
+# of StrategyExpression.h) or when an existing C++ trigger fires (`trigger`). Execution order is by relevance, not by
+# position in this file. Actions named "cmbt ..." are RowCheckedAction (they re-check their own row before casting); the
+# poison rows and the kicks are the stock actions. Rows that can hold in the same tick never share an action name.
+#
+# Relevance bands. Off the global cooldown (checked every update): Enforcer Stance high + 9 (a death or the sim's
+# iteration reset strips it, as Bear Form: it goes back on at once), Insult high + 8, Adrenaline Rush high + 6.5, the
+# poison recasts high + 6 / 5.5, Grappling Hook high + 4, Sprint high + 2, the kicks interrupt + 2 / + 1. Defensive:
+# Evasion emergency + 1, Cloak of Shadows emergency + 2. Then the single list, on the global cooldown, in the normal
+# band: En Garde 9.99, Riposte 9.98, Feint 9.97, Slice and Dice 9.9, Blade Rush 9.85, Killing Spree 9.8, Ghostly Strike
+# on a low Veil 9.75, Pistol Shot 9.7, Between the Eyes 9.65, Eviscerate 9.6, Ghostly Strike 9.55, the stall breaker
+# 9.0. The pack list (combat-tank-pack.yaml) adds Blade Flurry 9.995, the loose caster shots 9.96 / 9.955 and Fan of
+# Knives 9.58 to these. Nothing is at or above the pull sequence (105): the pull is the "pull" strategy
+# (RoguePullStrategy: Pistol Shot, else Insult).
+#
+# Spell ids (DBC names; by name where the spellbook has one castable spell of that name, else by id): Enforcer Stance
+# 203720 (by id; also the stance aura), Insult 203722 (by id), En Garde 203969 (by id; also its self aura), Riposte
+# 14251, Feint 1966, Slice and Dice 5171, Blade Rush 203980 (by id), Killing Spree 51690, Ghostly Strike 14278, Pistol
+# Shot 203958 (by id), Between the Eyes 203959 (by id), Eviscerate 2098, Adrenaline Rush 13750 (Celerity's copy 203996),
+# Kick 1766, Evasion 5277, Sprint 2983, Cloak of Shadows 31224, Grappling Hook 203963. Auras on the bot: En Garde
+# 203969, Ghostly Veil 203723 (charges), Opportunity 203983 (stacks), Primed Powder 203985 (stacks), Anticipation 203997
+# (stacks). Talent ranks (known() reads the talent): Improved Feint 203979, Restless Blades 203965 (Anticipation).
+#
+# Definitions against what the bot can read (open questions Q1-Q8 are answered in the S3b report):
+# - Riposte lit = `rogue riposte lit` (the defense aura state: the bot dodged or parried in the last 5 s; the core sets
+# it   for a dodge too through the rework's OnPlayerIsClass hook) with Riposte off cooldown. A cast on an unlit Riposte
+# is   refused by the core, which would only waste the basket; the stock `riposte` trigger reads the same refusal.
+# - A boss casting = `rogue boss casting` (a boss in the group's fight with a cast or a channel in progress: Feint's
+#   proxy for an area spell, guide Q5); a boss casting at the bot = `rogue boss casting at me`; a boss meleeing the bot
+# =   `rogue boss melees me`. Enemies attacking the bot = value("my attacker count").
+# - Loose enemy = `rogue loose enemy` (an enemy within 20 yd attacking a group member that is not the bot and not
+#   another tank, not taunt-immune: the guide's Q6 answered "no": a second tank's enemy is never Insulted). Veil low =
+#   Ghostly Veil's charges are 1 or fewer (a missing aura reads 0).
+# - En Garde "more than 5 s left" / "under 3 s" = `remaining(self, 203969, own)`; before En Garde is learned (level 35
+# on   the 4.4 link) the clause is dropped (`ger_ok`), as the Slice and Dice one before Slice and Dice.
+#
+# Never (guide), as row conditions: never leave Enforcer Stance (the stance row; no row removes it), never let En Garde
+# drop at 4+ points (row 1); no Feint expecting a threat drop (it is a damage taken cut: the rows read it that way); no
+# Pistol Shot without Opportunity in melee (no ranged Pistol Shot row: the tank's Pistol Shot is the pull and the
+# Opportunity line); no finisher below 5 points except En Garde / Slice and Dice at 4+.
+#
+# BOUNDED WAITS (S2b F1):
+# - Eviscerate (5 points) waits for En Garde > 5 s and Slice and Dice > 10 s: En Garde at 4+ points fires at < 3 s,
+# Slice   and Dice at < 3 s, so a 5 point bot waits at most 2 s (En Garde, 5 s to 3 s) or 7 s (Slice and Dice, 10 s to 3
+# s) for   a clock that runs down, and spends its energy on the builders meanwhile; the stall breaker (row S1) keeps one
+#   builder going at 5 points when Anticipation can store the point, so a 5 point bot never idles on energy.
+# - Between the Eyes and Killing Spree wait only for En Garde > 5 s (the same 2 s bound) and for Powder / the cooldown.
+# - Adrenaline Rush holds only while Killing Spree is 0-6 s from ready (the cooldown runs down: at most 6 s).
+# Deviations (reported): the stall breaker (S1); Cloak and Evasion add the guide's general (health) triggers to the tank
+# ones; Blade Rush has no engaged gate (the tank starts the fight).
+strategy: rogue/combat-tank
+class: rogue
+conditions:
+  target_alive: alive(target)
+  cp: value("combo::current target")
+  en: value("energy::self target")
+  in_combat: value("combat::self target")
+  room: cp <= 4 or (known(203965) and stacks(self, 203997) < 2)
+  stance_up: aura(self, 203720)
+  # En Garde more than 5 s away from expiring (or not learned yet: the clause drops)
+  ger_ok: not known(203969) or remaining(self, 203969, own) > 5000
+  # Slice and Dice over 10 s left (or not learned: the clause drops)
+  snd_ok: not known("slice and dice") or remaining(self, 5171, own) > 10000
+  veil_low: charges(self, 203723) <= 1
+  grapple_ready: known(203963) and cooldown(203963) == 0
+  # Killing Spree is known and between 0 and 6 s from ready: Adrenaline Rush waits (bounded: the cooldown runs down)
+  spree_hold: known(51690) and cooldown(51690) > 0 and cooldown(51690) <= 6000
+rows:
+  # ---- Setup: the poisons (out of combat too: the non-combat strategy has the same rows) ----
+  - do: use instant poison on main hand
+    trigger: main hand weapon no enchant
+    relevance: high + 6
+  - do: use deadly poison on off hand
+    trigger: off hand weapon no enchant
+    relevance: high + 5.5
+
+  # ---- Off the global cooldown (guide: checked every update) ----
+  # Enforcer Stance back on whenever it is missing (+105% threat, -10% damage; it is the toggle off the global
+  # cooldown). The sim's iteration reset and a death strip it
+  - do: cmbt enforcer stance
+    when: known(203720) and cooldown(203720) == 0 and not stance_up
+    relevance: high + 9
+  # O3: Insult on a loose enemy within 20 yd (attacking a healer or a damage dealer) when ready; it needs the stance
+  - do: cmbt insult
+    when: >-
+      known(203722) and cooldown(203722) == 0 and stance_up and alive("rogue loose enemy")
+    relevance: high + 8
+  # O1: Adrenaline Rush in combat for threat (the pull), unless Killing Spree is 1-6 s from ready (BOUND: 6 s)
+  - do: cmbt adrenaline rush
+    when: >-
+      known(13750) and cooldown(13750) == 0 and in_combat and target_alive and not spree_hold
+    relevance: high + 6.5
+  # O2: Kick (the stock triggers)
+  - do: kick
+    trigger: kick
+    relevance: interrupt + 2
+  - do: kick on enemy healer
+    trigger: kick on enemy healer
+    relevance: interrupt + 1
+  # O4: Grappling Hook to close on a target over 15 yd away (the tank's pull: Pistol Shot, then Blade Rush or the hook)
+  - do: cmbt grappling hook
+    when: >-
+      known(203963) and cooldown(203963) == 0 and target_alive and in_combat and not in_range(target, 15)
+      and in_range(target, 40)
+    relevance: high + 4
+  # O6: Sprint when the bot must move over 20 yd and Grappling Hook is not ready
+  - do: cmbt sprint
+    when: >-
+      known("sprint") and cooldown("sprint") == 0 and target_alive and not in_range(target, 20) and moving(self)
+      and not grapple_ready
+    relevance: high + 2
+
+  # ---- Defensive ----
+  # O5: Evasion below 35% health while being meleed; below 50% while a boss melees the bot
+  - do: cmbt evasion
+    when: >-
+      known("evasion") and cooldown("evasion") == 0
+      and ((health_pct(self) < 35 and value("my attacker count") >= 1)
+      or (health_pct(self) < 50 and value("rogue boss melees me")))
+    relevance: emergency + 1
+  # Cloak of Shadows with a harmful magic effect on the bot below 50% health, or a boss casting at the bot. On the
+  # global cooldown; ahead of the list
+  - do: cmbt cloak of shadows
+    when: >-
+      known(31224) and cooldown(31224) == 0
+      and ((health_pct(self) < 50 and value("rogue magic debuff")) or value("rogue boss casting at me"))
+    relevance: emergency + 2
+
+  # ---- Single target (Tank list) ----
+  # 1: En Garde at 4+ points when missing or under 3 s left (it is enemy-targeted: cast on the target)
+  - do: cmbt en garde
+    when: known(203969) and target_alive and cp >= 4 and remaining(self, 203969, own) < 3000
+    relevance: normal + 9.99
+  # 2: Riposte when lit and ready, 10 energy
+  - do: cmbt riposte
+    when: >-
+      known(14251) and target_alive and value("rogue riposte lit") and cooldown(14251) == 0 and en >= 10
+    relevance: normal + 9.98
+  # 3: Feint when ready, 35 energy and a boss in combat is casting, or 3+ enemies attack the bot, or (Improved Feint)
+  # health is below 60%
+  - do: cmbt feint
+    when: >-
+      known("feint") and cooldown("feint") == 0 and en >= 35 and in_combat
+      and (value("rogue boss casting") or value("my attacker count") >= 3
+      or (known(203979) and health_pct(self) < 60))
+    relevance: normal + 9.97
+  # 4: Slice and Dice at 4+ points when missing or under 3 s left
+  - do: cmbt snd
+    when: >-
+      known("slice and dice") and target_alive and cp >= 4 and remaining(self, 5171, own) < 3000
+    relevance: normal + 9.9
+  # 5: Blade Rush when ready, within 20 yd (it does not move a rogue already in reach)
+  - do: cmbt blade rush
+    when: known(203980) and cooldown(203980) == 0 and target_alive and in_range(target, 20)
+    relevance: normal + 9.85
+  # 6: Killing Spree at 5 points and 25 energy with En Garde over 5 s left
+  - do: cmbt killing spree
+    when: >-
+      known(51690) and cooldown(51690) == 0 and target_alive and cp == 5 and en >= 25 and ger_ok
+    relevance: normal + 9.8
+  # 7: Ghostly Strike when Veil is low, 40 energy, 4 points or fewer
+  - do: cmbt ghostly strike veil
+    when: known(14278) and target_alive and veil_low and en >= 40 and cp <= 4
+    relevance: normal + 9.75
+  # 8: Pistol Shot while Opportunity has a charge
+  # S3b part 2 tune: at 90+ energy the free shot waits (a builder that spends energy goes first; energy sat at the cap
+  # 14% of the fight in the sims). Not a wait that can stall: the shot fires again as soon as energy is under 90.
+  - do: cmbt pistol shot opportunity
+    when: known(203958) and target_alive and stacks(self, 203983) >= 1 and room and en < 90
+    relevance: normal + 9.7
+  # 9: Between the Eyes at 5 points with Powder 4+ and En Garde over 5 s left
+  - do: cmbt bte loaded
+    when: known(203959) and target_alive and cp == 5 and stacks(self, 203985) >= 4 and ger_ok
+    relevance: normal + 9.65
+  # 10: Eviscerate at 5 points with En Garde over 5 s and Slice and Dice over 10 s left (BOUND: 2 s / 7 s)
+  - do: cmbt eviscerate
+    when: known("eviscerate") and target_alive and cp == 5 and ger_ok and snd_ok
+    relevance: normal + 9.6
+  # 11: Ghostly Strike at 55 energy (15 are kept for Riposte), 4 points or fewer
+  - do: cmbt ghostly strike
+    when: known(14278) and target_alive and en >= 55 and cp <= 4
+    relevance: normal + 9.55
+  # S1 (stall breaker, deviation): a 5 point bot that is waiting on En Garde / Slice and Dice keeps building while
+  # Anticipation (Restless Blades) can store the point, so it never idles on capped energy
+  - do: cmbt ghostly strike stall
+    when: >-
+      known(14278) and target_alive and en >= 55 and cp == 5 and known(203965) and stacks(self, 203997) < 2
+    relevance: normal + 9.0

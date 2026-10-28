@@ -29,6 +29,10 @@ void RogueReworkAoeStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         ai::data::AppendRows("rogue/assassination-pack", triggers);
     else if (ai::rogue_rework::IsSubtletyBuild(botAI->GetBot()))
         ai::data::AppendRows("rogue/subtlety-pack", triggers);
+    else if (ai::rogue_rework::IsBotTankBuild(botAI->GetBot()))
+        ai::data::AppendRows("rogue/combat-tank-pack", triggers);
+    else if (ai::rogue_rework::IsCombatBuild(botAI->GetBot()))
+        ai::data::AppendRows("rogue/combat-pack", triggers);
     else
         RogueAoeStrategy::InitTriggers(triggers);
 }

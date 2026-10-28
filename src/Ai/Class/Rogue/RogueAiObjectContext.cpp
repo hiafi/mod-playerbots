@@ -17,10 +17,13 @@
 #include "RogueFinishingActions.h"
 #include "RogueOpeningActions.h"
 #include "RogueReworkActions.h"
+#include "RogueReworkCombatActions.h"
+#include "RogueReworkCombatStrategy.h"
 #include "RogueReworkStrategies.h"
 #include "RogueReworkSubtletyActions.h"
 #include "RogueReworkSubtletyStrategy.h"
 #include "RogueReworkTriggers.h"
+#include "RogueReworkUtils.h"
 #include "RogueReworkValues.h"
 #include "RogueTriggers.h"
 
@@ -40,10 +43,13 @@ public:
 
 private:
     static Strategy* boost(PlayerbotAI* botAI) { return new RogueBoostStrategy(botAI); }
-    // Rework: an Assassination bot gets the reworked pack list, every other rogue the stock aoe rows
+    // Rework: every spec's bot gets its reworked pack list (the Combat tank its own), any other rogue the stock aoe
+    // rows
     static Strategy* aoe(PlayerbotAI* botAI) { return new RogueReworkAoeStrategy(botAI); }
     static Strategy* nc(PlayerbotAI* botAI) { return new GenericRogueNonCombatStrategy(botAI); }
-    static Strategy* pull(PlayerbotAI* botAI) { return new PullStrategy(botAI, "shoot"); }
+    // Rework: only the Combat tank build pulls (AiFactory adds the strategy to it alone): Pistol Shot, else Insult,
+    // else the stock pull
+    static Strategy* pull(PlayerbotAI* botAI) { return new RoguePullStrategy(botAI); }
     static Strategy* stealthed(PlayerbotAI* botAI) { return new StealthedRogueStrategy(botAI); }
     static Strategy* stealth(PlayerbotAI* botAI) { return new StealthStrategy(botAI); }
     static Strategy* cc(PlayerbotAI* botAI) { return new RogueCcStrategy(botAI); }
@@ -55,14 +61,19 @@ public:
     RogueCombatStrategyFactoryInternal() : NamedObjectContext<Strategy>(false, true)
     {
         creators["combat"] = &RogueCombatStrategyFactoryInternal::combat;
+        creators["combat tank"] = &RogueCombatStrategyFactoryInternal::combat_tank;
         creators["assassin"] = &RogueCombatStrategyFactoryInternal::assassin;
         creators["subtlety"] = &RogueCombatStrategyFactoryInternal::subtlety;
     }
 
 private:
-    static Strategy* combat(PlayerbotAI* botAI) { return new CombatRogueStrategy(botAI); }
-    // Rework: "assassin" is the reworked Assassination rotation and "subtlety" the reworked Subtlety one. The stock
+    // Rework: "combat" is the reworked Combat DPS rotation and "combat tank" the tank build's (AiFactory picks the name
+    // by ai::rogue_rework::IsBotTankBuild). Two names, not one creator that picks: the context caches a strategy per
+    // name, so only a second name lets a respec's ResetStrategies swap the shell. "assassin" is the reworked
+    // Assassination rotation and "subtlety" the reworked Subtlety one. The stock CombatRogueStrategy,
     // AssassinationRogueStrategy and SubtletyRogueStrategy stay compiled and registered under no name
+    static Strategy* combat(PlayerbotAI* botAI) { return new RogueReworkCombatStrategy(botAI); }
+    static Strategy* combat_tank(PlayerbotAI* botAI) { return new RogueReworkCombatTankStrategy(botAI); }
     static Strategy* assassin(PlayerbotAI* botAI) { return new RogueReworkAssassinationStrategy(botAI); }
     static Strategy* subtlety(PlayerbotAI* botAI) { return new RogueReworkSubtletyStrategy(botAI); }
 };
@@ -298,6 +309,7 @@ void RogueAiObjectContext::BuildSharedActionContexts(
     actionContexts.Add(new RogueAiObjectContextInternal());
     actionContexts.Add(new RogueReworkActionFactory());
     actionContexts.Add(new RogueSubtletyActionFactory());
+    actionContexts.Add(new RogueCombatActionFactory());
 }
 
 void RogueAiObjectContext::BuildSharedTriggerContexts(
