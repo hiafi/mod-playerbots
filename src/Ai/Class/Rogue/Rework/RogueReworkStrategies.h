@@ -46,4 +46,18 @@ public:
     void InitTriggers(std::vector<TriggerNode*>& triggers) override;
 };
 
+// Registered as "boost". Empty on purpose: the stock RogueBoostStrategy casts Adrenaline Rush on cooldown and Blade
+// Flurry on one target, past the rework rows' gates. Every rogue bot plays a rework shell (AiFactory maps each tab to
+// "assassin", "combat" / "combat tank" or "subtlety"; a bot with no talents is an Assassination one), whose rows own
+// the cooldowns: Adrenaline Rush and Killing Spree (combat.yaml, combat-tank.yaml), Blade Flurry (combat.yaml's pair
+// row, combat-pack.yaml, combat-tank-pack.yaml), Cold Blood (assassination.yaml), Shadow Dance and Preparation
+// (subtlety.yaml), Vanish (assassination.yaml, subtlety.yaml).
+class RogueReworkBoostStrategy : public Strategy
+{
+public:
+    RogueReworkBoostStrategy(PlayerbotAI* botAI) : Strategy(botAI) {}
+
+    std::string const getName() override { return "boost"; }
+};
+
 #endif

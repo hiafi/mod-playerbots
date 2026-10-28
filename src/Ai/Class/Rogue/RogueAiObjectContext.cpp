@@ -42,7 +42,9 @@ public:
     }
 
 private:
-    static Strategy* boost(PlayerbotAI* botAI) { return new RogueBoostStrategy(botAI); }
+    // Rework: empty, every rogue bot's rework rows own its cooldowns (RogueReworkStrategies.h). The stock
+    // RogueBoostStrategy stays compiled and registered under no name
+    static Strategy* boost(PlayerbotAI* botAI) { return new RogueReworkBoostStrategy(botAI); }
     // Rework: every spec's bot gets its reworked pack list (the Combat tank its own), any other rogue the stock aoe
     // rows
     static Strategy* aoe(PlayerbotAI* botAI) { return new RogueReworkAoeStrategy(botAI); }
