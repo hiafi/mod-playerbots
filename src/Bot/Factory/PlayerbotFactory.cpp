@@ -3656,7 +3656,8 @@ void PlayerbotFactory::InitClassSpells()
                 bot->learnSpell(355, false);   // Taunt
                 bot->learnSpell(7386, false);  // Sunder Armor
             }
-            if (level >= 30)
+            // Custom: warrior-rework W0a - the trainer now teaches Berserker Stance at level 16
+            if (level >= 16)
                 bot->learnSpell(2458, false);  // Berserker Stance
             break;
         case CLASS_PALADIN:

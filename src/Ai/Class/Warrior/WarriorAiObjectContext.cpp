@@ -99,6 +99,8 @@ public:
         creators["shockwave on snare target"] = &WarriorTriggerFactoryInternal::shockwave_on_snare_target;
         creators["taste for blood"] = &WarriorTriggerFactoryInternal::taste_for_blood;
         creators["thunder clap and rage"] = &WarriorTriggerFactoryInternal::thunderclap_and_rage;
+        // Custom: warrior-rework W0a - Cleave is a GCD strike now, only at 60+ rage on packs
+        creators["light aoe high rage"] = &WarriorTriggerFactoryInternal::light_aoe_high_rage;
         creators["intercept can cast"] = &WarriorTriggerFactoryInternal::intercept_can_cast;
         creators["intercept and far enemy"] = &WarriorTriggerFactoryInternal::intercept_and_far_enemy;
         creators["intercept and rage"] = &WarriorTriggerFactoryInternal::intercept_and_rage;
@@ -131,6 +133,11 @@ private:
     static Trigger* thunderclap_and_rage(PlayerbotAI* botAI)
     {
         return new TwoTriggers(botAI, "thunder clap", "light rage available");
+    }
+    // Custom: warrior-rework W0a
+    static Trigger* light_aoe_high_rage(PlayerbotAI* botAI)
+    {
+        return new TwoTriggers(botAI, "light aoe", "high rage available");
     }
     static Trigger* intercept_can_cast(PlayerbotAI* botAI) { return new InterceptCanCastTrigger(botAI); }
     static Trigger* intercept_and_far_enemy(PlayerbotAI* botAI)
