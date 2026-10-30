@@ -35,6 +35,7 @@ constexpr char BLOODRAGE[] = "bloodrage";
 constexpr char LAST_STAND[] = "last stand";
 constexpr char SHIELD_WALL[] = "shield wall";
 constexpr char ENRAGED_REGENERATION[] = "enraged regeneration";
+constexpr char SKULL_BANNER[] = "skull banner";
 constexpr char SHIELD_SLAM[] = "shield slam";
 constexpr char THUNDER_CLAP[] = "thunder clap";
 constexpr char SHOCKWAVE[] = "shockwave";
@@ -56,6 +57,7 @@ WarriorProtActionFactory::WarriorProtActionFactory()
     creators["prot last stand"] = &MakeSelf<LAST_STAND>;
     creators["prot shield wall"] = &MakeSelf<SHIELD_WALL>;
     creators["prot enraged regeneration"] = &MakeSelf<ENRAGED_REGENERATION>;
+    creators["prot skull banner"] = &MakeSelf<SKULL_BANNER>;
 
     // The single-target rotation. Shield Slam, Thunder Clap and Devastate are queued by several rows under one name on
     // purpose: the rows are mutually exclusive or near-identical, and a failed re-check costs one tick

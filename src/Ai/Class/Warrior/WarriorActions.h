@@ -7,6 +7,7 @@
 #ifndef PLAYERBOTS_WARRIORACTIONS_H
 #define PLAYERBOTS_WARRIORACTIONS_H
 
+#include "Action.h"
 #include "AiObject.h"
 #include "GenericSpellActions.h"
 #include "Player.h"
@@ -168,6 +169,24 @@ public:
     bool isUseful() override;
     bool isPossible() override;
     Unit* GetTarget() override;
+};
+
+// Heroic Leap (204400) is ground targeted: the bot casts it at its current target's position (the landing slam covers
+// the 8 yd around the point, so the target is hit). The row's condition says when; the action finds the point and
+// refuses (isUseful) when there is none: the target is 8 to 40 yd away, the point is on the ground
+// (UpdateAllowedPositionZ), in line of sight, not far above or below the bot, and one the caster could land on
+// (Leap::IsLandablePoint, the same test the spell's CheckCast runs). Never cast while rooted, charging or in the air.
+class WarriorHeroicLeapAction : public Action
+{
+public:
+    WarriorHeroicLeapAction(PlayerbotAI* botAI, std::string const name = "heroic leap") : Action(botAI, name) {}
+
+    bool isUseful() override;
+    bool isPossible() override;
+    bool Execute(Event event) override;
+
+private:
+    bool FindPoint(float& x, float& y, float& z) const;
 };
 
 #endif

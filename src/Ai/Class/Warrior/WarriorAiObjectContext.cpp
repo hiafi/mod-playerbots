@@ -252,6 +252,7 @@ public:
         creators["shattering throw"] = &WarriorAiObjectContextInternal::shattering_throw;
         creators["vigilance"] = &WarriorAiObjectContextInternal::vigilance;
         creators["enraged regeneration"] = &WarriorAiObjectContextInternal::enraged_regeneration;
+        creators["heroic leap"] = &WarriorAiObjectContextInternal::heroic_leap;
     }
 
 private:
@@ -323,6 +324,7 @@ private:
     static Action* bladestorm(PlayerbotAI* botAI) { return new CastBladestormAction(botAI); }
     static Action* vigilance(PlayerbotAI* botAI) { return new CastVigilanceAction(botAI); }
     static Action* enraged_regeneration(PlayerbotAI* botAI) { return new CastEnragedRegenerationAction(botAI); }
+    static Action* heroic_leap(PlayerbotAI* botAI) { return new WarriorHeroicLeapAction(botAI); }
 };
 
 SharedNamedObjectContextList<Strategy> WarriorAiObjectContext::sharedStrategyContexts;
