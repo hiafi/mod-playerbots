@@ -110,8 +110,9 @@ rows:
   - do: create spellstone
     when: known(2362) and value("item count::spellstone") == 0 and not moving(self)
     relevance: high + 4
+  # The stone's on-use is a 3 sec self cast that grants the 200715 buff (dungeon-prereqs S5b), not a weapon enchant.
   - do: spellstone
-    trigger: spellstone
+    when: not aura(self, 200715, own) and value("item count::spellstone") > 0 and not moving(self)
     relevance: high + 4
 ---
 strategy: warlock/firestone
@@ -120,6 +121,7 @@ rows:
   - do: create firestone
     when: known(6366) and value("item count::firestone") == 0 and not moving(self)
     relevance: high + 4
+  # The stone's on-use is a 3 sec self cast that grants the 200714 buff (dungeon-prereqs S5b), not a weapon enchant.
   - do: firestone
-    trigger: firestone
+    when: not aura(self, 200714, own) and value("item count::firestone") > 0 and not moving(self)
     relevance: high + 4
