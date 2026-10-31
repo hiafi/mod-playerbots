@@ -45,6 +45,9 @@ MELEE_ACTION(CastConsecrationAction, "consecration");
 SNARE_ACTION(CastRepentanceSnareAction, "repentance");
 DEBUFF_ACTION(CastRepentanceAction, "repentance");
 ENEMY_HEALER_ACTION(CastRepentanceOnHealerAction, "repentance");
+// Custom: dungeon-prereqs S3 - Rebuke 201473, the class-wide melee interrupt
+MELEE_ACTION(CastRebukeAction, "rebuke");
+ENEMY_HEALER_ACTION(CastRebukeOnEnemyHealerAction, "rebuke");
 
 // hamme of wrath
 SPELL_ACTION(CastHammerOfWrathAction, "hammer of wrath");

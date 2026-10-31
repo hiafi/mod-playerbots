@@ -26,6 +26,9 @@ void PaladinReworkHolyStrategy::InitTriggers(std::vector<TriggerNode*>& triggers
 
     // Kept from the stock HealPaladinStrategy / GenericPaladinStrategy
     add("party member to heal out of spell range", "reach party member to heal", ACTION_EMERGENCY + 3);
+    // Rebuke 201473 (dungeon-prereqs S3) above Hammer of Justice, which stays as the fallback while Rebuke cools down.
+    // Melee-gated current target only: no enemy-healer row, which would walk the healer into melee range.
+    add("rebuke interrupt", "rebuke", ACTION_INTERRUPT + 2);
     add("hammer of justice interrupt", "hammer of justice", ACTION_INTERRUPT);
     add("hammer of justice on enemy healer", "hammer of justice on enemy healer", ACTION_INTERRUPT);
     add("hand of freedom on party", "hand of freedom on party", ACTION_HIGH + 4);
@@ -45,18 +48,15 @@ void PaladinReworkHolyStrategy::InitTriggers(std::vector<TriggerNode*>& triggers
     add("holy beacon refresh", "holy beacon", R + 7.75f);
     add("holy sacred shield", "holy sacred shield", R + 7.5f);
 
-    // Line 11: the stock cure triggers on Holy-named cleanses; PaladinHolyCleanseMultiplier gates them
+    // Line 11: the stock cure triggers on Holy-named cleanses; PaladinHolyCleanseMultiplier gates them.
+    // dungeon-prereqs S3: Cleanse removes Disease and Magic, Purify Disease only; neither removes Poison any more.
     add("cleanse cure disease", "holy cleanse disease", R + 7.3f);
-    add("cleanse cure poison", "holy cleanse poison", R + 7.3f);
     add("cleanse cure magic", "holy cleanse magic", R + 7.3f);
     add("cleanse party member cure disease", "holy cleanse disease on party", R + 7.15f);
-    add("cleanse party member cure poison", "holy cleanse poison on party", R + 7.15f);
     add("cleanse party member cure magic", "holy cleanse magic on party", R + 7.15f);
-    // Purify just below each Cleanse it can stand in for: a bot without Cleanse (below 42) falls through to it
+    // Purify just below the Disease Cleanse it can stand in for: a bot without Cleanse (below 18) falls through to it
     add("cleanse cure disease", "holy purify disease", R + 7.28f);
-    add("cleanse cure poison", "holy purify poison", R + 7.28f);
     add("cleanse party member cure disease", "holy purify disease on party", R + 7.13f);
-    add("cleanse party member cure poison", "holy purify poison on party", R + 7.13f);
 
     add("holy divine illumination", "divine illumination", R + 6.5f);
 

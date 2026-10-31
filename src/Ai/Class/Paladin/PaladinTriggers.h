@@ -48,6 +48,10 @@ INTERRUPT_HEALER_TRIGGER(RepentanceOnHealerTrigger, "repentance on enemy healer"
 SNARE_TRIGGER(RepentanceSnareTrigger, "repentance on snare target");
 INTERRUPT_TRIGGER(RepentanceInterruptTrigger, "repentance");
 
+// Custom: dungeon-prereqs S3 - Rebuke 201473, the class-wide melee interrupt (learned at 10)
+INTERRUPT_TRIGGER(RebukeInterruptSpellTrigger, "rebuke");
+INTERRUPT_HEALER_TRIGGER(RebukeOnEnemyHealerTrigger, "rebuke");
+
 class BlessingOnPartyTrigger : public BuffOnPartyTrigger
 {
 public:

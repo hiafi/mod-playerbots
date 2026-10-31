@@ -41,6 +41,14 @@ rows:
   - do: reach melee
     trigger: enemy out of melee
     relevance: high + 1
+  # Rebuke 201473 (dungeon-prereqs S3, learned at 10) first; Hammer of Justice below it is the fallback while Rebuke
+  # is on its 16 s cooldown.
+  - do: rebuke
+    when: known(201473) and cooldown(201473) == 0 and trigger("rebuke interrupt")
+    relevance: interrupt + 2
+  - do: rebuke on enemy healer
+    when: known(201473) and cooldown(201473) == 0 and trigger("rebuke on enemy healer")
+    relevance: interrupt + 1
   - do: hammer of justice
     trigger: hammer of justice interrupt
     relevance: interrupt

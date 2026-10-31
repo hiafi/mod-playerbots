@@ -169,6 +169,8 @@ public:
         creators["repentance on enemy healer"] = &PaladinTriggerFactoryInternal::repentance_on_enemy_healer;
         creators["repentance on snare target"] = &PaladinTriggerFactoryInternal::repentance_on_snare_target;
         creators["repentance interrupt"] = &PaladinTriggerFactoryInternal::repentance_interrupt;
+        creators["rebuke interrupt"] = &PaladinTriggerFactoryInternal::rebuke_interrupt;
+        creators["rebuke on enemy healer"] = &PaladinTriggerFactoryInternal::rebuke_on_enemy_healer;
         creators["beacon of light on main tank"] = &PaladinTriggerFactoryInternal::beacon_of_light_on_main_tank;
         creators["sacred shield on main tank"] = &PaladinTriggerFactoryInternal::sacred_shield_on_main_tank;
         creators["hand of freedom on party"] = &PaladinTriggerFactoryInternal::hand_of_freedom_on_party;
@@ -247,6 +249,8 @@ private:
     static Trigger* repentance_on_enemy_healer(PlayerbotAI* botAI) { return new RepentanceOnHealerTrigger(botAI); }
     static Trigger* repentance_on_snare_target(PlayerbotAI* botAI) { return new RepentanceSnareTrigger(botAI); }
     static Trigger* repentance_interrupt(PlayerbotAI* botAI) { return new RepentanceInterruptTrigger(botAI); }
+    static Trigger* rebuke_interrupt(PlayerbotAI* botAI) { return new RebukeInterruptSpellTrigger(botAI); }
+    static Trigger* rebuke_on_enemy_healer(PlayerbotAI* botAI) { return new RebukeOnEnemyHealerTrigger(botAI); }
     static Trigger* beacon_of_light_on_main_tank(PlayerbotAI* botAI) { return new BeaconOfLightOnMainTankTrigger(botAI); }
     static Trigger* sacred_shield_on_main_tank(PlayerbotAI* botAI) { return new SacredShieldOnMainTankTrigger(botAI); }
     static Trigger* hand_of_freedom_on_party(PlayerbotAI* botAI) { return new HandOfFreedomOnPartyTrigger(botAI); }
@@ -369,6 +373,8 @@ public:
         creators["repentance"] = &PaladinAiObjectContextInternal::repentance;
         creators["repentance on snare target"] = &PaladinAiObjectContextInternal::repentance_on_snare_target;
         creators["repentance on enemy healer"] = &PaladinAiObjectContextInternal::repentance_on_enemy_healer;
+        creators["rebuke"] = &PaladinAiObjectContextInternal::rebuke;
+        creators["rebuke on enemy healer"] = &PaladinAiObjectContextInternal::rebuke_on_enemy_healer;
         creators["sanctity aura"] = &PaladinAiObjectContextInternal::sanctity_aura;
         creators["holy shock"] = &PaladinAiObjectContextInternal::holy_shock;
         creators["holy shock on party"] = &PaladinAiObjectContextInternal::holy_shock_on_party;
@@ -486,6 +492,8 @@ private:
     static Action* repentance(PlayerbotAI* botAI) { return new CastRepentanceAction(botAI); }
     static Action* repentance_on_snare_target(PlayerbotAI* botAI) { return new CastRepentanceSnareAction(botAI); }
     static Action* repentance_on_enemy_healer(PlayerbotAI* botAI) { return new CastRepentanceOnHealerAction(botAI); }
+    static Action* rebuke(PlayerbotAI* botAI) { return new CastRebukeAction(botAI); }
+    static Action* rebuke_on_enemy_healer(PlayerbotAI* botAI) { return new CastRebukeOnEnemyHealerAction(botAI); }
     static Action* sanctity_aura(PlayerbotAI* botAI) { return new CastSanctityAuraAction(botAI); }
     static Action* holy_shock(PlayerbotAI* botAI) { return new CastHolyShockAction(botAI); }
     static Action* holy_shock_on_party(PlayerbotAI* botAI) { return new CastHolyShockOnPartyAction(botAI); }

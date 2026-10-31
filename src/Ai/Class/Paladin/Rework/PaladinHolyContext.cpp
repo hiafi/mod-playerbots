@@ -62,16 +62,12 @@ PaladinHolyActionFactory::PaladinHolyActionFactory()
     creators["holy light on heal target"] = &Make<Action, PaladinHolyLightOnHealTargetAction>;
     creators["flash of light on heal target"] = &Make<Action, PaladinHolyFlashOfLightOnHealTargetAction>;
     creators["holy cleanse disease"] = &Make<Action, PaladinHolyCleanseAction<CastCleanseDiseaseAction>>;
-    creators["holy cleanse poison"] = &Make<Action, PaladinHolyCleanseAction<CastCleansePoisonAction>>;
     creators["holy cleanse magic"] = &Make<Action, PaladinHolyCleanseAction<CastCleanseMagicAction>>;
     creators["holy cleanse disease on party"] =
         &Make<Action, PaladinHolyCleanseAction<CastCleanseDiseaseOnPartyAction>>;
-    creators["holy cleanse poison on party"] = &Make<Action, PaladinHolyCleanseAction<CastCleansePoisonOnPartyAction>>;
     creators["holy cleanse magic on party"] = &Make<Action, PaladinHolyCleanseAction<CastCleanseMagicOnPartyAction>>;
     creators["holy purify disease"] = &Make<Action, PaladinHolyCleanseAction<CastPurifyDiseaseAction>>;
-    creators["holy purify poison"] = &Make<Action, PaladinHolyCleanseAction<CastPurifyPoisonAction>>;
     creators["holy purify disease on party"] = &Make<Action, PaladinHolyCleanseAction<CastPurifyDiseaseOnPartyAction>>;
-    creators["holy purify poison on party"] = &Make<Action, PaladinHolyCleanseAction<CastPurifyPoisonOnPartyAction>>;
 }
 
 PaladinHolyValueFactory::PaladinHolyValueFactory()
