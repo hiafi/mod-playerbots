@@ -133,8 +133,9 @@ rows:
   - do: resto abolish poison on party
     trigger: party member cure poison
     relevance: normal + 7.8
-  - do: resto remove curse on party
-    trigger: party member remove curse
+  # Nature's Cure answers Magic (Remove Curse is retired); poison stays with Abolish Poison
+  - do: resto natures cure on party
+    trigger: party member nature's cure
     relevance: normal + 7.7
 
   # 10: Lifebloom on the tank, and with Gift of the Earthmother rank 3 on the sticky second target (DR35). Never on

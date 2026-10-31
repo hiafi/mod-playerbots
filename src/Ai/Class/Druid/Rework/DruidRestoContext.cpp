@@ -108,7 +108,7 @@ DruidRestoActionFactory::DruidRestoActionFactory()
 
     // The cures, for DruidHealerCureMultiplier
     creators["resto abolish poison on party"] = &MakeCure<CastAbolishPoisonOnPartyAction>;
-    creators["resto remove curse on party"] = &MakeCure<CastDruidRemoveCurseOnPartyAction>;
+    creators["resto natures cure on party"] = &MakeCure<CastNaturesCureOnPartyAction>;
 
     // The solo "healer dps" damage spells (DR8)
     creators["resto solo moonfire"] = &MakeOnTarget<MOONFIRE>;

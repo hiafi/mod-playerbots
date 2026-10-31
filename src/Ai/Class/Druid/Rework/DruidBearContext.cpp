@@ -56,6 +56,7 @@ constexpr char SWIPE_BEAR[] = "swipe (bear)";
 constexpr char PULVERIZE[] = "pulverize";
 constexpr char LACERATE[] = "lacerate";
 constexpr char BASH[] = "bash";
+constexpr char SKULL_BASH[] = "skull bash";
 
 constexpr char BEAR_BASH_HEALER[] = "bear bash healer";
 
@@ -93,6 +94,12 @@ DruidBearActionFactory::DruidBearActionFactory()
     creators["bear pulverize"] = &MakeMelee<PULVERIZE>;
     creators["bear lacerate"] = &MakeMelee<LACERATE>;
     creators["bear bash"] = &MakeMelee<BASH>;
+
+    // The interrupt (dungeon-prereqs S5): Skull Bash on the casting target, and on a casting enemy healer (the unit
+    // comes from the stock enemy-healer value; the row keeps it in melee reach)
+    creators["bear skull bash"] = &MakeMelee<SKULL_BASH>;
+    creators["bear skull bash on enemy healer"] = [](PlayerbotAI* botAI) -> Action*
+    { return new RowCheckedAction<CastSpellOnEnemyHealerAction>(botAI, SKULL_BASH); };
 
     // Bash on a casting enemy healer: the unit comes from a value, not the current target
     creators["bear bash enemy healer"] = [](PlayerbotAI* botAI) -> Action*

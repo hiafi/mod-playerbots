@@ -447,6 +447,7 @@ void DruidAiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextLi
 {
     AiObjectContext::BuildSharedTriggerContexts(triggerContexts);
     triggerContexts.Add(new DruidTriggerFactoryInternal());
+    triggerContexts.Add(new DruidReworkTriggerFactory());
     triggerContexts.Add(new DruidBalanceTriggerFactory());
     triggerContexts.Add(new DruidBearTriggerFactory());
 }

@@ -5,10 +5,10 @@
 # Actions named "bear ..." and "druid ..." are RowCheckedAction (they re-check their own row before casting); only
 # "reach melee" is a stock action. The charge row is the `druid/feral-charge-bear` document of common.yaml.
 #
-# Bands: defensives (emergency) > Bash (interrupt) > form, off-the-GCD rows, opener, `reach melee` (high) > pack
-# (normal + 9.x, so Swipe fills before any single-target row) > single target > the default `melee`. Ironfur, Enrage and
-# Growl are off the GCD, so the engine skips the GCD-blocked rows above them and they still fire during the GCD;
-# Berserk has a 1 s GCD on this server.
+# Bands: defensives (emergency) > Skull Bash, then Bash (interrupt) > form, off-the-GCD rows, opener, `reach melee`
+# (high) > pack (normal + 9.x, so Swipe fills before any single-target row) > single target > the default `melee`.
+# Ironfur, Enrage, Growl and Skull Bash are off the GCD, so the engine skips the GCD-blocked rows above them and they
+# still fire during the GCD; Berserk has a 1 s GCD on this server.
 #
 # Rows that queue the same action name and qualifier merge into one basket that keeps the first pusher's event, so only
 # that row is re-checked. The overlaps are on purpose (a failed re-check costs one tick): Ironfur I1/I2, Mangle
@@ -26,7 +26,7 @@
 # Thrash 200423 (its group id with Faerie Fire 770), Stampede 200433 (free Mangle after Feral Charge), Lacerate 33745,
 # Mangle (Bear) 33878, Maul 6807, Swipe (Bear) 779, Demoralizing Roar 99, Enrage 5229, Berserk 50334, Frenzied
 # Regeneration 22842, Survival Instincts 61336, Barkskin 22812, Growl 6795, Feral Charge (Bear) 16979, Faerie Fire
-# (Feral) 16857, Bash 5211, Challenging Roar 5209.
+# (Feral) 16857, Bash 5211, Challenging Roar 5209, Skull Bash 200605.
 strategy: druid/bear
 class: druid
 conditions:
@@ -42,6 +42,11 @@ conditions:
   demo_up: remaining(target, 99) >= 3000 or aura(target, "1160,6190,11554,11555,11556,25202,25203,47437,702,1108,6205,7646,11707,11708,27224,30909,50511,67,26017,24423,24577,24578,24579,27051,55487")
   # 45 rage so that an Ironfur (20) is still affordable after the Maul
   maul_ok: known(6807) and cooldown(6807) == 0 and alive(target) and rage >= 45
+  # Skull Bash 200605 is ready, the bot is in form, and no Feral Charge (16979) is in flight
+  skull_bash_ok: known(200605) and cooldown(200605) == 0 and in_bear and ms_since_cast(16979) > 1500
+  # Bash 5211 only when Skull Bash can't answer, and never on a cast Skull Bash or the charge just interrupted
+  bash_fallback: >-
+    (not known(200605) or cooldown(200605) > 0) and ms_since_cast(200605) > 1000 and ms_since_cast(16979) > 1500
 rows:
   # S1: Mangle first, off cooldown
   - do: bear mangle
@@ -74,13 +79,25 @@ rows:
     when: known(22842) and cooldown(22842) == 0 and health_pct(self) < 50
     relevance: emergency + 1
 
-  # U1: Bash the casting target, unless it is stun-immune (the trigger checks both)
+  # U0 (dungeon-prereqs S5): Skull Bash the casting target, then a casting enemy healer within reach. Never in the 1.5
+  # sec after a Feral Charge: the charge's own interrupt lands on arrival, and both would go on the same cast
+  - do: bear skull bash
+    when: >-
+      skull_bash_ok and in_range(target, 5) and trigger("skull bash")
+    relevance: interrupt + 2
+  - do: bear skull bash on enemy healer
+    when: >-
+      skull_bash_ok and in_range("enemy healer target::skull bash", 5) and trigger("skull bash on enemy healer")
+    relevance: interrupt + 1
+  # U1: Bash the casting target, unless it is stun-immune (the trigger checks both); only as the fallback while Skull
+  # Bash is unknown or cooling down, and not on the cast a Skull Bash or a Feral Charge has just answered
   - do: bear bash
-    when: known(5211) and cooldown(5211) == 0 and in_range(target, 5) and trigger("bear bash interrupt")
+    when: >-
+      known(5211) and cooldown(5211) == 0 and bash_fallback and in_range(target, 5) and trigger("bear bash interrupt")
     relevance: interrupt
   # U2 (DQ9): Bash a casting enemy healer within reach
   - do: bear bash enemy healer
-    when: known(5211) and cooldown(5211) == 0 and alive("bear bash healer")
+    when: known(5211) and cooldown(5211) == 0 and bash_fallback and alive("bear bash healer")
     relevance: interrupt
 
   # F: Bear Form (Bestial Fury's form reads "not in form"; nothing here casts it)
