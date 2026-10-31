@@ -22,7 +22,7 @@ public:
         creators["wrath of air totem"] = &wrath_of_air_totem;
         creators["windfury totem"] = &windfury_totem;
         creators["cleanse spirit"] = &cleanse_spirit;
-        creators["cleanse spirit poison on party"] = &cleanse_spirit_poison_on_party;
+        creators["cleanse spirit magic on party"] = &cleanse_spirit_magic_on_party;
         creators["cleanse spirit disease on party"] = &cleanse_spirit_disease_on_party;
     }
 
@@ -90,11 +90,11 @@ private:
                               /*A*/ { NextAction("cure toxins") },
                               /*C*/ {});
     }
-    static ActionNode* cleanse_spirit_poison_on_party([[maybe_unused]] PlayerbotAI* botAI)
+    static ActionNode* cleanse_spirit_magic_on_party([[maybe_unused]] PlayerbotAI* botAI)
     {
-        return new ActionNode("cleanse spirit poison on party",
+        return new ActionNode("cleanse spirit magic on party",
                               /*P*/ {},
-                              /*A*/ { NextAction("cure toxins poison on party") },
+                              /*A*/ {},
                               /*C*/ {});
     }
     static ActionNode* cleanse_spirit_disease_on_party([[maybe_unused]] PlayerbotAI* botAI)
@@ -123,8 +123,8 @@ void GenericShamanStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 
 void ShamanCureStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
-    triggers.push_back(new TriggerNode("cleanse spirit poison", { NextAction("cleanse spirit", 24.0f), }));
-    triggers.push_back(new TriggerNode("party member cleanse spirit poison", { NextAction("cleanse spirit poison on party", 23.0f), }));
+    triggers.push_back(new TriggerNode("cleanse spirit magic", { NextAction("cleanse spirit", 24.0f), }));
+    triggers.push_back(new TriggerNode("party member cleanse spirit magic", { NextAction("cleanse spirit magic on party", 23.0f), }));
     // Rework: Cleanse Spirit no longer removes disease; the Cleansing Totem owns it (no disease rows)
     triggers.push_back(new TriggerNode("cleanse spirit curse", { NextAction("cleanse spirit", 24.0f), }));
     triggers.push_back(new TriggerNode("party member cleanse spirit curse", { NextAction("cleanse spirit curse on party", 23.0f), }));

@@ -451,11 +451,11 @@ ShamanReworkActionFactory::ShamanReworkActionFactory()
     creators["shaman tidal force"] = [](PlayerbotAI* botAI) -> Action*
     { return Cast(botAI, "tidal force", {SPELL_TIDAL_FORCE_CASTABLE}, SELF_TARGET); };
 
-    // The cures of the Restoration rotation: poison and curse only (Cleanse Spirit lost disease; the Cleansing Totem
-    // owns it)
-    creators["shaman resto cleanse poison on party"] = &HealerCure<CastCleanseSpiritPoisonOnPartyAction>;
+    // The cures of the Restoration rotation: magic and curse only (Cleanse Spirit lost disease and, for the dispel
+    // split, poison; the Cleansing Totem owns both)
+    creators["shaman resto cleanse magic on party"] = &HealerCure<CastCleanseSpiritMagicOnPartyAction>;
     creators["shaman resto cleanse curse on party"] = &HealerCure<CastCleanseSpiritCurseOnPartyAction>;
-    creators["shaman resto cleanse self poison"] = &HealerCure<CastCleanseSpiritAction>;
+    creators["shaman resto cleanse self magic"] = &HealerCure<CastCleanseSpiritAction>;
     creators["shaman resto cleanse self curse"] = &HealerCure<CastCleanseSpiritAction>;
 
     // Out of combat

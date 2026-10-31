@@ -158,17 +158,17 @@ public:
     PurgeTrigger(PlayerbotAI* botAI) : TargetAuraDispelTrigger(botAI, "purge", DISPEL_MAGIC) {}
 };
 
-class CleanseSpiritPoisonTrigger : public NeedCureTrigger
+class CleanseSpiritMagicTrigger : public NeedCureTrigger
 {
 public:
-    CleanseSpiritPoisonTrigger(PlayerbotAI* botAI) : NeedCureTrigger(botAI, "cleanse spirit", DISPEL_POISON) {}
+    CleanseSpiritMagicTrigger(PlayerbotAI* botAI) : NeedCureTrigger(botAI, "cleanse spirit", DISPEL_MAGIC) {}
 };
 
-class PartyMemberCleanseSpiritPoisonTrigger : public PartyMemberNeedCureTrigger
+class PartyMemberCleanseSpiritMagicTrigger : public PartyMemberNeedCureTrigger
 {
 public:
-    PartyMemberCleanseSpiritPoisonTrigger(PlayerbotAI* botAI)
-        : PartyMemberNeedCureTrigger(botAI, "cleanse spirit", DISPEL_POISON) {}
+    PartyMemberCleanseSpiritMagicTrigger(PlayerbotAI* botAI)
+        : PartyMemberNeedCureTrigger(botAI, "cleanse spirit", DISPEL_MAGIC) {}
 };
 
 class CleanseSpiritCurseTrigger : public NeedCureTrigger

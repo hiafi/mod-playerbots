@@ -180,13 +180,13 @@ public:
         CastCureSpellAction(botAI, "cleanse spirit") {}
 };
 
-class CastCleanseSpiritPoisonOnPartyAction : public CurePartyMemberAction
+class CastCleanseSpiritMagicOnPartyAction : public CurePartyMemberAction
 {
 public:
-    CastCleanseSpiritPoisonOnPartyAction(PlayerbotAI* botAI) :
-        CurePartyMemberAction(botAI, "cleanse spirit", DISPEL_POISON) {}
+    CastCleanseSpiritMagicOnPartyAction(PlayerbotAI* botAI) :
+        CurePartyMemberAction(botAI, "cleanse spirit", DISPEL_MAGIC) {}
 
-    std::string const getName() override { return "cleanse spirit poison on party"; }
+    std::string const getName() override { return "cleanse spirit magic on party"; }
 };
 
 class CastCleanseSpiritCurseOnPartyAction : public CurePartyMemberAction
