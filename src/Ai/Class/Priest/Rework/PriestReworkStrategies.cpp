@@ -14,7 +14,9 @@ namespace
 {
 constexpr char const* CURE_SAFE_HEALTH_PCT = "50";
 
-// The cures the stock "cure" strategy queues; the copies in the rework rows carry the tag instead
+// The cures the stock "cure" strategy queues; the copies in the rework rows carry the tag instead. The two disease
+// names stay although the spells are retired: the stock cure strategy still queues them whenever a disease is
+// present, and zeroing them keeps a failing cast out of the queue.
 constexpr char const* STOCK_CURE_NAMES[] = {"dispel magic", "dispel magic on party", "abolish disease",
                                             "abolish disease on party"};
 }  // namespace

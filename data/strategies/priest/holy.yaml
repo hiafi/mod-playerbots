@@ -95,18 +95,12 @@ rows:
       and value("party members below::80") >= 2 and not moving(self)
     relevance: normal + 7.5
 
-  # PR12: cures, as copies the healer cure multiplier gates (only while the cure strategy is on and nobody is under 50%)
+  # PR12: Magic cures (Cure/Abolish Disease are retired), as copies the healer cure multiplier gates (only while the cure strategy is on and nobody is under 50%)
   - do: priest dispel magic
     trigger: dispel magic
     relevance: normal + 7.3
-  - do: priest abolish disease
-    trigger: cure disease
-    relevance: normal + 7.3
   - do: priest dispel magic on party
     trigger: dispel magic on party
-    relevance: normal + 7.2
-  - do: priest abolish disease on party
-    trigger: party member cure disease
     relevance: normal + 7.2
 
   # 12: with the Answered Prayers proc, Renew on the lowest member without it, whatever their health

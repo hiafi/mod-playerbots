@@ -15,10 +15,8 @@
 namespace ai::priest_rework
 {
 
-// Cures: Dispel Magic, Cure Disease, Abolish Disease
+// Cures: Dispel Magic (Magic only; Cure Disease and Abolish Disease are retired for players)
 constexpr uint32 SPELL_DISPEL_MAGIC = 527;
-constexpr uint32 SPELL_CURE_DISEASE = 528;
-constexpr uint32 SPELL_ABOLISH_DISEASE = 552;
 
 // Discipline: Spirit Shell (the self buff; the ally absorb is 200167)
 constexpr uint32 SPELL_SPIRIT_SHELL = 200166;

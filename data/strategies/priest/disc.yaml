@@ -128,18 +128,12 @@ rows:
     when: health_pct("tank first heal target::55,55") < 55
     relevance: normal + 5.0
 
-  # 15: cures, as copies the healer cure multiplier gates (only while the cure strategy is on and nobody is under 50%)
+  # 15: Magic cures (Cure/Abolish Disease are retired), as copies the healer cure multiplier gates (only while the cure strategy is on and nobody is under 50%)
   - do: priest dispel magic
     trigger: dispel magic
     relevance: normal + 4.5
-  - do: priest abolish disease
-    trigger: cure disease
-    relevance: normal + 4.5
   - do: priest dispel magic on party
     trigger: dispel magic on party
-    relevance: normal + 4.4
-  - do: priest abolish disease on party
-    trigger: party member cure disease
     relevance: normal + 4.4
 
   # 16: Prayer of Mending on the tank

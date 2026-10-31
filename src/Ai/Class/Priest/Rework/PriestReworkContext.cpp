@@ -68,9 +68,7 @@ PriestReworkActionFactory::PriestReworkActionFactory()
     creators["priest smite filler"] = [](PlayerbotAI* botAI) -> Action*
     { return new RowCheckedAction<CastSpellAction>(botAI, SMITE); };
 
-    // The cures, for the healer strategies' PriestHealerCureMultiplier
+    X
     creators["priest dispel magic"] = &Make<PriestCure<CastDispelMagicAction>>;
     creators["priest dispel magic on party"] = &Make<PriestCure<CastDispelMagicOnPartyAction>>;
-    creators["priest abolish disease"] = &Make<PriestCure<CastAbolishDiseaseAction>>;
-    creators["priest abolish disease on party"] = &Make<PriestCure<CastAbolishDiseaseOnPartyAction>>;
 }
