@@ -6,7 +6,9 @@
 
 #include "WarriorActions.h"
 #include "AiFactory.h"
+#include "LeapMechanics.h"
 #include "Playerbots.h"
+#include <cmath>
 
 namespace
 {
@@ -16,6 +18,16 @@ constexpr uint32 SPELL_ICE_BLOCK = 45438;
 constexpr uint32 SPELL_BLESSING_OF_PROTECTION = 41450;
 constexpr uint32 SPELL_VIGILANCE = 50720;
 constexpr uint32 SPELL_SHATTERING_THROW = 64382;
+
+// Heroic Leap and its flight aura (keep in sync with core Generated/WarriorData.h SPELL_HEROIC_LEAP / SPELL_LEAPING;
+// mirrored like the other reworked classes' ids; note the module still needs the fork core for LeapMechanics.h)
+constexpr uint32 SPELL_HEROIC_LEAP = 204400;
+constexpr uint32 SPELL_LEAPING = 204402;
+// The leap spans 8 to 40 yd (the spell's own range is checked by CanCastSpell); a point far above or below the bot is
+// a climb or a drop the leap cannot make
+constexpr float HEROIC_LEAP_MIN_YD = 8.0f;
+constexpr float HEROIC_LEAP_MAX_YD = 40.0f;
+constexpr float HEROIC_LEAP_MAX_DZ = 6.0f;
 }
 
 bool CastBerserkerRageAction::isPossible()
@@ -231,4 +243,53 @@ bool CastShatteringThrowAction::isPossible()
 
     // If the minimal checks above pass, simply return true.
     return true;
+}
+
+bool WarriorHeroicLeapAction::FindPoint(float& x, float& y, float& z) const
+{
+    Unit* target = AI_VALUE(Unit*, _targetValue);
+    if (!target || !target->IsAlive() || !target->IsInWorld() || target->GetMapId() != bot->GetMapId())
+        return false;
+
+    // Center to center: the target's own reach never moves the window. Closer than the slam radius a leap is a waste
+    float const distance = bot->GetExactDist2d(target);
+    if (distance < HEROIC_LEAP_MIN_YD || distance > HEROIC_LEAP_MAX_YD)
+        return false;
+
+    x = target->GetPositionX();
+    y = target->GetPositionY();
+    z = target->GetPositionZ();
+
+    // On the ground: the Z is snapped to the map there (a point over a gap or a wall keeps its own Z and fails below)
+    bot->UpdateAllowedPositionZ(x, y, z);
+
+    if (std::fabs(z - bot->GetPositionZ()) > HEROIC_LEAP_MAX_DZ)
+        return false;
+
+    if (!bot->IsWithinLOS(x, y, z))
+        return false;
+
+    // The caster must be able to stand there: the same rule the spell's CheckCast applies (NOPATH)
+    return Leap::IsLandablePoint(bot, x, y, z);
+}
+
+bool WarriorHeroicLeapAction::isUseful()
+{
+    if (botAI->IsInVehicle() || bot->HasUnitState(UNIT_STATE_ROOT | UNIT_STATE_CHARGING) || bot->HasAura(SPELL_LEAPING))
+        return false;
+
+    float x, y, z;
+    return FindPoint(x, y, z);
+}
+
+bool WarriorHeroicLeapAction::isPossible()
+{
+    float x, y, z;
+    return FindPoint(x, y, z) && botAI->CanCastSpell(SPELL_HEROIC_LEAP, x, y, z, true);
+}
+
+bool WarriorHeroicLeapAction::Execute(Event /*event*/)
+{
+    float x, y, z;
+    return FindPoint(x, y, z) && botAI->CastSpell(SPELL_HEROIC_LEAP, x, y, z);
 }

@@ -7,6 +7,7 @@
 #include "RogueReworkCombatActions.h"
 #include "CancelOwnAuraAction.h"
 #include "CastOnValueAction.h"
+#include "LeapMechanics.h"
 #include "Playerbots.h"
 #include "RogueActions.h"
 #include "RogueReworkActions.h"
@@ -99,7 +100,8 @@ bool RogueGrapplingHookAction::FindPoint(float& x, float& y, float& z) const
     if (std::fabs(z - bot->GetPositionZ()) > 6.0f)
         return false;
 
-    return bot->IsWithinLOS(x, y, z);
+    // The core's own landing rule (a wall face, a steep slope or a transport deck refuses the cast with NOPATH)
+    return bot->IsWithinLOS(x, y, z) && Leap::IsLandablePoint(bot, x, y, z);
 }
 
 bool RogueGrapplingHookAction::isUseful()

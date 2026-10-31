@@ -92,6 +92,7 @@ arguments, not here.
 | `enemies_in_cone(yd, deg)` | number | | value `enemies in cone::<yd>,<deg>` |
 | `last_crit(ids)` | number | UINT32_MAX when the last result was not a crit | value `last own spell crit::<ids>` |
 | `cooldown(spell)` | ms | 0 when ready, unknown or unresolved | `ai::spell::CooldownRemainingMs` |
+| `ready_for(spell)` | ms | 0 while on cooldown, unknown spell or unresolved name; infinity for a known spell with no cooldown entry | the bot's own `Player` cooldown entry: `getMSTime() - end` of an expired one (no history kept) |
 | `ms_since_cast(spell)` | ms | infinity when never cast, evicted, or the name is unresolved | `ai::spell::SpellCastStamps` |
 | `lifetime(u)` | seconds | 0 | value `target lifetime` / `estimated lifetime::<u>` (a float of seconds: `lifetime(target) < 18`) |
 | `time_since_target_change()` | ms | | value `time since target change` |
@@ -128,6 +129,19 @@ for interval-1 triggers without per-tick state. A `data` trigger can't be nested
   may lack: `known(642) and cooldown(642) == 0`.
 - A passive talent is never in the spellbook, so C++ must test it with `HasTalent(id, GetActiveSpec())`, not
   `HasSpell`.
+- `ready_for(x) >= N` means "off cooldown for at least N ms". The core keeps an expired cooldown entry until the next
+  save purge (`_SaveSpellCooldowns`, entries ending within a second of now are erased) and erases it when a cut
+  (`ModifySpellCooldown`) takes the remaining time to 0 or the cooldown is cleared. A known spell with no entry reads
+  infinity ("ready for long"), which satisfies `>= N`: a hold written as `ready_for(x) >= N` therefore FIRES when a cut
+  just finished the cooldown, although the spell was not waiting. A spell not yet cast this fight also reads infinity.
+  The standard "has waited N ms" test is `ready_for(x) >= N and (ready_for(x) < 600000 or combat_time() > N)`: true
+  on a finite reading of N ms or more, and on an infinite one only once the fight has run N ms, so neither a spell not
+  yet cast this fight nor one a cut just finished reads as waiting at the pull, and neither is ignored for the whole
+  fight. Fury's `dw_hold` / `rk_hold` (`fury.yaml`) are the reference. The older
+  `ready_for(x) >= N and ready_for(x) < 600000` is never true on an infinite reading, so it misses a spell that has
+  been ready since the pull; a row that should be true on infinity (Arms' `smash_wait`, where that is harmless) drops
+  the bound and says why in its comment.
+  `end` moves with cuts and Cooldown Haste, which is why this is not `ms_since_cast(x) - cooldown`.
 - Compare ms functions in ms. `ms_since_cast(x) <= 2000` is false for a spell never cast. `lifetime()` is the exception:
   it is seconds.
 - `combat_time()` replaces `trigger("combat time::90")` in a `when:`: that trigger keeps its clock per instance and only

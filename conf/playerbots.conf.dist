@@ -1838,30 +1838,50 @@ Playerbots.BotGlyphs = 1
 # WARRIOR
 #
 
-Playerbots.PremadeSpecName.1.0 = arms pve
-Playerbots.PremadeSpecGlyph.1.0 = 43418,43395,43423,43399,43397,43421
-Playerbots.PremadeSpecLink.1.0.60 = 3022032023335100002012211231241
-Playerbots.PremadeSpecLink.1.0.80 = 3022032023335100102012213231251-305-2033
-Playerbots.PremadeSpecName.1.1 = fury pve
-Playerbots.PremadeSpecGlyph.1.1 = 43418,43395,43414,43396,49084,43432
-Playerbots.PremadeSpecLink.1.1.60 = -305053000500310053120501351
-Playerbots.PremadeSpecLink.1.1.80 = 32002300233-305053000500310153120511351
-Playerbots.PremadeSpecName.1.2 = prot pve
+# Arms (S2): .20/.25/.40/.50 are intermediates so the spine lands on time (MS 20, Taste for Blood 25,
+# Colossus Smash 40, Bladestorm 50); .80 repeats .60 (51 points is the cap). Glyphs are retired.
+Playerbots.PremadeSpecName.1.0 = arms raid
+Playerbots.PremadeSpecLink.1.0.20 = 02302301
+Playerbots.PremadeSpecLink.1.0.25 = 0230231121001
+Playerbots.PremadeSpecLink.1.0.30 = 02302311230031
+Playerbots.PremadeSpecLink.1.0.40 = 033023312323310100001
+Playerbots.PremadeSpecLink.1.0.45 = 0330233123233103020011
+Playerbots.PremadeSpecLink.1.0.50 = 03302331232331030200122010001
+Playerbots.PremadeSpecLink.1.0.60 = 033023312323310302001220200312031
+Playerbots.PremadeSpecLink.1.0.80 = 033023312323310302001220200312031
+Playerbots.PremadeSpecName.1.1 = arms packs
+Playerbots.PremadeSpecLink.1.1.20 = 02302301
+Playerbots.PremadeSpecLink.1.1.25 = 0230231121001
+Playerbots.PremadeSpecLink.1.1.30 = 02302311230031
+Playerbots.PremadeSpecLink.1.1.40 = 023023312303312200001
+Playerbots.PremadeSpecLink.1.1.45 = 02302331230331230000122
+Playerbots.PremadeSpecLink.1.1.50 = 02302331230331230000122021101
+Playerbots.PremadeSpecLink.1.1.60 = 023023312303312300001220212310231
+Playerbots.PremadeSpecLink.1.1.80 = 023023312303312300001220212310231
+Playerbots.PremadeSpecName.1.2 = prot tank
 Playerbots.PremadeSpecGlyph.1.2 = 43429,43397,43425,43399,49084,45797
-Playerbots.PremadeSpecLink.1.2.60 = --2331303122023321020330030123030
-Playerbots.PremadeSpecLink.1.2.80 = --2331303122023321020330030123030
-Playerbots.PremadeSpecName.1.3 = arms pvp
-Playerbots.PremadeSpecGlyph.1.3 = 43417,43397,43423,43396,49084,43421
-Playerbots.PremadeSpecLink.1.3.60 = 0320232023331100032212012221251
-Playerbots.PremadeSpecLink.1.3.80 = 0320332023335100232212013231251-3250001
-Playerbots.PremadeSpecName.1.4 = fury pvp
-Playerbots.PremadeSpecGlyph.1.4 = 43432,43397,43417,43395,43396,43418
-Playerbots.PremadeSpecLink.1.4.60 = -325000131500212250120511351
-Playerbots.PremadeSpecLink.1.4.80 = 03220300233-325000131500212250122511351
-Playerbots.PremadeSpecName.1.5 = prot pvp
-Playerbots.PremadeSpecGlyph.1.5 = 43425,43397,43415,43396,49084,45792
-Playerbots.PremadeSpecLink.1.5.60 = --250031220223012520332113321
-Playerbots.PremadeSpecLink.1.5.80 = 0502300123-3-250031220223012521332113321
+Playerbots.PremadeSpecLink.1.2.30 = --2331302122002
+Playerbots.PremadeSpecLink.1.2.45 = --23313021220323210201003
+Playerbots.PremadeSpecLink.1.2.60 = --2331302122032321020310330123201
+Playerbots.PremadeSpecLink.1.2.80 = --2331302122032321020310330123201
+Playerbots.PremadeSpecName.1.3 = fury raid
+Playerbots.PremadeSpecLink.1.3.20 = -20330201
+Playerbots.PremadeSpecLink.1.3.25 = -2033022102001
+Playerbots.PremadeSpecLink.1.3.30 = -203302210200501
+Playerbots.PremadeSpecLink.1.3.40 = -203302210252501020001
+Playerbots.PremadeSpecLink.1.3.45 = -203302210252501020303
+Playerbots.PremadeSpecLink.1.3.50 = -203302210252501020303000401
+Playerbots.PremadeSpecLink.1.3.60 = -2033022102525010203030005013231
+Playerbots.PremadeSpecLink.1.3.80 = -2033022102525010203030005013231
+Playerbots.PremadeSpecName.1.4 = fury packs
+Playerbots.PremadeSpecLink.1.4.20 = -03303101
+Playerbots.PremadeSpecLink.1.4.25 = -0330320130001
+Playerbots.PremadeSpecLink.1.4.30 = -033032013000501
+Playerbots.PremadeSpecLink.1.4.40 = -033032013050501220001
+Playerbots.PremadeSpecLink.1.4.45 = -0330320130505012210032
+Playerbots.PremadeSpecLink.1.4.50 = -033032013050501221003220201
+Playerbots.PremadeSpecLink.1.4.60 = -0330320130505012210032205013031
+Playerbots.PremadeSpecLink.1.4.80 = -0330320130505012210032205013031
 
 #
 #
@@ -2458,24 +2478,21 @@ Playerbots.WorldBuffMatrix = # WARRIOR ARMS 1:0,1,0,80,80:53760,57358; # WARRIOR
 # WARRIOR
 #
 
-# arms pve
-Playerbots.RandomClassSpecProb.1.0 = 20
+# arms raid
+Playerbots.RandomClassSpecProb.1.0 = 10
 Playerbots.RandomClassSpecIndex.1.0 = 0
-# fury pve
-Playerbots.RandomClassSpecProb.1.1 = 40
+# arms packs
+Playerbots.RandomClassSpecProb.1.1 = 10
 Playerbots.RandomClassSpecIndex.1.1 = 1
-# prot pve
+# prot tank
 Playerbots.RandomClassSpecProb.1.2 = 40
 Playerbots.RandomClassSpecIndex.1.2 = 2
-# arms pvp
-Playerbots.RandomClassSpecProb.1.3 = 0
+# fury raid
+Playerbots.RandomClassSpecProb.1.3 = 20
 Playerbots.RandomClassSpecIndex.1.3 = 3
-# fury pvp
-Playerbots.RandomClassSpecProb.1.4 = 0
+# fury packs
+Playerbots.RandomClassSpecProb.1.4 = 20
 Playerbots.RandomClassSpecIndex.1.4 = 4
-# prot pvp
-Playerbots.RandomClassSpecProb.1.5 = 0
-Playerbots.RandomClassSpecIndex.1.5 = 5
 
 #
 #

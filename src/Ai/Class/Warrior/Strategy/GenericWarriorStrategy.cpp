@@ -17,7 +17,8 @@ private:
     {
         return new ActionNode(
             "berserker rage",
-            /*P*/ { NextAction("berserker stance") },
+            // Custom: warrior-rework W0a - no ability needs a stance, so no stance swap before Berserker Rage
+            /*P*/ {},
             /*A*/ {},
             /*C*/ {}
         );
@@ -62,8 +63,9 @@ void WarriorAoeStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
                                        NextAction("bladestorm", ACTION_HIGH + 6),
                                        NextAction("thunder clap", ACTION_HIGH + 5),
                                        NextAction("shockwave", ACTION_HIGH + 4),
-                                       NextAction("demoralizing shout without life time check", ACTION_HIGH + 1),
-                                       NextAction("cleave", ACTION_HIGH) }));
+                                       NextAction("demoralizing shout without life time check", ACTION_HIGH + 1) }));
+    // Custom: warrior-rework W0a - Cleave costs a GCD + 20 rage now; gated at 60 rage so it can't starve Mortal Strike
+    triggers.push_back(new TriggerNode("light aoe high rage", { NextAction("cleave", ACTION_HIGH) }));
     triggers.push_back(
         new TriggerNode("shockwave on snare target",
                         { NextAction("shockwave on snare target", ACTION_HIGH + 5) }));

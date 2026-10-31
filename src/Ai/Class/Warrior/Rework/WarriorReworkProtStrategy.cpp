@@ -71,6 +71,10 @@ void WarriorReworkAoeStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     // strategy (a respec resets them) follows the new spec
     if (ai::warrior_rework::IsProtBuild(botAI->GetBot()))
         ai::data::AppendRows("warrior/prot-aoe", triggers);
+    else if (ai::warrior_rework::IsArmsBuild(botAI->GetBot()))
+        ai::data::AppendRows("warrior/arms-pack", triggers);
+    else if (ai::warrior_rework::IsFuryBuild(botAI->GetBot()))
+        ai::data::AppendRows("warrior/fury-pack", triggers);
     else
         WarriorAoeStrategy::InitTriggers(triggers);
 }

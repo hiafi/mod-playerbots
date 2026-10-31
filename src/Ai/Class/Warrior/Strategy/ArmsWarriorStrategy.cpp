@@ -14,7 +14,6 @@ public:
         creators["charge"] = &charge;
         creators["death wish"] = &death_wish;
         creators["piercing howl"] = &piercing_howl;
-        creators["mocking blow"] = &mocking_blow;
         creators["heroic strike"] = &heroic_strike;
     }
 
@@ -44,16 +43,7 @@ private:
         return new ActionNode(
             "piercing howl",
             /*P*/ {},
-            /*A*/ { NextAction("mocking blow") },
-            /*C*/ {}
-        );
-    }
-
-    static ActionNode* mocking_blow(PlayerbotAI* /*botAI*/)
-    {
-        return new ActionNode(
-            "mocking blow",
-            /*P*/ {},
+            // Custom: warrior-rework W0a - Mocking Blow is removed (untrained), chain goes straight to Hamstring
             /*A*/ { NextAction("hamstring") },
             /*C*/ {}
         );
@@ -241,14 +231,7 @@ void ArmsWarriorStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         )
     );
 
-    triggers.push_back(
-        new TriggerNode(
-            "almost full health",
-            {
-                NextAction("retaliation", ACTION_EMERGENCY + 1)
-            }
-        )
-    );
+    // Custom: warrior-rework W0a - the Retaliation row ('almost full health') is removed: the spell is untrained
 
     triggers.push_back(
         new TriggerNode(

@@ -12,9 +12,7 @@ public:
     FuryWarriorStrategyActionNodeFactory()
     {
         creators["charge"] = &charge;
-        creators["intercept"] = &intercept;
         creators["piercing howl"] = &piercing_howl;
-        creators["pummel"] = &pummel;
     }
 
 private:
@@ -23,16 +21,7 @@ private:
         return new ActionNode(
             "charge",
             /*P*/ {},
-            /*A*/ { NextAction("intercept" )},
-            /*C*/ {}
-        );
-    }
-
-    static ActionNode* intercept(PlayerbotAI* /*botAI*/)
-    {
-        return new ActionNode(
-            "intercept",
-            /*P*/ {},
+            // Custom: warrior-rework W0a - Intercept is removed (untrained), chain goes straight to reach melee
             /*A*/ { NextAction("reach melee" )},
             /*C*/ {}
         );
@@ -48,15 +37,7 @@ private:
         );
     }
 
-    static ActionNode* pummel(PlayerbotAI* /*botAI*/)
-    {
-        return new ActionNode(
-            "pummel",
-            /*P*/ {},
-            /*A*/ { NextAction("intercept" )},
-            /*C*/ {}
-        );
-    }
+    // Custom: warrior-rework W0a - the pummel -> intercept alternative is removed (Intercept untrained)
 };
 
 FuryWarriorStrategy::FuryWarriorStrategy(PlayerbotAI* botAI) : GenericWarriorStrategy(botAI)

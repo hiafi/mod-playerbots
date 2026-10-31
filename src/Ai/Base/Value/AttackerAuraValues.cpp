@@ -134,7 +134,12 @@ uint8 AttackersWithAuraIdValue::Calculate()
 
 ObjectGuid LowestHealthAttackerBelowValue::CalculateGuid()
 {
-    std::vector<float> const args = ai::qualifier::ParseNumbers(qualifier, 2);
+    // "pct,range", or "pct,range,1" to also require the unit in the bot's melee range (the range stays the cheap
+    // pre-filter): Spell::CheckCast measures a melee spell's reach centre to centre, not edge to edge like GetDistance
+    std::vector<float> args = ai::qualifier::ParseNumbers(qualifier, 3);
+    bool const requireMelee = !args.empty() && args[2] > 0.0f;
+    if (args.empty())
+        args = ai::qualifier::ParseNumbers(qualifier, 2);
     if (args.empty())
         return ObjectGuid::Empty;
 
@@ -144,7 +149,8 @@ ObjectGuid LowestHealthAttackerBelowValue::CalculateGuid()
     {
         Unit* unit = botAI->GetUnit(guid);
         if (!unit || !unit->IsAlive() || exclusions.find(guid) != exclusions.end() ||
-            bot->GetDistance(unit) > args[1] || unit->GetHealthPct() >= args[0])
+            bot->GetDistance(unit) > args[1] || unit->GetHealthPct() >= args[0] ||
+            (requireMelee && !bot->IsWithinMeleeRange(unit)))
             continue;
 
         if (!lowest || unit->GetHealthPct() < lowest->GetHealthPct())

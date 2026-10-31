@@ -33,6 +33,25 @@ enum class ValueKind : uint8
     Float,
     Bool
 };
+
+// ms the spell has been off cooldown, read from the bot's own cooldown entry (no history kept here). The core leaves an
+// expired entry in the map until the next save purge, so `now - end` is exact for a recently expired cooldown, and the
+// cuts and haste corrections that move `end` keep it right. Same comparison as Player::GetSpellCooldownDelay, so an
+// entry that is still running reads 0. A known spell with no entry (never cast, the entry cleared or cut to zero, or
+// purged by a save) has been ready for an unknown time: infinity, which passes "ready for at least N" and never
+// "ready for less than N"
+double ReadyForMs(Player const* bot, uint32 spellId, uint32 nowMs)
+{
+    if (!bot->HasSpell(spellId))
+        return 0.0;
+
+    SpellCooldowns const& cooldowns = bot->GetSpellCooldownMap();
+    SpellCooldowns::const_iterator const itr = cooldowns.find(spellId);
+    if (itr == cooldowns.end())
+        return std::numeric_limits<double>::infinity();
+
+    return itr->second.end > nowMs ? 0.0 : double(nowMs - itr->second.end);
+}
 }  // namespace
 
 struct BoundCondition::Node
@@ -203,6 +222,7 @@ private:
                     node.spellId = Cast<uint32>(call, call.valueName, "a uint32");
 
                 break;
+            case ExprFn::ReadyFor:
             case ExprFn::MsSinceCast:
             case ExprFn::Known:
                 if (!call.spellName.empty())
@@ -405,6 +425,11 @@ double BoundCondition::EvalCall(Node const& node) const
         {
             uint32 const spellId = call.spellName.empty() ? call.spellId : node.spellId->Get();
             return spellId ? ai::spell::CooldownRemainingMs(_bot, spellId) : 0.0;
+        }
+        case ExprFn::ReadyFor:
+        {
+            uint32 const spellId = call.spellName.empty() ? call.spellId : node.spellId->Get();
+            return spellId ? ReadyForMs(_bot, spellId, getMSTime()) : 0.0;
         }
         case ExprFn::MsSinceCast:
         {

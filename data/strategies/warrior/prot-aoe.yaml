@@ -5,43 +5,54 @@
 # action name merge into one basket that re-checks only the first row.
 #
 # A pack is three or more enemies within Thunder Clap's 8 yd (PW5). There is no unsafe-aoe-units gate: a tank must AoE,
-# the same ruling as the Bear (DQ8). The pack rows sit at normal + 9.x, above the single-target rows, in the plan's
-# order: Thunder Clap, Shockwave, Shield Slam (while Shield Discipline is down, or always without Storm's Bulwark),
-# Revenge, Devastate. Cleave is the off-the-GCD rage dump of the pack, above 40 rage where Heroic Strike waits for 50 on
-# one or two targets; its guard keeps it from re-queueing while one is pending. Heroic Strike steps aside at three
-# enemies (prot.yaml), so it never replaces a queued Cleave.
+# the same ruling as the Bear (DQ8). The pack rows sit at normal + 9.x, above the single-target rows, in the guide's
+# order: Thunder Clap, Challenging Shout (3 or more loose enemies within 10 yd), Shockwave (two or more in the cone),
+# Revenge, Shield Slam while Shield Discipline is down, Demoralizing Shout (3 or more enemies within 10 yd lacking it),
+# Cleave, Shield Slam when ready, Devastate. Cleave is the pack's rage dump, an instant GCD strike spent only at 60 rage
+# or more like Heroic Strike on one or two targets. Heroic Strike steps aside at three enemies (prot.yaml), so the two
+# never compete.
 strategy: warrior/prot-aoe
 class: warrior
 conditions:
   rage: value("rage::self target")
   pack: alive(target) and enemies_within(8) >= 3
   shield: trigger("prot shield")
-  bulwark: known(200058) or known(200059) or known(200060)
   disc_up: aura(self, 200064)
+  ss_ready: known(23922) and cooldown(23922) == 0 and shield
 rows:
   # A1: Thunder Clap on cooldown
   - do: prot pack thunder clap
     when: pack and known(6343) and cooldown(6343) == 0
     relevance: normal + 9.5
-  # A2: Shockwave on cooldown (not known at level 60)
+  # A1b: Challenging Shout when 3 or more loose enemies are within 10 yd
+  - do: prot challenging shout
+    when: known(1161) and cooldown(1161) == 0 and value("prot loose enemies::10") >= 3
+    relevance: normal + 9.45
+  # A2: Shockwave on cooldown when two or more enemies are in its frontal cone
   - do: prot pack shockwave
-    when: pack and known(46968) and cooldown(46968) == 0
+    when: pack and known(46968) and cooldown(46968) == 0 and enemies_in_cone(10, 104) >= 2
     relevance: normal + 9.4
-  # A3: Shield Slam while Shield Discipline is down, or always without Storm's Bulwark
-  - do: prot pack shield slam
-    when: >-
-      pack and known(23922) and cooldown(23922) == 0 and shield
-      and (not bulwark or not disc_up)
-    relevance: normal + 9.3
-  # A4: Revenge whenever it is castable
+  # A4: Revenge whenever it is castable, above the pack Shield Slam
   - do: prot pack revenge
     when: pack and known(6572) and cooldown(6572) == 0 and trigger("revenge")
+    relevance: normal + 9.3
+  # A8: Shield Slam, any time it is ready (below Cleave)
+  - do: prot pack shield slam
+    when: pack and ss_ready
+    relevance: normal + 9.05
+  # A3: Shield Slam while Shield Discipline is down
+  - do: prot pack shield slam
+    when: pack and ss_ready and not disc_up
+    relevance: normal + 9.25
+  # A6b: Demoralizing Shout when 3 or more enemies within 10 yd lack it
+  - do: prot demoralizing shout
+    when: alive(target) and known(1160) and rage >= 10 and value("prot demo missing::10") >= 3
     relevance: normal + 9.2
+  # A6: Cleave (instant GCD strike) at 60 rage or more
+  - do: prot cleave
+    when: pack and known(845) and rage >= 60
+    relevance: normal + 9.1
   # A5: Devastate, the filler
   - do: prot pack devastate
     when: pack and known(20243) and shield
     relevance: normal + 9
-  # A6: Cleave above 40 rage
-  - do: prot cleave
-    when: pack and known(845) and rage > 40 and ms_since_cast(845) > 1500
-    relevance: high + 6.6

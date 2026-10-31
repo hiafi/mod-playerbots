@@ -17,7 +17,8 @@ private:
     {
         return new ActionNode(
             "berserker rage",
-            /*P*/ { NextAction("berserker stance") },
+            // Custom: warrior-rework W0a - no ability needs a stance, so no stance swap before Berserker Rage
+            /*P*/ {},
             /*A*/ {},
             /*C*/ {}
         );

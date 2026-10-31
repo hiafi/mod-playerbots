@@ -47,7 +47,8 @@ public:
 };
 
 // The alive attacker with the lowest health percent among those below pct, for an execute switch.
-// Qualifier: "pct,range", e.g. "20,30".
+// Qualifier: "pct,range", e.g. "20,30"; a third number above 0 ("20,5,1") also requires the unit within the bot's
+// melee range, for a melee finisher.
 class LowestHealthAttackerBelowValue : public GuidCachedUnitValue, public Qualified
 {
 public:

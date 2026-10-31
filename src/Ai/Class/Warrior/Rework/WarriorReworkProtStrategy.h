@@ -30,8 +30,9 @@ public:
 };
 
 // Registered as "aoe", in place of the stock WarriorAoeStrategy it derives from. A Protection bot gets the rows of
-// "warrior/prot-aoe" (data/strategies/warrior/prot-aoe.yaml); an Arms or Fury bot gets the stock strategy's own rows
-// untouched, so their behaviour is unchanged. Still the toggle `co +aoe` / `co -aoe`.
+// "warrior/prot-aoe" (data/strategies/warrior/prot-aoe.yaml), an Arms bot (S2) the rows of "warrior/arms-pack"
+// (arms-pack.yaml), a Fury bot (S3) the rows of "warrior/fury-pack" (fury-pack.yaml). The stock strategy's own rows
+// are the fallback for a warrior of no build (none today). Still the toggle `co +aoe` / `co -aoe`.
 class WarriorReworkAoeStrategy : public WarriorAoeStrategy
 {
 public:

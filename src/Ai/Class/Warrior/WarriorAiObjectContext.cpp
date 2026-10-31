@@ -5,15 +5,19 @@
  */
 
 #include "WarriorAiObjectContext.h"
-#include "ArmsWarriorStrategy.h"
-#include "FuryWarriorStrategy.h"
 #include "GenericWarriorNonCombatStrategy.h"
 #include "NamedObjectContext.h"
 #include "Playerbots.h"
 #include "TankWarriorStrategy.h"
 #include "WarriorActions.h"
+#include "WarriorArmsContext.h"
+#include "WarriorArmsValues.h"
+#include "WarriorFuryContext.h"
 #include "WarriorProtContext.h"
+#include "WarriorProtValues.h"
 #include "WarriorPullStrategy.h"
+#include "WarriorReworkArmsStrategy.h"
+#include "WarriorReworkFuryStrategy.h"
 #include "WarriorReworkProtStrategy.h"
 #include "WarriorTriggers.h"
 
@@ -29,7 +33,7 @@ public:
 
 private:
     static Strategy* nc(PlayerbotAI* botAI) { return new GenericWarriorNonCombatStrategy(botAI); }
-    // Prot bots get the rework's pack rows, Arms and Fury the stock ones (WarriorReworkAoeStrategy)
+    // Prot, Arms and Fury bots get the rework's pack rows (WarriorReworkAoeStrategy)
     static Strategy* warrior_aoe(PlayerbotAI* botAI) { return new WarriorReworkAoeStrategy(botAI); }
     static Strategy* pull(PlayerbotAI* botAI) { return new WarriorPullStrategy(botAI); }
 };
@@ -48,8 +52,10 @@ public:
 private:
     // The stock TankWarriorStrategy stays in the tree; the Protection rework replaces it under the same name
     static Strategy* prot(PlayerbotAI* botAI) { return new WarriorReworkProtStrategy(botAI); }
-    static Strategy* arms(PlayerbotAI* botAI) { return new ArmsWarriorStrategy(botAI); }
-    static Strategy* fury(PlayerbotAI* botAI) { return new FuryWarriorStrategy(botAI); }
+    // The stock ArmsWarriorStrategy stays in the tree; the Arms rework replaces it under the same name
+    static Strategy* arms(PlayerbotAI* botAI) { return new WarriorReworkArmsStrategy(botAI); }
+    // The stock FuryWarriorStrategy stays in the tree; the Fury rework replaces it under the same name
+    static Strategy* fury(PlayerbotAI* botAI) { return new WarriorReworkFuryStrategy(botAI); }
 };
 
 class WarriorTriggerFactoryInternal : public NamedObjectContext<Trigger>
@@ -99,6 +105,8 @@ public:
         creators["shockwave on snare target"] = &WarriorTriggerFactoryInternal::shockwave_on_snare_target;
         creators["taste for blood"] = &WarriorTriggerFactoryInternal::taste_for_blood;
         creators["thunder clap and rage"] = &WarriorTriggerFactoryInternal::thunderclap_and_rage;
+        // Custom: warrior-rework W0a - Cleave is a GCD strike now, only at 60+ rage on packs
+        creators["light aoe high rage"] = &WarriorTriggerFactoryInternal::light_aoe_high_rage;
         creators["intercept can cast"] = &WarriorTriggerFactoryInternal::intercept_can_cast;
         creators["intercept and far enemy"] = &WarriorTriggerFactoryInternal::intercept_and_far_enemy;
         creators["intercept and rage"] = &WarriorTriggerFactoryInternal::intercept_and_rage;
@@ -131,6 +139,11 @@ private:
     static Trigger* thunderclap_and_rage(PlayerbotAI* botAI)
     {
         return new TwoTriggers(botAI, "thunder clap", "light rage available");
+    }
+    // Custom: warrior-rework W0a
+    static Trigger* light_aoe_high_rage(PlayerbotAI* botAI)
+    {
+        return new TwoTriggers(botAI, "light aoe", "high rage available");
     }
     static Trigger* intercept_can_cast(PlayerbotAI* botAI) { return new InterceptCanCastTrigger(botAI); }
     static Trigger* intercept_and_far_enemy(PlayerbotAI* botAI)
@@ -245,6 +258,7 @@ public:
         creators["shattering throw"] = &WarriorAiObjectContextInternal::shattering_throw;
         creators["vigilance"] = &WarriorAiObjectContextInternal::vigilance;
         creators["enraged regeneration"] = &WarriorAiObjectContextInternal::enraged_regeneration;
+        creators["heroic leap"] = &WarriorAiObjectContextInternal::heroic_leap;
     }
 
 private:
@@ -316,6 +330,7 @@ private:
     static Action* bladestorm(PlayerbotAI* botAI) { return new CastBladestormAction(botAI); }
     static Action* vigilance(PlayerbotAI* botAI) { return new CastVigilanceAction(botAI); }
     static Action* enraged_regeneration(PlayerbotAI* botAI) { return new CastEnragedRegenerationAction(botAI); }
+    static Action* heroic_leap(PlayerbotAI* botAI) { return new WarriorHeroicLeapAction(botAI); }
 };
 
 SharedNamedObjectContextList<Strategy> WarriorAiObjectContext::sharedStrategyContexts;
@@ -348,6 +363,8 @@ void WarriorAiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextL
     AiObjectContext::BuildSharedActionContexts(actionContexts);
     actionContexts.Add(new WarriorAiObjectContextInternal());
     actionContexts.Add(new WarriorProtActionFactory());
+    actionContexts.Add(new WarriorArmsActionFactory());
+    actionContexts.Add(new WarriorFuryActionFactory());
 }
 
 void WarriorAiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextList<Trigger>& triggerContexts)
@@ -360,4 +377,6 @@ void WarriorAiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContext
 void WarriorAiObjectContext::BuildSharedValueContexts(SharedNamedObjectContextList<UntypedValue>& valueContexts)
 {
     AiObjectContext::BuildSharedValueContexts(valueContexts);
+    valueContexts.Add(new WarriorProtValueFactory());
+    valueContexts.Add(new WarriorArmsValueFactory());
 }
