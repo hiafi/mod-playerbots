@@ -247,7 +247,7 @@ bool CastShatteringThrowAction::isPossible()
 
 bool WarriorHeroicLeapAction::FindPoint(float& x, float& y, float& z) const
 {
-    Unit* target = AI_VALUE(Unit*, "current target");
+    Unit* target = AI_VALUE(Unit*, _targetValue);
     if (!target || !target->IsAlive() || !target->IsInWorld() || target->GetMapId() != bot->GetMapId())
         return false;
 

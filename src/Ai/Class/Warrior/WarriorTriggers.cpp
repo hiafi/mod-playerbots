@@ -7,6 +7,8 @@
 #include "WarriorTriggers.h"
 #include "Playerbots.h"
 
+#include <cmath>
+
 namespace
 {
 constexpr uint32 SPELL_VIGILANCE = 50720;
@@ -14,7 +16,13 @@ constexpr uint32 SPELL_SHATTERING_THROW = 64382;
 constexpr uint32 SPELL_DIVINE_SHIELD = 642;
 constexpr uint32 SPELL_ICE_BLOCK = 45438;
 constexpr uint32 SPELL_BLESSING_OF_PROTECTION = 41450;
-constexpr uint32 SPELL_COMMANDING_PRESENCE_RANKS[] = { 12318, 12857, 12858, 12860, 12861 };
+// Commanding Presence (S3): two ranks, half and full of the Strength a Battle Shout gives (core:
+// WarriorData::SPELL_COMMANDING_PRESENCE, SPELL_COMMANDING_PRESENCE_12857, COMMANDING_PRESENCE_AT_60)
+constexpr uint32 SPELL_COMMANDING_PRESENCE_RANK1 = 12318;
+constexpr uint32 SPELL_COMMANDING_PRESENCE_RANK2 = 12857;
+constexpr int32 COMMANDING_PRESENCE_STRENGTH_AT_60 = 30;
+constexpr int32 COMMANDING_PRESENCE_MAX_LEVEL = 60;
+constexpr int32 ATTACK_POWER_PER_STRENGTH = 2;
 }
 
 bool BloodrageBuffTrigger::IsActive()
@@ -97,19 +105,18 @@ bool BattleShoutTrigger::IsActive()
     if (!bsApValue)
         return false;
 
-    static const float commandingPresenceBonus[]   = {
-        0.05f, 0.10f, 0.15f, 0.20f, 0.25f };
-
-    float cpBonus = 0.0f;
-    for (int rank = 4; rank >= 0; --rank)
-    {
-        if (bot->HasAura(SPELL_COMMANDING_PRESENCE_RANKS[rank]))
-        {
-            cpBonus = commandingPresenceBonus[rank];
-            break;
-        }
-    }
-    int32 effectiveBsAp = int32(bsApValue * (1.0f + cpBonus));
+    // Commanding Presence no longer scales the shout's attack power: it adds Strength to it (rank 2 the full amount,
+    // rank 1 half; it grows with the bot's level up to 60), and a warrior turns each Strength into 2 attack power.
+    // Rounded the way the core's Warrior::GetCommandingPresenceAmount rounds (lround of the float product)
+    float cpRankFactor = 0.0f;
+    if (bot->HasAura(SPELL_COMMANDING_PRESENCE_RANK2))
+        cpRankFactor = 1.0f;
+    else if (bot->HasAura(SPELL_COMMANDING_PRESENCE_RANK1))
+        cpRankFactor = 0.5f;
+    int32 const cpStrength = int32(std::lround(float(COMMANDING_PRESENCE_STRENGTH_AT_60) *
+                                               float(std::min<int32>(bot->GetLevel(), COMMANDING_PRESENCE_MAX_LEVEL)) /
+                                               float(COMMANDING_PRESENCE_MAX_LEVEL) * cpRankFactor));
+    int32 const effectiveBsAp = bsApValue + cpStrength * ATTACK_POWER_PER_STRENGTH;
 
     static char const* blessingNames[] = {
         "blessing of might", "greater blessing of might", nullptr

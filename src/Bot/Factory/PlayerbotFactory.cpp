@@ -44,6 +44,7 @@
 #include "StatsWeightCalculator.h"
 #include "SpellMgr.h"
 #include "Trainer.h"
+#include "WarriorReworkUtils.h"
 #include "World.h"
 #include <array>
 #include <optional>
@@ -1736,6 +1737,12 @@ uint32 PlayerbotFactory::InitTalentsTree(bool increment /*false*/, bool use_temp
     if (increment && cls == CLASS_ROGUE)
         rogueSlot = ai::rogue_rework::PremadeSlot(bot);
 
+    // Rework: a Warrior keeps its premade slot (1.0 / 1.1 Arms, 1.2 Protection, 1.3 / 1.4 Fury) at any level; the tab
+    // (0, 1 or 2) would send every bot of the leading tab to its first slot, and the second Arms link to 1.0
+    uint32 warriorSlot = ai::warrior_rework::NO_PREMADE_SLOT;
+    if (increment && cls == CLASS_WARRIOR)
+        warriorSlot = ai::warrior_rework::PremadeSlot(bot);
+
     if (deathKnightSlot != ai::dk_rework::NO_PREMADE_SLOT)
     {
         specTab = deathKnightSlot;
@@ -1743,6 +1750,10 @@ uint32 PlayerbotFactory::InitTalentsTree(bool increment /*false*/, bool use_temp
     else if (rogueSlot != ai::rogue_rework::NO_PREMADE_SLOT)
     {
         specTab = rogueSlot;
+    }
+    else if (warriorSlot != ai::warrior_rework::NO_PREMADE_SLOT)
+    {
+        specTab = warriorSlot;
     }
     else if (increment && total_tabs != 0)
     {
@@ -2435,6 +2446,8 @@ void PlayerbotFactory::InitEquipment(bool incremental, bool second_chance)
     int32 delta = std::min(blevel, 10u);
 
     bool isPvp = sRandomPlayerbotMgr.IsSpecPvp(bot->GetGUID().GetCounter(), bot->getClass());
+    // Rework: a Warrior who is not Protection holds weapons only (the tab test AiFactory uses for "prot")
+    bool const warriorWeaponsOnly = bot->getClass() == CLASS_WARRIOR && !ai::warrior_rework::IsProtBuild(bot);
 
     StatsWeightCalculator calculator(bot);
     if (isPvp)
@@ -2617,6 +2630,11 @@ void PlayerbotFactory::InitEquipment(bool incremental, bool second_chance)
 
                         if (slot == EQUIPMENT_SLOT_OFFHAND && bot->getClass() == CLASS_ROGUE &&
                             proto->Class != ITEM_CLASS_WEAPON)
+                            continue;
+
+                        // Rework: no shield or held item in a non-Protection Warrior's off hand, also when no
+                        // off-hand weapon can be equipped yet (weight 0 alone still beats the empty slot)
+                        if (slot == EQUIPMENT_SLOT_OFFHAND && warriorWeaponsOnly && proto->Class != ITEM_CLASS_WEAPON)
                             continue;
 
                         int32 bestRandomProp = 0;
@@ -3466,9 +3484,14 @@ void PlayerbotFactory::InitSkills()
             SetRandomSkill(SKILL_POLEARMS);
             SetRandomSkill(SKILL_FIST_WEAPONS);
             SetRandomSkill(SKILL_THROWN);
-            bot->SetSkill(SKILL_DUAL_WIELD, 0, dualWieldLevel, dualWieldLevel);
-            bot->SetSkill(SKILL_PLATE_MAIL, 0, skillLevel, skillLevel);
-            bot->SetCanDualWield(dualWieldLevel);
+            // Rework: Dual Wield (674) is a level 10 spell; the level 20 gate above must not take the skill (and with
+            // it the spell) from a 10-19 warrior
+            {
+                uint32 const warriorDualWield = bot->GetLevel() < 10 ? 0 : 1;
+                bot->SetSkill(SKILL_DUAL_WIELD, 0, warriorDualWield, warriorDualWield);
+                bot->SetSkill(SKILL_PLATE_MAIL, 0, skillLevel, skillLevel);
+                bot->SetCanDualWield(warriorDualWield);
+            }
             break;
         case CLASS_PALADIN:
             SetRandomSkill(SKILL_SWORDS);

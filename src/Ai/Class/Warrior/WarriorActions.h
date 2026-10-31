@@ -176,10 +176,18 @@ public:
 // refuses (isUseful) when there is none: the target is 8 to 40 yd away, the point is on the ground
 // (UpdateAllowedPositionZ), in line of sight, not far above or below the bot, and one the caster could land on
 // (Leap::IsLandablePoint, the same test the spell's CheckCast runs). Never cast while rooted, charging or in the air.
+//
+// `targetValue` is the Unit* value whose position the bot leaps to ("current target", or "prot loose enemy" for the
+// "heroic leap loose" creator). A bot's CanCastSpell(x, y, z) does not run the spell script's CheckCast, so the
+// landable test here is the only guard.
 class WarriorHeroicLeapAction : public Action
 {
 public:
-    WarriorHeroicLeapAction(PlayerbotAI* botAI, std::string const name = "heroic leap") : Action(botAI, name) {}
+    WarriorHeroicLeapAction(PlayerbotAI* botAI, std::string const name = "heroic leap",
+                            std::string const targetValue = "current target")
+        : Action(botAI, name), _targetValue(targetValue)
+    {
+    }
 
     bool isUseful() override;
     bool isPossible() override;
@@ -187,6 +195,8 @@ public:
 
 private:
     bool FindPoint(float& x, float& y, float& z) const;
+
+    std::string _targetValue;
 };
 
 #endif

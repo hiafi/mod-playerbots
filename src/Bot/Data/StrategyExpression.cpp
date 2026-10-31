@@ -59,6 +59,10 @@ struct FunctionSpec
 // last_crit(ids)              value "last own spell crit::<ids>"; UINT32_MAX when the last result was not a crit.
 // cooldown(spell)             ai::spell::CooldownRemainingMs of the id (a name: the id the value "spell id::<name>"
 //                             resolves). ms, 0 when ready, unknown or unresolved.
+// ready_for(spell)            ms the spell has been off cooldown (getMSTime clock minus the end of its expired
+//                             Player cooldown entry). 0 while on cooldown, when the bot does not know the spell, or
+//                             when the name is unresolved. Infinity for a known spell with no cooldown entry (never
+//                             cast, or the entry was cleared or purged by a save): ready for "ever".
 // ms_since_cast(spell)        ai::spell::SpellCastStamps::MsSince: ms since the bot started a cast of the spell through
 //                             PlayerbotAI::CastSpell (getMSTime clock; instants count from the cast). Name: resolved
 //                             like cooldown(). Infinity when never cast (or the name is unresolved), so
@@ -92,6 +96,7 @@ constexpr FunctionSpec FUNCTIONS[] = {
     {"enemies_in_cone", ExprFn::EnemiesInCone, ExprType::Number, 2, 2, {ArgKind::Number, ArgKind::Number}},
     {"last_crit", ExprFn::LastCrit, ExprType::Number, 1, 1, {ArgKind::Ids}},
     {"cooldown", ExprFn::Cooldown, ExprType::Number, 1, 1, {ArgKind::Spell}},
+    {"ready_for", ExprFn::ReadyFor, ExprType::Number, 1, 1, {ArgKind::Spell}},
     {"ms_since_cast", ExprFn::MsSinceCast, ExprType::Number, 1, 1, {ArgKind::Spell}},
     {"lifetime", ExprFn::Lifetime, ExprType::Number, 1, 1, {ArgKind::Unit}},
     {"time_since_target_change", ExprFn::TimeSinceTargetChange, ExprType::Number, 0, 0, {}},
@@ -874,6 +879,7 @@ private:
                 node->valueName = node->spellName.empty() ? "spell cooldown remaining::" + std::to_string(node->spellId)
                                                           : "spell id::" + node->spellName;
                 break;
+            case ExprFn::ReadyFor:
             case ExprFn::MsSinceCast:
             case ExprFn::Known:
                 if (!node->spellName.empty())

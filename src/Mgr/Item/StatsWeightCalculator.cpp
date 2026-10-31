@@ -621,6 +621,13 @@ void StatsWeightCalculator::CalculateItemTypePenalty(ItemTemplate const* proto)
     // {
     //     weight_ *= 1.0;
     // }
+    // Rework: a Warrior who is not Protection never wears a shield or a held-in-off-hand item (Fury and Arms hold
+    // weapons only); 0 keeps it out of ItemUsageValue and EquipAction, and loses to any weapon in the factory
+    if (cls == CLASS_WARRIOR && tab != WARRIOR_TAB_PROTECTION &&
+        (proto->InventoryType == INVTYPE_SHIELD || proto->InventoryType == INVTYPE_HOLDABLE))
+    {
+        weight_ = 0;
+    }
     if (proto->Class == ITEM_CLASS_WEAPON)
     {
         // double hand

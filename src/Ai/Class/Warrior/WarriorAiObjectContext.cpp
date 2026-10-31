@@ -5,15 +5,19 @@
  */
 
 #include "WarriorAiObjectContext.h"
-#include "ArmsWarriorStrategy.h"
-#include "FuryWarriorStrategy.h"
 #include "GenericWarriorNonCombatStrategy.h"
 #include "NamedObjectContext.h"
 #include "Playerbots.h"
 #include "TankWarriorStrategy.h"
 #include "WarriorActions.h"
+#include "WarriorArmsContext.h"
+#include "WarriorArmsValues.h"
+#include "WarriorFuryContext.h"
 #include "WarriorProtContext.h"
+#include "WarriorProtValues.h"
 #include "WarriorPullStrategy.h"
+#include "WarriorReworkArmsStrategy.h"
+#include "WarriorReworkFuryStrategy.h"
 #include "WarriorReworkProtStrategy.h"
 #include "WarriorTriggers.h"
 
@@ -29,7 +33,7 @@ public:
 
 private:
     static Strategy* nc(PlayerbotAI* botAI) { return new GenericWarriorNonCombatStrategy(botAI); }
-    // Prot bots get the rework's pack rows, Arms and Fury the stock ones (WarriorReworkAoeStrategy)
+    // Prot, Arms and Fury bots get the rework's pack rows (WarriorReworkAoeStrategy)
     static Strategy* warrior_aoe(PlayerbotAI* botAI) { return new WarriorReworkAoeStrategy(botAI); }
     static Strategy* pull(PlayerbotAI* botAI) { return new WarriorPullStrategy(botAI); }
 };
@@ -48,8 +52,10 @@ public:
 private:
     // The stock TankWarriorStrategy stays in the tree; the Protection rework replaces it under the same name
     static Strategy* prot(PlayerbotAI* botAI) { return new WarriorReworkProtStrategy(botAI); }
-    static Strategy* arms(PlayerbotAI* botAI) { return new ArmsWarriorStrategy(botAI); }
-    static Strategy* fury(PlayerbotAI* botAI) { return new FuryWarriorStrategy(botAI); }
+    // The stock ArmsWarriorStrategy stays in the tree; the Arms rework replaces it under the same name
+    static Strategy* arms(PlayerbotAI* botAI) { return new WarriorReworkArmsStrategy(botAI); }
+    // The stock FuryWarriorStrategy stays in the tree; the Fury rework replaces it under the same name
+    static Strategy* fury(PlayerbotAI* botAI) { return new WarriorReworkFuryStrategy(botAI); }
 };
 
 class WarriorTriggerFactoryInternal : public NamedObjectContext<Trigger>
@@ -357,6 +363,8 @@ void WarriorAiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextL
     AiObjectContext::BuildSharedActionContexts(actionContexts);
     actionContexts.Add(new WarriorAiObjectContextInternal());
     actionContexts.Add(new WarriorProtActionFactory());
+    actionContexts.Add(new WarriorArmsActionFactory());
+    actionContexts.Add(new WarriorFuryActionFactory());
 }
 
 void WarriorAiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextList<Trigger>& triggerContexts)
@@ -369,4 +377,6 @@ void WarriorAiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContext
 void WarriorAiObjectContext::BuildSharedValueContexts(SharedNamedObjectContextList<UntypedValue>& valueContexts)
 {
     AiObjectContext::BuildSharedValueContexts(valueContexts);
+    valueContexts.Add(new WarriorProtValueFactory());
+    valueContexts.Add(new WarriorArmsValueFactory());
 }

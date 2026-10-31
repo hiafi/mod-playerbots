@@ -24,19 +24,24 @@
 # Every spell a bot may not know yet carries `known()`: `cooldown()` of an unknown spell reads 0, and `known()` also
 # reads talents, so the passive ones work. Spell Reflection (23920) is trained at level 44, so bots learn it;
 # Enraged Regeneration (55694) is trained at level 56 (trainer 200), so bots learn it.
-# Shockwave (46968) is the 52nd talent point, so it is not known at level 60, and its rows stay gated. Every row on the
-# target has `alive(target)`.
+# Shockwave (46968) is the last talent of the tree and the 51-point premade link takes it, so bots know it at 60; its
+# rows stay gated on `known()` for the levels before. Every row on the target has `alive(target)`.
 # Rage is `value("rage::self target")`; "tanking" is `value("my attacker count")`, every unit whose victim is the bot.
 #
-# Storm's Bulwark (the talent, ranks 200058/200059/200060) is what makes Thunder Clap grant a shield (the shield itself
-# is the absorb aura 200028), and the Shield Discipline buff (200064, set by a Shield Slam that hits, consumed by
-# Thunder Clap) only matters with it. Without the talent the buff would stay up for
-# 30 s and never be consumed, so rows R1/R2/R5 reduce to "Shield Slam on cooldown, Thunder Clap on cooldown". Shield
-# Slam, Devastate, Shield Block, Spell Reflection and Shield Wall need a shield: `prot shield` (a class trigger) is true
-# with one, and a bot without one falls back to Sunder Armor (R8b) and Thunder Clap. Revenge is castable only in the 5 s
-# after a dodge, parry or block (an aura state, Defensive Stance), so its rows are "castable" and never a cadence. Sword
-# and Board (a Revenge or Devastate proc) resets Shield Slam's cooldown, so it needs no row of its own. There is no
-# hold-position rule after a Thunder Clap (PW3): the Thunderstruck echo is centred on the caster, not the cast.
+# Shield Discipline (the talent, ranks 200062/200063; buff 200064) is set by a Shield Slam that hits and consumed by ANY
+# Thunder Clap, which then grants the larger shield (the shield itself is the absorb aura 200028); the buff waits 20 s.
+# No row reads Storm's Bulwark: R1 is gated on Shield Discipline being learned (the guide: from 50, before that the
+# single target list skips to line 5). Shield Slam, Devastate, Shield Block, Spell Reflection and Shield Wall need a
+# shield: `prot shield` (a class trigger) is true with one, and a bot without one falls back to Sunder Armor (R8b) and
+# Thunder Clap. Revenge is castable only in the 5 s after a dodge, parry or block (an aura state, Defensive Stance), so
+# its rows are "castable" and never a cadence. Sword and Board (any rage cast) makes Shield Slam free, so it needs no
+# row of its own. No row reads Tempered, Empowered Revenge, 200045 or the Thunder Clap echo; there is no hold-position
+# rule after a Thunder Clap (the echo strikes where the Thunder Clap was cast; a tank barely moves).
+#
+# Recent damage is `value("prot recent damage")`: the percent of maximum health taken in the last 5 s, absorbed damage
+# included. It is sampled when read, so it comes first in every condition that uses it. A loose enemy is an enemy in
+# combat with the group that is hitting a party member other than the bot (and not another tank):
+# `alive("prot loose enemy")` is the nearest one, `prot loose enemies::<yd>` counts them.
 #
 # Sunder Armor: Devastate and the Sunder Armor ability (7386, a trigger-spell effect) both leave the debuff 58567 on the
 # target, so the stacks and the time left are read from 58567, from the bot's own casts.
@@ -51,10 +56,11 @@
 # Spell ids: Charge 100, Shield Bash 72, Defensive Stance 71, Heroic Strike 78, Cleave 845, Shield Wall 871,
 # Challenging Shout 1161, Shield Block 2565, Bloodrage 2687 (aura 29131), Thunder Clap 6343, Revenge 6572, Sunder Armor
 # 7386 (debuff 58567, also left by Devastate), Concussion Blow 12809, Last Stand 12975, Berserker Rage 18499 (also its
-# aura), Devastate 20243, Spell Reflection 23920, Shield Slam 23922, Shockwave 46968, Enraged Regeneration 55694,
+# aura), Devastate 20243, Spell Reflection 23920, Shield Slam 23922, Taunt 355, Demoralizing Shout 1160,
+# Shockwave 46968, Enraged Regeneration 55694,
 # Victory Rush 34428 (aura Victorious 32216), Heroic Leap 204400, Skull Banner 204405 (Rallied 204407).
-# Talents: Storm's Bulwark 200058/200059/200060 (absorb aura 200028), Shield Discipline 200062/
-# 200063 (buff 200064). Concussion Blow, Last Stand, Devastate and Shockwave are talents that grant the spell of the
+# Talents: Shield Discipline 200062/200063 (buff 200064; absorb aura 200028).
+# Concussion Blow, Last Stand, Devastate and Shockwave are talents that grant the spell of the
 # same id.
 strategy: warrior/prot
 class: warrior
@@ -62,10 +68,11 @@ conditions:
   rage: value("rage::self target")
   tanking: value("my attacker count") >= 1
   shield: trigger("prot shield")
-  # The Storm's Bulwark talent: with it Shield Slam arms Thunder Clap's shield. Only the current rank is held, so any of
-  # the three
-  bulwark: known(200058) or known(200059) or known(200060)
+  # Shield Discipline learned (only the current rank is held, so either): the guide's Shield Slam line 2 starts at 50
+  shield_learned: known(200062) or known(200063)
   disc_up: aura(self, 200064)
+  # Sunder is not full: below 5 stacks of this bot's Sunder Armor, or 5 s or less left
+  sunder_stale: stacks(target, "58567", own) < 5 or remaining(target, "58567", own) <= 5000
   ss_ready: known(23922) and cooldown(23922) == 0 and alive(target) and shield
   tc_ready: known(6343) and cooldown(6343) == 0 and alive(target)
   devastate_ok: known(20243) and alive(target) and shield
@@ -96,47 +103,46 @@ rows:
   - do: victory rush
     when: vr_ready and remaining(self, 32216) < 5000
     relevance: normal + 8.35
-  # R6: Shield Slam, any time it is ready (the free cast of Sword and Board lands here too)
+  # R6: Shield Slam, any time it is ready (the free cast of Sword and Board lands here too), below Concussion Blow
   - do: prot shield slam
     when: ss_ready
     relevance: normal + 8.3
-  # R1: Shield Slam first when Thunder Clap has nothing to spend (no Shield Discipline up), or always without Storm's
-  # Bulwark
+  # R1: Shield Slam first while Shield Discipline is learned and its buff is down
   - do: prot shield slam
-    when: ss_ready and (not bulwark or not disc_up)
+    when: ss_ready and shield_learned and not disc_up
     relevance: normal + 8.8
-  # R2: Thunder Clap with Shield Discipline up, on cooldown without Storm's Bulwark, or without a shield to slam
+  # R2: Thunder Clap with Shield Discipline up, or without a shield to slam
   - do: prot thunder clap
-    when: tc_ready and (not bulwark or not shield or disc_up)
+    when: tc_ready and (not shield or disc_up)
     relevance: normal + 8.7
-  # R3: Shockwave on cooldown (not known at level 60)
+  # R5: Thunder Clap without Shield Discipline up when the next Shield Slam is more than 1.5 s away, or when the target
+  # lacks this bot's slow. Above Shockwave and Revenge (guide single target line 3 holds all three clauses)
+  - do: prot thunder clap
+    when: >-
+      tc_ready and shield and not disc_up
+      and (cooldown(23922) > 1500 or not aura(target, 6343, own))
+    relevance: normal + 8.65
+  # R3: Shockwave on cooldown with the target in front of the bot
   - do: prot shockwave
-    when: known(46968) and cooldown(46968) == 0 and alive(target) and in_range(target, 10)
+    when: >-
+      known(46968) and cooldown(46968) == 0 and alive(target) and in_range(target, 10) and in_arc(target, 104)
     relevance: normal + 8.6
   # R4: Revenge whenever it is castable
   - do: prot revenge
     when: known(6572) and cooldown(6572) == 0 and alive(target) and trigger("revenge")
     relevance: normal + 8.5
-  # R5: Thunder Clap without Shield Discipline when the next Shield Slam is more than 1.5 s away
-  - do: prot thunder clap
-    when: tc_ready and bulwark and shield and not disc_up and cooldown(23922) > 1500
-    relevance: normal + 8.4
-  # R6b: Concussion Blow on cooldown
+  # R6b: Concussion Blow on cooldown against a boss, above the ready Shield Slam (R6)
   - do: prot concussion blow
-    when: known(12809) and cooldown(12809) == 0 and alive(target)
-    relevance: normal + 8.2
+    when: known(12809) and cooldown(12809) == 0 and alive(target) and (boss(target) or elite(target))
+    relevance: normal + 8.4
+  # R7: Devastate while Sunder is not full (guide single target line 8), above Heroic Strike
+  - do: prot devastate
+    when: devastate_ok and sunder_stale
+    relevance: normal + 8.15
   # R8: Devastate, the filler that builds the Sunder stacks
   - do: prot devastate
     when: devastate_ok
     relevance: normal + 8
-  # R7 (PW7): the Sunder refresh, once the debuff is up and about to lapse. Above Revenge and the late Thunder Clap, so
-  # a Sunder under 3 s left wins the GCD over every row but the Shield Slam / Thunder Clap pair (the basket takes the
-  # higher relevance of R7 and R8)
-  - do: prot devastate
-    when: >-
-      devastate_ok and stacks(target, "58567", own) >= 1
-      and remaining(target, "58567", own) < 3000
-    relevance: normal + 8.45
   # R8b: without a shield Devastate cannot be cast, so Sunder Armor keeps the debuff at 5 stacks and fresh
   - do: prot sunder armor
     when: >-
@@ -144,13 +150,16 @@ rows:
       and (stacks(target, "58567", own) < 5 or remaining(target, "58567", own) < 6000)
     relevance: normal + 7.9
 
-  # D1: Last Stand at low health, above the rotation so a Thunder Clap lands under the raised maximum health
+  # D1: Last Stand at low health after real damage (25% of maximum health in 5 s), above the rotation so a Thunder
+  # Clap lands under the raised maximum health
   - do: prot last stand
-    when: known(12975) and cooldown(12975) == 0 and health_pct(self) < 40
+    when: >-
+      value("prot recent damage") >= 25 and known(12975) and cooldown(12975) == 0 and health_pct(self) < 40
     relevance: emergency + 3
-  # D2: Shield Wall
+  # D2: Shield Wall below 30% health or after 40% of maximum health taken in 5 s
   - do: prot shield wall
-    when: known(871) and cooldown(871) == 0 and shield and health_pct(self) < 25
+    when: >-
+      (value("prot recent damage") >= 40 or health_pct(self) < 30) and known(871) and cooldown(871) == 0 and shield
     relevance: emergency + 2
   # D3 (PW2): Enraged Regeneration, once Shield Wall is gone
   - do: prot enraged regeneration
@@ -175,6 +184,14 @@ rows:
   - do: taunt
     trigger: lose aggro
     relevance: interrupt + 1
+  # G2: Taunt a loose enemy that is hitting a party member
+  - do: prot taunt
+    when: known(355) and cooldown(355) == 0 and alive("prot loose enemy")
+    relevance: interrupt + 1
+  # G3: Spell Reflection the moment the current target casts a spell at the bot (off the GCD, no rage gate)
+  - do: prot spell reflection
+    when: known(23920) and cooldown(23920) == 0 and shield and trigger("spell reflection")
+    relevance: interrupt - 1
 
   # F: Defensive Stance, the Prot stance
   - do: prot defensive stance
@@ -190,7 +207,8 @@ rows:
   # S1: Skull Banner (off the GCD) in the first 5 s of a boss fight, when fewer than half of the group have Rallied
   - do: prot skull banner
     when: >-
-      known(204405) and cooldown(204405) == 0 and boss(target) and combat_time() < 5000 and few_rallied
+      known(204405) and cooldown(204405) == 0 and (boss(target) or elite(target))
+      and combat_time() < 5000 and few_rallied
     relevance: high + 8.5
   # K1: Commanding Shout, kept from the stock tank
   - do: commanding shout
@@ -203,18 +221,17 @@ rows:
       known(204400) and cooldown(204400) == 0 and known(100) and cooldown(100) > 0 and alive(target)
       and in_range(target, 40) and not in_range(target, 8)
     relevance: high + 4.5
-  # K2: Challenging Shout when a pack is on the group (the stock tank's panic button)
-  - do: challenging shout
-    when: known(1161) and cooldown(1161) == 0 and trigger("high aoe")
-    relevance: high + 3
+  # C3: Heroic Leap at a loose enemy 8 to 40 yd away, only while Charge is on cooldown (the action picks the landing
+  # point)
+  - do: heroic leap loose
+    when: >-
+      known(204400) and cooldown(204400) == 0 and known(100) and cooldown(100) > 0 and alive("prot loose enemy")
+      and in_range("prot loose enemy", 40) and not in_range("prot loose enemy", 8)
+    relevance: high + 4.4
   # B1: Shield Block on cooldown while something is hitting the bot
   - do: prot shield block
     when: known(2565) and cooldown(2565) == 0 and shield and tanking
     relevance: high + 7.6
-  # B2 (PW8): Spell Reflection on cooldown while tanking, with a Heroic Strike margin of rage
-  - do: prot spell reflection
-    when: known(23920) and cooldown(23920) == 0 and shield and tanking and rage >= 35
-    relevance: high + 7.4
   # B3 (PW6): Bloodrage on cooldown while rage is low (it costs health)
   - do: prot bloodrage
     when: known(2687) and cooldown(2687) == 0 and rage < 70 and health_pct(self) > 50

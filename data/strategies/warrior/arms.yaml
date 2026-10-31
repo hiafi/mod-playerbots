@@ -1,0 +1,228 @@
+# The reworked Arms warrior, from the guide (docs/reworks/bot-strategy/warrior-arms-bot-guide.md, S2): "warrior/arms"
+# is appended to the "arms" combat strategy by WarriorReworkArmsStrategy::InitTriggers (after the melee shell, whose
+# `reach melee` walk is high + 1). The pack list is the `warrior/arms-pack` document, appended to "aoe". Each row queues
+# its action at the relevance when its condition holds (`when`, the expression language of StrategyExpression.h).
+# Execution order is by relevance, not by position in this file. Actions named "arms ..." are RowCheckedAction (a cast
+# by spell id that re-checks its own row); "berserker rage", "victory rush", "charge", "heroic leap", "pummel",
+# "pummel on enemy healer", "battle stance" and "battle shout" are stock.
+#
+# The "arms" strategy also runs for warriors below level 10 and for warriors with no talent points, so EVERY
+# row is `known()`-gated. A passive talent is never in the spellbook: `known()` also tests the active spec's talents.
+#
+# Bands: control break (emergency + 1) > interrupts (interrupt + 2 / + 1) > stance, shout (high + 10 / 9) > the
+# off-the-GCD rows (high + 7.5 .. 4.5; Avatar, Sweeping Strikes, Skull Banner, Recklessness, Bloodrage, Intervene,
+# Charge and Heroic Leap are off the GCD, so the engine still fires them during a global) > `reach melee` (high + 1,
+# the shell's) > the rotation (normal + 9.95 .. 8.75, one 0.05 step per guide line).
+#
+# POOLING (the S1 lesson): the engine skips an action that is not affordable and goes on to the next row, so a cheap
+# spender below Mortal Strike would eat the rage Mortal Strike needs. Every spender except Mortal Strike carries the
+# soft gate `pool_N` = (rage >= 25 + its cost N) or Mortal Strike is not coming within 1.5 s, and (rage >= 20 + N) or
+# Colossus Smash is not coming within 1.5 s (D32: "the same for Colossus Smash at 20"; Smash's own row carries only the
+# Mortal Strike half, `mpool_20`). Slam with Momentum's free charge skips it (it costs nothing). Sweeping Strikes and
+# Bloodrage are exempt (the guide's off-GCD buttons), and so are Intervene and Pummel (10 rage, off the GCD, utility: a
+# deliberate exemption).
+#
+# Rows that queue the same action name (qualifier included) merge into one basket that keeps the first pusher's event,
+# so only that row is re-checked: the repeated guide lines get a `::tag` (the action ignores it): Overpower lines
+# 6/8/11 (`cap`, `window`, `bank`), Slam 7/12 (`window`, `dump`), Execute 4/10 (`window`, `dump`).
+#
+# Spell ids: Colossus Smash 204490 (debuff = the window, 204491), Avatar 204492 (cast and self aura), Sweeping Strikes
+# 204493 (the Arms one, not stock 12328), Skull Banner 204405 (Rallied 204407), Mortal Strike 12294, Slam 1464,
+# Overpower 7384 (charge aura 204403), Execute 5308, Rend 772, Whirlwind 1680, Bladestorm 46924, Heroic Strike 78,
+# Momentum buff 204498, Juggernaut buff 204499, Endless Rage rank 2 (the capstone) 204544, Improved Charge rank 2
+# 12697, Victorious 32216, Battle Stance 2457, Battle Shout 6673.
+strategy: warrior/arms
+class: warrior
+conditions:
+  rage: value("rage::self target")
+  in_combat: value("combat::self target")
+  # 3+ enemies in combat within 8 yd; `co -aoe` turns the aoe value off and the single list plays at any count
+  # (and Sweeping Strikes learned: below level 30 a pack keeps the single list, the pack list opens on Sweeping)
+  pack: known(204493) and value("warrior aoe enabled") and enemies_within(8) >= 3
+  big_pack: known(204493) and value("warrior aoe enabled") and enemies_within(8) >= 5
+  # "the tank has it": the target is on a tank (or there is no group), or 2 s after the fight started
+  tank_has: value("warrior may engage") or combat_time() >= 2000
+  boss_like: boss(target) or elite(target)
+  long_lived: boss(target) or (elite(target) and lifetime(target) > 15)
+  # the Colossus Smash window (this bot's debuff on the target) and the aura states (a named condition is a bool:
+  # numbers such as the window's time left or the Overpower charges are written inline)
+  window: aura(target, 204491, own)
+  avatar_up: aura(self, 204492)
+  sweeping_up: aura(self, 204493)
+  momentum_up: aura(self, 204498)
+  jugg_up: aura(self, 204499)
+  ovp_exp: remaining(self, 204403) < 3000
+  rend_low: not aura(target, 772, own) or remaining(target, 772, own) < 3000
+  execute_ph: health_pct(target) < 20
+  smash_soon: known(204490) and cooldown(204490) <= 3000
+  # Colossus Smash is more than 3 s away, or its window is up with 1.5 s or more left (Avatar's window is permanent)
+  smash_far: not known(204490) or cooldown(204490) > 3000 or (window and remaining(target, 204491, own) >= 1500)
+  # "smash waiting": Colossus Smash has been off cooldown for 3 s or more. ready_for reads infinity for a spell with
+  # no cooldown entry: before the first cast of the fight (waiting: S2 sims, harness-requested fix, 2026-10-30) and
+  # after a Mortal Strike cut finished the cooldown and erased the entry (casting at once is harmless: the cut means a
+  # Mortal Strike just landed, the next falls inside the window)
+  smash_wait: known(204490) and ready_for(204490) >= 3000
+  # Mortal Strike is ready or about to be (the pool line protects its rage)
+  ms_soon: known(12294) and cooldown(12294) <= 1500
+  # Colossus Smash is castable within 1.5 s: off cooldown or about to be, and not held back by a window that still has
+  # 3 s or more to run (an Avatar window never ends, so Smash is never "soon" under it)
+  cs_soon: known(204490) and cooldown(204490) <= 1500 and not (window and remaining(target, 204491, own) >= 3000)
+  mpool_20: not ms_soon or rage >= 45
+  pool_5: (not ms_soon or rage >= 30) and (not cs_soon or rage >= 25)
+  pool_10: (not ms_soon or rage >= 35) and (not cs_soon or rage >= 30)
+  pool_15: (not ms_soon or rage >= 40) and (not cs_soon or rage >= 35)
+  pool_20: (not ms_soon or rage >= 45) and (not cs_soon or rage >= 40)
+  pool_25: (not ms_soon or rage >= 50) and (not cs_soon or rage >= 45)
+  # Execute spends its cost plus up to 15 more rage (30 in all)
+  pool_30: (not ms_soon or rage >= 55) and (not cs_soon or rage >= 50)
+  vr_ready: known(34428) and aura(self, 32216) and alive(target)
+  # Skull Banner: fewer than half of the group members have Rallied
+  few_rallied: value("warrior few rallied")
+rows:
+  # --- Control break: Berserker Rage when feared, sapped or incapacitated (on the GCD, stock)
+  - do: berserker rage
+    when: known(18499) and cooldown(18499) == 0 and trigger("fear sleep sap")
+    relevance: emergency + 1
+
+  # --- Interrupts (the stock Arms strategy had none)
+  - do: pummel
+    when: known(6552) and cooldown(6552) == 0 and trigger("pummel")
+    relevance: interrupt + 2
+  - do: pummel on enemy healer
+    when: known(6552) and cooldown(6552) == 0 and trigger("pummel on enemy healer")
+    relevance: interrupt + 1
+
+  # --- Setup: Battle Stance, Battle Shout. Nothing else changes stance, so a bot already in Battle never swaps.
+  - do: battle stance
+    when: known(2457) and not aura(self, 2457)
+    relevance: high + 10
+  - do: battle shout
+    when: known(6673) and trigger("battle shout")
+    relevance: high + 9
+
+  # --- Off the global cooldown (guide lines 1-9)
+  # 1. Avatar: in combat, the tank has it, a boss (or elite) or a big pack, and Bladestorm is ready or > 30 s away
+  - do: arms avatar
+    when: >-
+      known(204492) and cooldown(204492) == 0 and alive(target) and in_combat and tank_has
+      and (boss_like or big_pack)
+      and (not known(46924) or cooldown(46924) == 0 or cooldown(46924) > 30000)
+    relevance: high + 7.5
+  # 2. Sweeping Strikes: a pack, or exactly 2 enemies within 8 yd and both long-lived
+  - do: arms sweeping strikes
+    when: >-
+      known(204493) and cooldown(204493) == 0 and alive(target)
+      and (pack or (enemies_within(8) == 2 and value("warrior long lived enemies::8") == 2))
+    relevance: high + 7.4
+  # 3. Skull Banner: a boss (or elite) in combat with the group and fewer than half Rallied
+  - do: arms skull banner
+    when: known(204405) and cooldown(204405) == 0 and alive(target) and in_combat and boss_like and few_rallied
+    relevance: high + 7.3
+  # 4. Recklessness: a boss (or elite) with the window up and 4 s or more left, or Avatar active
+  - do: arms recklessness
+    when: >-
+      known(1719) and cooldown(1719) == 0 and alive(target) and boss_like
+      and ((window and remaining(target, 204491, own) >= 4000) or avatar_up)
+    relevance: high + 7.2
+  # 8. Bloodrage: in combat, rage below 30, health above 50%
+  - do: arms bloodrage
+    when: known(2687) and cooldown(2687) == 0 and in_combat and rage < 30 and health_pct(self) > 50
+    relevance: high + 7.1
+  # 9. Intervene: a healer within 25 yd below 40% and attacked (the value picks it)
+  - do: arms intervene
+    when: known(3411) and cooldown(3411) == 0 and in_combat and alive("warrior intervene target")
+    relevance: high + 7
+  # 7. Charge: 20 to 25 yd away (30 with Improved Charge's capstone), in combat, the tank has it. Never an opener.
+  - do: charge
+    when: >-
+      known(100) and cooldown(100) == 0 and alive(target) and in_combat and tank_has
+      and not in_range(target, 20) and (in_range(target, 25) or (known(12697) and in_range(target, 30)))
+    relevance: high + 4.5
+  # 6. Heroic Leap: 8 to 40 yd away, the tank has it, not during Bladestorm. With Weight of the Earth (204537) the
+  # landing strikes 16 yd around: leap onto a pack, or when the target is too far for a Charge to be the answer
+  # (guide: "prefer a moment with a pack"; the last clause keeps a single-target Weight of the Earth bot moving)
+  - do: heroic leap
+    when: >-
+      known(204400) and cooldown(204400) == 0 and alive(target) and tank_has and not aura(self, 46924)
+      and in_range(target, 40) and not in_range(target, 8)
+      and (not known(204537) or enemies_near_target(16) >= 3 or not in_range(target, 25))
+    relevance: high + 5
+
+  # --- Single target list (rows carry `not pack`, so a pack plays the `warrior/arms-pack` list instead)
+  # 1. Victory Rush when Victorious is up and health below 60% (free; also in a pack)
+  - do: victory rush
+    when: vr_ready and health_pct(self) < 60
+    relevance: normal + 9.95
+  # 2. Colossus Smash: window not up (or < 1.5 s left); Mortal Strike within 1.5 s, or Smash waiting 3 s or more,
+  # or Avatar (skip the Mortal Strike check). The window never exists before level 40.
+  - do: arms colossus smash
+    when: >-
+      not pack and known(204490) and cooldown(204490) == 0 and alive(target) and mpool_20
+      and (not window or remaining(target, 204491, own) < 1500)
+      and (avatar_up or not known(12294) or cooldown(12294) <= 1500 or smash_wait)
+    relevance: normal + 9.35
+  # 3. Mortal Strike (no soft gate: it is what the gate protects)
+  - do: arms mortal strike
+    when: not pack and known(12294) and cooldown(12294) == 0 and alive(target)
+    relevance: normal + 9.3
+  # 4. Execute in the execute phase when the window is up
+  - do: arms execute::window
+    when: not pack and known(5308) and alive(target) and execute_ph and window and pool_30
+    relevance: normal + 9.25
+  # 5. Rend: low or missing, a long-lived target (any target before Mortal Strike), Juggernaut not up
+  - do: arms rend
+    when: >-
+      not pack and known(772) and alive(target) and rend_low and (long_lived or not known(12294))
+      and not jugg_up and pool_10
+    relevance: normal + 9.2
+  # 6. Overpower at 5 charges, or 1 or more and the charges expiring (never sit at 5)
+  - do: arms overpower::cap
+    when: >-
+      not pack and known(7384) and alive(target) and pool_5
+      and (stacks(self, 204403) >= 5 or (stacks(self, 204403) >= 1 and ovp_exp))
+    relevance: normal + 9.15
+  # 7. Slam in the window, or Momentum up (Momentum makes it free: no pool gate)
+  - do: arms slam::window
+    when: >-
+      not pack and known(1464) and cooldown(1464) == 0 and alive(target)
+      and ((window and pool_15) or momentum_up)
+    relevance: normal + 9.1
+  # 8. Overpower with charges while the window is up
+  - do: arms overpower::window
+    when: not pack and known(7384) and alive(target) and stacks(self, 204403) >= 1 and window and pool_5
+    relevance: normal + 9.05
+  # 9. Bladestorm with Avatar active, Mortal Strike and Colossus Smash both more than 3 s away
+  - do: arms bladestorm
+    when: >-
+      not pack and known(46924) and cooldown(46924) == 0 and alive(target) and avatar_up
+      and cooldown(12294) > 3000 and smash_far and pool_25
+    relevance: normal + 9
+  # 10. Execute in the execute phase, rage 30 or more, Smash not about to be ready
+  - do: arms execute::dump
+    when: not pack and known(5308) and alive(target) and execute_ph and rage >= 30 and not smash_soon and pool_30
+    relevance: normal + 8.95
+  # 11. Overpower at 3 or more charges (keeps 2 banked for the next window; below Colossus Smash: at 1 or more)
+  - do: arms overpower::bank
+    when: >-
+      not pack and known(7384) and alive(target) and pool_5
+      and (stacks(self, 204403) >= 3 or (not known(204490) and stacks(self, 204403) >= 1))
+    relevance: normal + 8.9
+  # 12. Slam ready, rage 50 or more (so above every pool line), not (Smash soon and rage below 70)
+  - do: arms slam::dump
+    when: >-
+      not pack and known(1464) and cooldown(1464) == 0 and alive(target)
+      and (rage >= 50 or (not known(204490) and rage >= 30 and pool_15))
+      and not (smash_soon and rage < 70)
+    relevance: normal + 8.85
+  # 13. Victory Rush with less than 5 s of Victorious left
+  - do: victory rush
+    when: vr_ready and remaining(self, 32216) < 5000
+    relevance: normal + 8.8
+  # 14. Heroic Strike dump: rage 30 or more before Slam is learned; from Slam on only at 95 or more without Endless
+  # Rage's capstone, and never while Slam is ready
+  - do: arms heroic strike
+    when: >-
+      not pack and known(78) and alive(target) and pool_15
+      and ((not known(1464) and rage >= 30)
+      or (known(1464) and cooldown(1464) > 0 and rage >= 95 and not known(204544)))
+    relevance: normal + 8.75

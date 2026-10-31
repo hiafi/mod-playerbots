@@ -1,0 +1,70 @@
+# The reworked Fury warrior's pack list (guide "AoE or packs"): "warrior/fury-pack" is appended to the "aoe" strategy
+# by WarriorReworkAoeStrategy::InitTriggers when the bot's leading tab is Fury (Prot keeps `warrior/prot-aoe`, Arms
+# `warrior/arms-pack`). The single target list, the off-the-GCD buttons (Death Wish, Recklessness, ...) and the setup
+# rows are the `warrior/fury` document. A pack is 3 or more enemies in combat within 8 yd while the bot has the "aoe"
+# strategy (`co -aoe` turns it off and the single list plays at any count) and Cleave is learned (14). With exactly 2
+# enemies the single list plays with Cleave swapped in. No Blood Rush assumption: slot 1.4 does not take it, so the
+# Rampage rows read the auras (`free_rampage`) and nothing else.
+#
+# Bands: normal + 9.9 .. 9.5, one 0.05 step per guide line (above the single list, which a pack never plays). Actions
+# are the pack twins "fury pack ..." (RowCheckedAction casts by spell id). Rows that queue the same name merge into one
+# basket that re-checks only the first row, so the repeated guide lines get a `::tag`: Rampage 3 (`free`, `paid`),
+# Execute 5/6 (`deathmaker`, `phase`), Cleave 4/8 (`surge`, `dump`). Reserve: every paid Cleave / Execute carries the
+# soft gate `res_N` (fury.yaml header); the guide's pack Whirlwind has none. Every row is `known()`-gated.
+# See fury.yaml for the spell ids.
+strategy: warrior/fury-pack
+class: warrior
+conditions:
+  rage: value("rage::self target")
+  pack: known(845) and value("warrior aoe enabled") and enemies_within(8) >= 3
+  tank_has: value("warrior may engage") or combat_time() >= 2000
+  execute_ph: known(5308) and health_pct(target) < 20
+  blood_rush_up: aura(self, 204637)
+  surge_up: aura(self, 204652)
+  dm_up: aura(self, 204638)
+  dm_late: remaining(self, 204638) < 3000
+  free_rampage: blood_rush_up or (aura(self, 1719) and known(204658))
+  rampage_due: known(204630) and cooldown(204630) <= 3000
+  reserve_on: rampage_due and not free_rampage
+  res_20: not reserve_on or rage >= 70
+  # Execute spends its cost plus up to 15 more rage (30 in all)
+  res_30: not reserve_on or rage >= 80
+  bt_ok_for_rampage: cooldown(23881) > 1500 or not (known(204677) or known(204678))
+  vr_ready: known(34428) and aura(self, 32216) and alive(target)
+rows:
+  # 1. Whirlwind, rage 25 or more, the tank has it (the opener on a pack)
+  - do: fury pack whirlwind
+    when: pack and known(1680) and cooldown(1680) == 0 and alive(target) and tank_has and rage >= 25
+    relevance: normal + 9.9
+  # 2. Bloodthirst on the current target
+  - do: fury pack bloodthirst
+    when: pack and known(23881) and cooldown(23881) == 0 and alive(target)
+    relevance: normal + 9.85
+  # 3. Rampage as the single list's lines 1 and 3
+  - do: fury pack rampage::free
+    when: pack and known(204630) and cooldown(204630) == 0 and alive(target) and free_rampage
+    relevance: normal + 9.8
+  - do: fury pack rampage::paid
+    when: >-
+      pack and known(204630) and cooldown(204630) == 0 and alive(target) and rage >= 50 and bt_ok_for_rampage
+    relevance: normal + 9.75
+  # 4. Cleave when Bloodsurge is up (free)
+  - do: fury pack cleave::surge
+    when: pack and known(845) and alive(target) and surge_up
+    relevance: normal + 9.7
+  # 5. Execute with Deathmaker up: rage 70 or more, or Deathmaker nearly gone
+  - do: fury pack execute::deathmaker
+    when: pack and known(5308) and alive(target) and dm_up and (rage >= 70 or dm_late)
+    relevance: normal + 9.65
+  # 6. Execute on the current target in the execute phase: its cost plus the Reserve (res_30)
+  - do: fury pack execute::phase
+    when: pack and known(5308) and alive(target) and execute_ph and rage >= 15 and res_30
+    relevance: normal + 9.6
+  # 7. Victory Rush as the single list's line 7
+  - do: victory rush
+    when: pack and vr_ready and (health_pct(self) < 70 or remaining(self, 32216) < 3000)
+    relevance: normal + 9.55
+  # 8. Cleave at rage 20 plus the Reserve (never held for Whirlwind: every Cleave takes 1.5 s off it)
+  - do: fury pack cleave::dump
+    when: pack and known(845) and alive(target) and rage >= 20 and res_20
+    relevance: normal + 9.5

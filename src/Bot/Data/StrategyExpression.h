@@ -65,6 +65,7 @@ enum class ExprFn : uint8
     EnemiesInCone,
     LastCrit,
     Cooldown,
+    ReadyFor,
     MsSinceCast,
     Lifetime,
     TimeSinceTargetChange,

@@ -1,0 +1,226 @@
+# The reworked Fury warrior, from the guide (docs/reworks/bot-strategy/warrior-fury-bot-guide.md, S3): "warrior/fury"
+# is appended to the "fury" combat strategy by WarriorReworkFuryStrategy::InitTriggers (after the melee shell, whose
+# `reach melee` walk is high + 1). The pack list is the `warrior/fury-pack` document, appended to "aoe". Each row
+# queues its action at the relevance when its condition holds (`when`, the expression language of StrategyExpression.h).
+# Execution order is by relevance, not by position in this file. Actions named "fury ..." are RowCheckedAction (a cast
+# by spell id that re-checks its own row); "berserker rage", "victory rush", "charge", "heroic leap", "pummel",
+# "pummel on enemy healer", "berserker stance", "battle stance", "battle shout" and "commanding shout" are stock.
+#
+# The "fury" strategy runs for every warrior whose leading talent tab is Fury from level 10, so EVERY
+# row is `known()`-gated: a level 10 bot has only Heroic Strike, Battle Shout, Charge, Victory Rush and Bloodrage. A
+# passive talent is never in the spellbook: `known()` also tests the active spec's talents. Free casts (Blood Rush's
+# and Merciless' free Rampage, Bloodsurge's free Slam / Cleave) are cost SpellMods, so the bot's affordability read
+# sees them at rage 0 and the `::free` rows need no special action.
+#
+# Bands: control break (emergency + 1) > interrupts (interrupt + 2 / + 1) > Enraged Regeneration (normal + 9.99, a
+# heal) > stance, shout (high + 10 / 9 / 8.9) > the off-the-GCD rows (high + 7.5 .. 4.5; Death Wish, Recklessness,
+# Skull Banner, Bloodrage, Charge and Heroic Leap are off the GCD, so the engine still fires them during a global) >
+# `reach melee` (high + 1, the shell's) > the rotation (normal + 9.95 .. 9.55, one 0.05 step per guide line).
+#
+# RESERVE (the S1/S2 pooling lesson): the engine skips an action that is not affordable and goes on to the next row,
+# so a cheap spender would eat the 50 rage Rampage needs (60 until the 2026-10-30 balance pass). The Reserve is 50
+# while Rampage is due (known, 3 s or less on its cooldown) and not free (no Blood Rush, no Recklessness with Merciless
+# rank 3). The language has no
+# arithmetic, so "N plus Reserve" is a named condition with the sum written out: `res_N` = not reserve_on or rage >=
+# N + 50 (Execute spends its 15 plus up to 15 more, so its gate is `res_30`). Heroic Strike is the
+# guide's `(rage >= 55 and not reserve_on) or rage >= 90`. Pummel and Enraged Regeneration are documented exemptions
+# (utility / emergency heal), and so are the free casts (they cost nothing). The Death Wish pool is 60 (Q13: it
+# costs 10 and the point is a paid Rampage right after), the execute-phase Execute uses res_30 (guide: 75), and the
+# above-20% Whirlwind carries no Reserve (the guide's line 4); the execute-phase Whirlwind does (its line 4).
+#
+# Rows that queue the same action name (qualifier included) merge into one basket that keeps the first pusher's
+# event, so only that row is re-checked: the repeated guide lines get a `::tag` (the action ignores it): Rampage 1/3/6
+# (`free`, `paid`, `paidx`), Execute (`deathmaker`, `phase`), Slam (`free`, `paid`), Cleave (`surge`, `dump`),
+# Whirlwind above 20% / in the execute phase (`fury whirlwind`, `fury whirlwind::phase`).
+#
+# Not written: Piercing Howl (1.4 only, needs a "solo" test), Skull-less pulls ("Fury does not pull": Charge and
+# Heroic Leap wait for `tank_has`), and a shield guard (gear policy, not a combat row).
+#
+# Spell ids: Rampage 204630 (the castable; 29801 is the retired talent aura), Enrage buff 204636, Blood Rush buff
+# 204637 (talent ranks 204677 / 204678), Deathmaker buff 204638, Bloodsurge buff 204652, Merciless rank 3 204658
+# (the id alone), Bloodthirst 23881, Whirlwind 1680, Slam 1464, Execute 5308, Cleave 845, Heroic Strike 78, Death Wish
+# 12292, Recklessness 1719, Bloodrage 2687, Skull Banner 204405 (Rallied 204407), Enraged Regeneration 55694,
+# Victory Rush 34428 (Victorious 32216), Berserker Rage 18499, Berserker Stance 2458, Battle Stance 2457, Battle
+# Shout 6673, Commanding Shout 469, Charge 100, Heroic Leap 204400, Pummel 6552.
+strategy: warrior/fury
+class: warrior
+conditions:
+  rage: value("rage::self target")
+  in_combat: value("combat::self target")
+  # 3+ enemies in combat within 8 yd (Cleave learned at 14: below that the single list plays); `co -aoe` turns the aoe
+  # value off and the single list plays at any count. `two` is exactly 2 (the single list with Cleave swapped in)
+  pack: known(845) and value("warrior aoe enabled") and enemies_within(8) >= 3
+  two: known(845) and value("warrior aoe enabled") and enemies_within(8) == 2
+  # "the tank has it": the target is on a tank (or there is no group), or 2 s after the fight started
+  tank_has: value("warrior may engage") or combat_time() >= 2000
+  long_lived: boss(target) or (elite(target) and lifetime(target) > 20)
+  # the execute phase needs Execute learned (24): before that the target's last 20% plays the normal list
+  execute_ph: known(5308) and health_pct(target) < 20
+  blood_rush_up: aura(self, 204637)
+  surge_up: aura(self, 204652)
+  dm_up: aura(self, 204638)
+  dm_late: remaining(self, 204638) < 3000
+  # Rampage costs nothing now: Blood Rush up, or Recklessness active with Merciless rank 3 (its id alone)
+  free_rampage: blood_rush_up or (aura(self, 1719) and known(204658))
+  rampage_due: known(204630) and cooldown(204630) <= 3000
+  reserve_on: rampage_due and not free_rampage
+  res_15: not reserve_on or rage >= 65
+  res_25: not reserve_on or rage >= 75
+  # Execute spends its cost plus up to 15 more rage (30 in all)
+  res_30: not reserve_on or rage >= 80
+  # never Rampage at full price while Bloodthirst is ready within a global and Blood Rush is known
+  bt_ok_for_rampage: cooldown(23881) > 1500 or not (known(204677) or known(204678))
+  # "ready for more than N s". ready_for reads infinity for a known spell with no cooldown entry (never cast), which
+  # would fire the hold at the first pull: only a finite reading counts, or a fight older than N
+  dw_hold: ready_for(12292) > 10000 and (ready_for(12292) < 600000 or combat_time() > 10000)
+  rk_hold: ready_for(1719) > 20000 and (ready_for(1719) < 600000 or combat_time() > 20000)
+  vr_ready: known(34428) and aura(self, 32216) and alive(target)
+  few_rallied: value("warrior few rallied")
+rows:
+  # --- Control break: Berserker Rage when feared, sapped or incapacitated (on the GCD, stock)
+  - do: berserker rage
+    when: known(18499) and cooldown(18499) == 0 and trigger("fear sleep sap")
+    relevance: emergency + 1
+
+  # --- Interrupts (off the GCD; 10 rage, a documented pool exemption)
+  - do: pummel
+    when: known(6552) and cooldown(6552) == 0 and trigger("pummel")
+    relevance: interrupt + 2
+  - do: pummel on enemy healer
+    when: known(6552) and cooldown(6552) == 0 and trigger("pummel on enemy healer")
+    relevance: interrupt + 1
+
+  # --- Enraged Regeneration (guide Q10): a self heal in combat below 40% health (15 rage, a documented pool
+  # exemption; it never touches Enrage)
+  - do: fury enraged regeneration
+    when: known(55694) and cooldown(55694) == 0 and in_combat and health_pct(self) < 40
+    relevance: normal + 9.99
+
+  # --- Setup: Berserker Stance from 16, Battle Stance before. No swap logic, so a bot never leaves Berserker.
+  - do: berserker stance
+    when: known(2458) and not aura(self, 2458)
+    relevance: high + 10
+  - do: battle stance
+    when: known(2457) and not known(2458) and not aura(self, 2457)
+    relevance: high + 10
+  # Battle Shout when the bot's shout is missing; Commanding Shout instead when another warrior's Battle Shout is
+  # already on the bot (and no Commanding Shout, from anyone, is up)
+  - do: battle shout
+    when: known(6673) and trigger("battle shout")
+    relevance: high + 9
+  - do: commanding shout
+    when: known(469) and aura(self, 6673) and not aura(self, 6673, own) and not aura(self, 469)
+    relevance: high + 8.9
+
+  # --- Off the global cooldown (guide lines 2-7; line 1, Pummel, is above)
+  # 2. Death Wish: a long-lived target or a pack, and a paid Rampage can follow (Rampage free, or rage 60 or more),
+  # or it has been ready for more than 10 s. Before Rampage (50) nothing is pooled.
+  - do: fury death wish
+    when: >-
+      known(12292) and cooldown(12292) == 0 and in_combat and alive(target) and (long_lived or pack)
+      and (not known(204630) or (cooldown(204630) == 0 and free_rampage) or rage >= 60 or dw_hold)
+    relevance: high + 7.5
+  # 3. Recklessness: a long-lived target, and Death Wish active or more than 20 s away, or it has been ready 20 s
+  - do: fury recklessness
+    when: >-
+      known(1719) and cooldown(1719) == 0 and in_combat and alive(target) and long_lived
+      and (not known(12292) or aura(self, 12292) or cooldown(12292) > 20000 or rk_hold)
+    relevance: high + 7.4
+  # 4. Skull Banner: a long-lived target, Death Wish active or more than 30 s away, fewer than half Rallied
+  - do: fury skull banner
+    when: >-
+      known(204405) and cooldown(204405) == 0 and in_combat and alive(target) and long_lived
+      and (not known(12292) or aura(self, 12292) or cooldown(12292) > 30000) and few_rallied
+    relevance: high + 7.3
+  # 5. Bloodrage: in combat, rage 80 or less, health 50% or more
+  - do: fury bloodrage
+    when: known(2687) and cooldown(2687) == 0 and in_combat and rage <= 80 and health_pct(self) >= 50
+    relevance: high + 7.1
+  # 6. Charge: 8 to 25 yd away, in combat, the tank has it. Never an opener.
+  - do: charge
+    when: >-
+      known(100) and cooldown(100) == 0 and alive(target) and in_combat and tank_has
+      and not in_range(target, 8) and in_range(target, 25)
+    relevance: high + 5
+  # 7. Heroic Leap: 8 to 40 yd away, in combat, the tank has it, Charge not ready (the action picks the landing point)
+  - do: heroic leap
+    when: >-
+      known(204400) and cooldown(204400) == 0 and alive(target) and in_combat and tank_has and cooldown(100) > 0
+      and not in_range(target, 8) and in_range(target, 40)
+    relevance: high + 4.5
+
+  # --- Single target list (rows carry `not pack`, so a pack plays the `warrior/fury-pack` list instead)
+  # 1. Rampage when it is free (Blood Rush or Recklessness with Merciless 3): both phases
+  - do: fury rampage::free
+    when: not pack and known(204630) and cooldown(204630) == 0 and alive(target) and free_rampage
+    relevance: normal + 9.95
+  # 2. Bloodthirst (costs nothing: no gate), both phases
+  - do: fury bloodthirst
+    when: not pack and known(23881) and cooldown(23881) == 0 and alive(target)
+    relevance: normal + 9.9
+  # 3. Rampage at full price: rage 50 or more, and Bloodthirst not about to be ready if Blood Rush is known
+  - do: fury rampage::paid
+    when: >-
+      not pack and not execute_ph and known(204630) and cooldown(204630) == 0 and alive(target)
+      and rage >= 50 and bt_ok_for_rampage
+    relevance: normal + 9.85
+  # Execute phase 3. Execute: rage at its cost plus the Reserve (res_30: it spends up to 30). Execute at 90 or more
+  # (the guide's line 7, never sit at the cap) is covered by res_30 under the Reserve and by rage >= 15 without it.
+  - do: fury execute::phase
+    when: not pack and known(5308) and alive(target) and execute_ph and rage >= 15 and res_30
+    relevance: normal + 9.85
+  # 4. Whirlwind, rage 25 or more, the tank has it. No Reserve above 20% (the guide's line 4).
+  - do: fury whirlwind
+    when: >-
+      not pack and not execute_ph and known(1680) and cooldown(1680) == 0 and alive(target) and tank_has
+      and rage >= 25
+    relevance: normal + 9.8
+  # Execute phase 4. Whirlwind plus the Reserve
+  - do: fury whirlwind::phase
+    when: >-
+      not pack and execute_ph and known(1680) and cooldown(1680) == 0 and alive(target) and tank_has
+      and rage >= 25 and res_25
+    relevance: normal + 9.8
+  # 5. Execute with Deathmaker up (usable on any target): rage 70 or more, or Deathmaker nearly gone
+  - do: fury execute::deathmaker
+    when: not pack and not execute_ph and known(5308) and alive(target) and dm_up and (rage >= 70 or dm_late)
+    relevance: normal + 9.75
+  # 6. Bloodsurge: Slam is free; with exactly 2 enemies Cleave takes it first
+  - do: fury slam::free
+    when: not pack and not two and known(1464) and cooldown(1464) == 0 and alive(target) and surge_up
+    relevance: normal + 9.7
+  - do: fury cleave::surge
+    when: two and known(845) and alive(target) and surge_up
+    relevance: normal + 9.7
+  # 7. Victory Rush: Victorious up and health below 70%, or Victorious nearly gone
+  - do: victory rush
+    when: >-
+      not pack and not execute_ph and vr_ready
+      and (health_pct(self) < 70 or remaining(self, 32216) < 3000)
+    relevance: normal + 9.65
+  # Execute phase 6. Rampage at full price, after Execute / Whirlwind / Slam
+  - do: fury rampage::paidx
+    when: >-
+      not pack and execute_ph and known(204630) and cooldown(204630) == 0 and alive(target)
+      and rage >= 50 and bt_ok_for_rampage
+    relevance: normal + 9.65
+  # 8. Slam at full price: rage 15 plus the Reserve
+  - do: fury slam::paid
+    when: >-
+      not pack and not execute_ph and known(1464) and cooldown(1464) == 0 and alive(target)
+      and rage >= 15 and res_15
+    relevance: normal + 9.6
+  # 9. Heroic Strike (Cleave with exactly 2 enemies): rage 55 with no Reserve, or 90 or more. Before Bloodthirst
+  # (20) the dump is plain: Heroic Strike at 15 (Cleave at 20).
+  - do: fury heroic strike
+    when: >-
+      not pack and not two and not execute_ph and known(78) and alive(target)
+      and ((known(23881) and ((rage >= 55 and not reserve_on) or rage >= 90))
+      or (not known(23881) and rage >= 15))
+    relevance: normal + 9.55
+  - do: fury cleave::dump
+    when: >-
+      two and not execute_ph and known(845) and alive(target)
+      and ((known(23881) and ((rage >= 55 and not reserve_on) or rage >= 90))
+      or (not known(23881) and rage >= 20))
+    relevance: normal + 9.55

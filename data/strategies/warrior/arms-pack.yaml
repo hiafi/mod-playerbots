@@ -1,0 +1,100 @@
+# The reworked Arms warrior's pack list (guide "AoE or packs"): "warrior/arms-pack" is appended to the "aoe" strategy by
+# WarriorReworkAoeStrategy::InitTriggers when the bot's leading tab is Arms (Prot keeps `warrior/prot-aoe`, Fury has
+# `warrior/fury-pack`). The single target list, the off-the-GCD buttons (Sweeping Strikes, Avatar, ...) and the
+# setup rows are the `warrior/arms` document. A pack is 3 or more enemies in combat within 8 yd while the bot has the
+# "aoe" strategy (`co -aoe` turns it off and the single list plays at any count). With exactly 2 enemies the single
+# list plays plus Sweeping Strikes.
+#
+# Bands: normal + 9.9 .. 9.4, one 0.05 step per guide line (above the single list, which a pack never plays).
+# Actions are the pack twins "arms pack ..." (RowCheckedAction casts by spell id). Rows that queue the same name merge
+# into one basket that re-checks only the first row, so the guide lines that repeat get a `::tag`: Colossus Smash 2/8
+# (`sweep`, `plain`), Overpower 5/9, Slam 6/10. Pooling: every spender but Mortal Strike carries the soft gate
+# `pool_N` = (rage >= 25 + cost) or Mortal Strike is not coming within 1.5 s, and (rage >= 20 + cost) or Colossus
+# Smash is not coming within 1.5 s (arms.yaml header); Slam with Momentum's free charge skips it. Every row is
+# `known()`-gated (the strategy is picked by the Arms tab, which includes level < 10 and warriors with no points).
+# See arms.yaml for the spell ids.
+strategy: warrior/arms-pack
+class: warrior
+conditions:
+  rage: value("rage::self target")
+  # (and Sweeping Strikes learned: below level 30 the single list plays in a pack)
+  pack: known(204493) and value("warrior aoe enabled") and enemies_within(8) >= 3
+  window: aura(target, 204491, own)
+  avatar_up: aura(self, 204492)
+  sweeping_up: aura(self, 204493)
+  momentum_up: aura(self, 204498)
+  rend_low: not aura(target, 772, own) or remaining(target, 772, own) < 3000
+  ms_soon: known(12294) and cooldown(12294) <= 1500
+  # Colossus Smash is castable within 1.5 s: off cooldown or about to be, and not held back by a window that still has
+  # 3 s or more to run (D32: the pool also protects Smash's 20 rage; Smash's own row carries only `mpool_20`)
+  cs_soon: known(204490) and cooldown(204490) <= 1500 and not (window and remaining(target, 204491, own) >= 3000)
+  mpool_20: not ms_soon or rage >= 45
+  pool_5: (not ms_soon or rage >= 30) and (not cs_soon or rage >= 25)
+  pool_10: (not ms_soon or rage >= 35) and (not cs_soon or rage >= 30)
+  pool_15: (not ms_soon or rage >= 40) and (not cs_soon or rage >= 35)
+  pool_20: (not ms_soon or rage >= 45) and (not cs_soon or rage >= 40)
+  pool_25: (not ms_soon or rage >= 50) and (not cs_soon or rage >= 45)
+  # Execute spends its cost plus up to 15 more rage (30 in all)
+  pool_30: (not ms_soon or rage >= 55) and (not cs_soon or rage >= 50)
+  smash_ready: known(204490) and cooldown(204490) == 0 and alive(target) and mpool_20
+  # Avatar is only cast on a boss (or elite) or a big pack (arms.yaml): a smaller pack of normal enemies never
+  # spends it, so Bladestorm must not wait for Avatar's cooldown there
+  boss_like: boss(target) or elite(target)
+  big_pack: known(204493) and value("warrior aoe enabled") and enemies_within(8) >= 5
+  avatar_gate: not known(204492) or cooldown(204492) > 30000 or not (boss_like or big_pack)
+  smash_open: not window or remaining(target, 204491, own) < 1500
+rows:
+  # 1. Rend while Sweeping Strikes is active and Rend is low or missing. The guide's "or Rend low" clause is dropped
+  # as ambiguous: "not bleeding from this Rend" is already part of rend_low.
+  - do: arms pack rend
+    when: pack and sweeping_up and known(772) and alive(target) and rend_low and pool_10
+    relevance: normal + 9.9
+  # 2. Colossus Smash while Sweeping Strikes is active (it spreads to up to 5 enemies)
+  - do: arms pack colossus smash::sweep
+    when: pack and sweeping_up and smash_ready and smash_open
+    relevance: normal + 9.85
+  # 3. Mortal Strike (no soft gate: it is what the gate protects)
+  - do: arms pack mortal strike
+    when: pack and known(12294) and cooldown(12294) == 0 and alive(target)
+    relevance: normal + 9.8
+  # 4. Bladestorm: Sweeping Strikes not active, and Avatar active or Avatar more than 30 s away (the clause drops
+  # while Avatar is not learned, before level 60, and where Avatar is never cast: a pack of fewer than 5 normal enemies)
+  - do: arms pack bladestorm
+    when: >-
+      pack and known(46924) and cooldown(46924) == 0 and alive(target) and not sweeping_up and pool_25
+      and (avatar_up or avatar_gate)
+    relevance: normal + 9.75
+  # 5. Overpower with charges while Sweeping Strikes is active
+  - do: arms pack overpower::sweep
+    when: pack and sweeping_up and known(7384) and alive(target) and stacks(self, 204403) >= 1 and pool_5
+    relevance: normal + 9.7
+  # 6. Slam while Sweeping Strikes is active
+  - do: arms pack slam::sweep
+    when: >-
+      pack and sweeping_up and known(1464) and cooldown(1464) == 0 and alive(target)
+      and (pool_15 or momentum_up)
+    relevance: normal + 9.65
+  # 7. Whirlwind
+  - do: arms pack whirlwind
+    when: pack and known(1680) and cooldown(1680) == 0 and alive(target) and pool_25
+    relevance: normal + 9.6
+  # 8. Colossus Smash
+  - do: arms pack colossus smash::plain
+    when: pack and smash_ready and smash_open
+    relevance: normal + 9.55
+  # 9. Overpower with charges
+  - do: arms pack overpower::plain
+    when: pack and known(7384) and alive(target) and stacks(self, 204403) >= 1 and pool_5
+    relevance: normal + 9.5
+  # 10. Slam at rage 40 or more (Momentum's free Slam needs no rage)
+  - do: arms pack slam::plain
+    when: >-
+      pack and known(1464) and cooldown(1464) == 0 and alive(target) and ((rage >= 40 and pool_15) or momentum_up)
+    relevance: normal + 9.45
+  # 11. Execute on any enemy below 20% within melee range, rage 30 or more. The third qualifier number makes the value
+  # test the bot's melee range (Execute's own reach check), so an enemy in the 3-5 yd band that Execute cannot reach is
+  # not picked over an in-reach one
+  - do: arms pack execute::20,5,1
+    when: >-
+      pack and known(5308) and rage >= 30 and pool_30 and alive("lowest health attacker below::20,5,1")
+    relevance: normal + 9.4
