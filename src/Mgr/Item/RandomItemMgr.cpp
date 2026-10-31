@@ -1045,7 +1045,7 @@ std::vector<uint32> const& RandomItemMgr::GetEnchantmentPool(uint32 entry) const
     return it->second;
 }
 
-bool RandomItemMgr::CanEquipArmor(ItemTemplate const* proto, uint8 clazz, uint32 level) const
+bool RandomItemMgr::CanEquipArmor(ItemTemplate const* proto, uint8 clazz, [[maybe_unused]] uint32 level) const
 {
     // skip null proto or invalid class
     if (!proto || clazz >= MAX_CLASSES)
@@ -1070,9 +1070,9 @@ bool RandomItemMgr::CanEquipArmor(ItemTemplate const* proto, uint8 clazz, uint32
     uint32 const requiredSubClass = [&]() -> uint32
     {
         if (clazz == CLASS_WARRIOR || clazz == CLASS_PALADIN)
-            return level >= 40 ? ITEM_SUBCLASS_ARMOR_PLATE : ITEM_SUBCLASS_ARMOR_MAIL;
+            return ITEM_SUBCLASS_ARMOR_PLATE; // plate is granted at level 1
         if (clazz == CLASS_HUNTER || clazz == CLASS_SHAMAN)
-            return level >= 40 ? ITEM_SUBCLASS_ARMOR_MAIL : ITEM_SUBCLASS_ARMOR_LEATHER;
+            return ITEM_SUBCLASS_ARMOR_MAIL; // mail is granted at level 1
         if (clazz == CLASS_DRUID || clazz == CLASS_ROGUE)
             return ITEM_SUBCLASS_ARMOR_LEATHER;
         return ITEM_SUBCLASS_ARMOR_CLOTH; // mage/warlock/priest
