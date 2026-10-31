@@ -1045,7 +1045,7 @@ std::vector<uint32> const& RandomItemMgr::GetEnchantmentPool(uint32 entry) const
     return it->second;
 }
 
-bool RandomItemMgr::CanEquipArmor(ItemTemplate const* proto, uint8 clazz, [[maybe_unused]] uint32 level) const
+bool RandomItemMgr::CanEquipArmor(ItemTemplate const* proto, uint8 clazz, uint32 level) const
 {
     // skip null proto or invalid class
     if (!proto || clazz >= MAX_CLASSES)
@@ -1078,8 +1078,22 @@ bool RandomItemMgr::CanEquipArmor(ItemTemplate const* proto, uint8 clazz, [[mayb
         return ITEM_SUBCLASS_ARMOR_CLOTH; // mage/warlock/priest
     }();
 
+    // Below 40 the next-lower armor type is still worn (stock has almost no plate/mail that early); from 40 on only
+    // the granted type counts.
+    uint32 const fallbackSubClass = [&]() -> uint32
+    {
+        if (level >= 40)
+            return MAX_ITEM_SUBCLASS_ARMOR; // none
+        if (clazz == CLASS_WARRIOR || clazz == CLASS_PALADIN)
+            return ITEM_SUBCLASS_ARMOR_MAIL;
+        if (clazz == CLASS_HUNTER || clazz == CLASS_SHAMAN)
+            return ITEM_SUBCLASS_ARMOR_LEATHER;
+        return MAX_ITEM_SUBCLASS_ARMOR;
+    }();
+
     // skip armor of wrong subclass (cloaks are exempt)
-    if (proto->InventoryType != INVTYPE_CLOAK && proto->SubClass != requiredSubClass)
+    if (proto->InventoryType != INVTYPE_CLOAK && proto->SubClass != requiredSubClass &&
+        proto->SubClass != fallbackSubClass)
         return false;
 
     // skip stats calculation for poor/normal quality items (grey/white)
