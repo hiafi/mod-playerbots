@@ -229,7 +229,7 @@ bool TooCloseToPlayerWithDebuffTrigger::TooCloseToPlayerWithDebuff(uint32 spellI
     for (GroupReference* gref = group->GetFirstMember(); gref; gref = gref->next())
     {
         Player* player = gref->GetSource();
-        if (player && player->IsAlive() && player->HasAura(spellId))
+        if (player && player != bot && player->IsAlive() && player->HasAura(spellId))
         {
             debuffedPlayers.push_back(player);
         }
@@ -265,14 +265,11 @@ bool TooFarFromPlayerWithAuraTrigger::TooFarFromPlayerWithAura(uint32 spellId, f
     for (GroupReference* gref = group->GetFirstMember(); gref; gref = gref->next())
     {
         Player* player = gref->GetSource();
-        if (player && player->IsAlive() && player->HasAura(spellId) &&
-            (selfInclude || (!selfInclude && player->GetGUID() != bot->GetGUID())))
+        if (player && player->IsAlive() && player->HasAura(spellId) && (selfInclude || player != bot))
         {
             debuffedPlayers.push_back(player);
         }
     }
-
-    return !debuffedPlayers.empty();
 
     if (debuffedPlayers.empty())
     {
