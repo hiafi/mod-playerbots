@@ -17,8 +17,8 @@ namespace
 constexpr char const* CURE_SAFE_HEALTH_PCT = "50";
 
 // The cures the stock "cure" strategy queues; the copies in the rework rows carry the tag instead. The disease cure is
-// here too: Cleanse Spirit lost disease, and the Cleansing Totem owns it.
-constexpr char const* STOCK_CURE_NAMES[] = {"cleanse spirit", "cleanse spirit poison on party",
+// here too: Cleanse Spirit lost disease (and poison), and the Cleansing Totem owns them.
+constexpr char const* STOCK_CURE_NAMES[] = {"cleanse spirit", "cleanse spirit magic on party",
                                             "cleanse spirit curse on party", "cleanse spirit disease on party"};
 }  // namespace
 

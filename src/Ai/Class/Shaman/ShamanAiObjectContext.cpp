@@ -199,10 +199,10 @@ public:
         creators["water walking"] = &ShamanATriggerFactoryInternal::water_walking;
         creators["water breathing on party"] = &ShamanATriggerFactoryInternal::water_breathing_on_party;
         creators["water walking on party"] = &ShamanATriggerFactoryInternal::water_walking_on_party;
-        creators["cleanse spirit poison"] = &ShamanATriggerFactoryInternal::cleanse_poison;
+        creators["cleanse spirit magic"] = &ShamanATriggerFactoryInternal::cleanse_magic;
         creators["cleanse spirit curse"] = &ShamanATriggerFactoryInternal::cleanse_curse;
         creators["cleanse spirit disease"] = &ShamanATriggerFactoryInternal::cleanse_disease;
-        creators["party member cleanse spirit poison"] = &ShamanATriggerFactoryInternal::party_member_cleanse_poison;
+        creators["party member cleanse spirit magic"] = &ShamanATriggerFactoryInternal::party_member_cleanse_magic;
         creators["party member cleanse spirit curse"] = &ShamanATriggerFactoryInternal::party_member_cleanse_curse;
         creators["party member cleanse spirit disease"] = &ShamanATriggerFactoryInternal::party_member_cleanse_disease;
         creators["shock"] = &ShamanATriggerFactoryInternal::shock;
@@ -257,10 +257,10 @@ private:
     static Trigger* elemental_mastery(PlayerbotAI* botAI) { return new ElementalMasteryTrigger(botAI); }
     static Trigger* party_member_cleanse_disease(PlayerbotAI* botAI) { return new PartyMemberCleanseSpiritDiseaseTrigger(botAI); }
     static Trigger* party_member_cleanse_curse(PlayerbotAI* botAI) { return new PartyMemberCleanseSpiritCurseTrigger(botAI); }
-    static Trigger* party_member_cleanse_poison(PlayerbotAI* botAI) { return new PartyMemberCleanseSpiritPoisonTrigger(botAI); }
+    static Trigger* party_member_cleanse_magic(PlayerbotAI* botAI) { return new PartyMemberCleanseSpiritMagicTrigger(botAI); }
     static Trigger* cleanse_disease(PlayerbotAI* botAI) { return new CleanseSpiritDiseaseTrigger(botAI); }
     static Trigger* cleanse_curse(PlayerbotAI* botAI) { return new CleanseSpiritCurseTrigger(botAI); }
-    static Trigger* cleanse_poison(PlayerbotAI* botAI) { return new CleanseSpiritPoisonTrigger(botAI); }
+    static Trigger* cleanse_magic(PlayerbotAI* botAI) { return new CleanseSpiritMagicTrigger(botAI); }
     static Trigger* water_breathing(PlayerbotAI* botAI) { return new WaterBreathingTrigger(botAI); }
     static Trigger* water_walking(PlayerbotAI* botAI) { return new WaterWalkingTrigger(botAI); }
     static Trigger* water_breathing_on_party(PlayerbotAI* botAI) { return new WaterBreathingOnPartyTrigger(botAI); }
@@ -350,7 +350,7 @@ public:
         creators["water walking on party"] = &ShamanAiObjectContextInternal::water_walking_on_party;
         creators["water breathing on party"] = &ShamanAiObjectContextInternal::water_breathing_on_party;
         creators["cleanse spirit"] = &ShamanAiObjectContextInternal::cleanse_spirit;
-        creators["cleanse spirit poison on party"] = &ShamanAiObjectContextInternal::cleanse_spirit_poison_on_party;
+        creators["cleanse spirit magic on party"] = &ShamanAiObjectContextInternal::cleanse_spirit_magic_on_party;
         creators["cleanse spirit disease on party"] = &ShamanAiObjectContextInternal::cleanse_spirit_disease_on_party;
         creators["cleanse spirit curse on party"] = &ShamanAiObjectContextInternal::cleanse_spirit_curse_on_party;
         creators["flame shock"] = &ShamanAiObjectContextInternal::flame_shock;
@@ -422,7 +422,7 @@ private:
     static Action* earth_shock(PlayerbotAI* botAI) { return new CastEarthShockAction(botAI); }
     static Action* flame_shock(PlayerbotAI* botAI) { return new CastFlameShockAction(botAI); }
     static Action* cleanse_spirit(PlayerbotAI* botAI) { return new CastCleanseSpiritAction(botAI); }
-    static Action* cleanse_spirit_poison_on_party(PlayerbotAI* botAI) { return new CastCleanseSpiritPoisonOnPartyAction(botAI); }
+    static Action* cleanse_spirit_magic_on_party(PlayerbotAI* botAI) { return new CastCleanseSpiritMagicOnPartyAction(botAI); }
     static Action* cleanse_spirit_disease_on_party(PlayerbotAI* botAI) { return new CastCleanseSpiritDiseaseOnPartyAction(botAI); }
     static Action* cleanse_spirit_curse_on_party(PlayerbotAI* botAI) { return new CastCleanseSpiritCurseOnPartyAction(botAI); }
     static Action* water_walking(PlayerbotAI* botAI) { return new CastWaterWalkingAction(botAI); }

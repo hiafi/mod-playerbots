@@ -8,6 +8,7 @@
 #define PLAYERBOTS_DRUIDREWORKCONTEXT_H
 
 #include "NamedObjectContext.h"
+#include "Trigger.h"
 // The strategy classes too, so DruidAiObjectContext.cpp needs one include for the whole shared rework layer
 #include "DruidReworkStrategies.h"
 
@@ -21,6 +22,15 @@ class DruidReworkActionFactory : public NamedObjectContext<Action>
 {
 public:
     DruidReworkActionFactory();
+};
+
+// The triggers every reworked druid spec shares: the Magic dispel ("party member nature's cure") and Skull Bash on the
+// current target or on a casting enemy healer (dungeon-prereqs S5). The Skull Bash triggers carry the spell name, which
+// the interrupt check reads.
+class DruidReworkTriggerFactory : public NamedObjectContext<Trigger>
+{
+public:
+    DruidReworkTriggerFactory();
 };
 
 #endif

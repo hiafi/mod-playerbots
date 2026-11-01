@@ -48,6 +48,7 @@ constexpr char SWIPE_BEAR[] = "swipe (bear)";
 constexpr char PULVERIZE[] = "pulverize";
 constexpr char LACERATE[] = "lacerate";
 constexpr char SAVAGE_BITE[] = "savage bite";
+constexpr char SKULL_BASH[] = "skull bash";
 }  // namespace
 
 DruidBearDpsActionFactory::DruidBearDpsActionFactory()
@@ -83,6 +84,12 @@ DruidBearDpsActionFactory::DruidBearDpsActionFactory()
     creators["bear dps savage bite"] = &MakeMelee<SAVAGE_BITE>;
     creators["bear dps maul"] = &MakeMelee<MAUL>;
     creators["bear dps filler lacerate"] = &MakeMelee<LACERATE>;
+
+    // The interrupt (dungeon-prereqs S5): Skull Bash on the casting target, and on a casting enemy healer (the unit
+    // comes from the stock enemy-healer value; the row keeps it in melee reach)
+    creators["bear dps skull bash"] = &MakeMelee<SKULL_BASH>;
+    creators["bear dps skull bash on enemy healer"] = [](PlayerbotAI* botAI) -> Action*
+    { return new RowCheckedAction<CastSpellOnEnemyHealerAction>(botAI, SKULL_BASH); };
 }
 
 bool BearDpsAoeEnabledValue::Calculate() { return botAI->HasStrategy("aoe", BOT_STATE_COMBAT); }

@@ -13,7 +13,8 @@
 # current target), `value("energy::self target")` (absolute energy) and `value("behind::current target")`.
 # Spell ids: Cat Form 768, Predator's Swiftness 69369, Barkskin 22812, Feral Charge - Cat 49376, Ravage 6785 (its free
 # cast is the Stampede buff 200434), Berserk 50334, Tiger's Fury 5217, Rip 1079, Rake 1822, Ferocious Bite 22568, Mangle
-# (Cat) 33876 (the debuff on the target is the spell itself, 33878 is the Bear's; 46856 and 46857 are Trauma).
+# (Cat) 33876 (the debuff on the target is the spell itself, 33878 is the Bear's; 46856 and 46857 are Trauma), Skull
+# Bash 200605.
 strategy: druid/cat
 class: druid
 conditions:
@@ -27,6 +28,8 @@ conditions:
   mangle_due: known(33876) and not mangled
   rake_due: known(1822) and remaining(target, 1822, own) < 3000
   berserking: aura(self, 50334)
+  # Skull Bash 200605 is ready and the bot is in Cat Form
+  skull_bash_ok: known(200605) and cooldown(200605) == 0 and in_cat
 rows:
   # F: Cat Form (also back into it after leaving form, e.g. the out-of-combat heals)
   - do: cat cat form
@@ -60,6 +63,15 @@ rows:
   - do: cat cower
     trigger: medium threat
     relevance: high + 0.9
+
+  # U1 (dungeon-prereqs S5): Skull Bash the casting target, then a casting enemy healer within reach
+  - do: cat skull bash
+    when: skull_bash_ok and in_range(target, 5) and trigger("skull bash")
+    relevance: interrupt + 2
+  - do: cat skull bash on enemy healer
+    when: >-
+      skull_bash_ok and in_range("enemy healer target::skull bash", 5) and trigger("skull bash on enemy healer")
+    relevance: interrupt + 1
 
   # O1: Feral Charge from 8 to 25 yd (DR30)
   - do: cat feral charge

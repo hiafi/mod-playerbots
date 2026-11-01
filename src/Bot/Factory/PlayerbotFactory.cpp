@@ -3455,7 +3455,8 @@ void PlayerbotFactory::InitSkills()
     if (bot->GetLevel() >= sPlayerbotAIConfig.UseFastFlyMountAtMinLevel)
         bot->learnSpell(34091);
 
-    uint32 skillLevel = bot->GetLevel() < 40 ? 0 : 1;
+    // Plate/Mail are granted from level 1 (the server grants them on login; dungeon-prereqs S1), not at 40
+    uint32 skillLevel = 1;
     uint32 dualWieldLevel = bot->GetLevel() < 20 ? 0 : 1;
     SetRandomSkill(SKILL_DEFENSE);
     SetRandomSkill(SKILL_UNARMED);

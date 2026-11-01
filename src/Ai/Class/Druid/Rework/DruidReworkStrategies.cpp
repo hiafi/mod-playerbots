@@ -14,8 +14,9 @@ namespace
 {
 constexpr char const* CURE_SAFE_HEALTH_PCT = "50";
 
-// The cures the stock "cure" strategy queues; the copies in the rework rows carry the tag instead
-constexpr char const* STOCK_CURE_NAMES[] = {"abolish poison on party", "remove curse on party"};
+// The cures the stock "cure" strategy queues; the copies in the rework rows carry the tag instead. Remove Curse is
+// retired (dungeon-prereqs S5): its stock row can no longer cast, so only Abolish Poison needs dropping
+constexpr char const* STOCK_CURE_NAMES[] = {"abolish poison on party"};
 }  // namespace
 
 void DruidReworkNonCombatStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)

@@ -45,10 +45,18 @@ constexpr char FEROCIOUS_BITE[] = "ferocious bite";
 constexpr char RAKE[] = "rake";
 constexpr char SHRED[] = "shred";
 constexpr char COWER[] = "cower";
+constexpr char SKULL_BASH[] = "skull bash";
 
 constexpr char TANK_FIRST_HEAL_TARGET[] = "tank first heal target";
 
 Action* MakeFeralCharge(PlayerbotAI* botAI) { return new RowCheckedAction<CastSpellAction>(botAI, FERAL_CHARGE_CAT); }
+
+// Skull Bash on a casting enemy healer: the unit comes from the stock enemy-healer value, the row keeps it in melee
+// reach
+Action* MakeSkullBashOnEnemyHealer(PlayerbotAI* botAI)
+{
+    return new RowCheckedAction<CastSpellOnEnemyHealerAction>(botAI, SKULL_BASH);
+}
 }  // namespace
 
 DruidCatActionFactory::DruidCatActionFactory()
@@ -73,6 +81,10 @@ DruidCatActionFactory::DruidCatActionFactory()
     creators["cat rake"] = &MakeMelee<RAKE>;
     creators["cat shred"] = &MakeMelee<SHRED>;
     creators["cat mangle"] = &MakeMelee<MANGLE_CAT>;
+
+    // The interrupt (dungeon-prereqs S5): Skull Bash on the casting target or on a casting enemy healer
+    creators["cat skull bash"] = &MakeMelee<SKULL_BASH>;
+    creators["cat skull bash on enemy healer"] = &MakeSkullBashOnEnemyHealer;
 
     // Offheal: Regrowth on the tank-first heal target; the qualifier is "tankPct,otherPct"
     creators["cat offheal regrowth"] = &MakeOnValue<REGROWTH, TANK_FIRST_HEAL_TARGET>;

@@ -7,10 +7,10 @@
 # RowCheckedAction (they re-check their own row before casting); only "reach melee"
 # is a stock action. The charge is a row here, not the `feral charge` strategy (that one is for the tank).
 #
-# Bands: defensives (emergency) > forms, off-the-GCD rows, Berserk, the charge, `reach melee` (high) > pack (normal +
-# 9.x, so the AoE list wins over the single-target list) > single target (normal + 8.x) > the default `melee`.
-# Enrage and Bestial Fury are off the GCD, so the engine skips the GCD-blocked rows above them and they still fire
-# during the GCD. The guide's "use the first true row" order is the descending relevance.
+# Bands: defensives (emergency) > Skull Bash (interrupt) > forms, off-the-GCD rows, Berserk, the charge, `reach melee`
+# (high) > pack (normal + 9.x, so the AoE list wins over the single-target list) > single target (normal + 8.x) > the
+# default `melee`. Enrage, Bestial Fury and Skull Bash are off the GCD, so the engine skips the GCD-blocked rows above
+# them and they still fire during the GCD. The guide's "use the first true row" order is the descending relevance.
 #
 # Bestial Fury is form 5 and replaces Bear Form 5487 (form 8) while it is up: aura 5487 is gone, and casting Bestial
 # Fury again turns it off. So "in a bear form" is `in_bear or in_fury`, never `aura(self, 5487)` alone, and F2 carries
@@ -47,9 +47,9 @@
 # Spell ids: Bear Form 5487, Bestial Fury 200425 (Swell 200426, Tooth and Claw 200438, Nurturing Instinct's Bloodtalons
 # 200430), Pulverize 200421, Upheaval 200422, Thrash 200423, Savage Bite 200439, Lacerate 33745, Mangle (Bear) 33878,
 # Maul 6807, Swipe (Bear) 779, Enrage 5229, Berserk 50334, Frenzied Regeneration 22842, Barkskin 22812, Feral Charge
-# (Bear) 16979, Faerie Fire 770. `known()` levels: Savage Bite 10, Enrage 12, Swipe 16, Bestial Fury 16 (talent),
-# Lacerate and Feral Charge 20, Pulverize 22, Thrash 30, Upheaval 34, Frenzied Regeneration 36, Barkskin 44, Berserk
-# (talent). Mangle (Bear) and Maul are read by `cooldown()`.
+# (Bear) 16979, Faerie Fire 770, Skull Bash 200605. `known()` levels: Skull Bash 10, Savage Bite 10, Enrage 12, Swipe
+# 16, Bestial Fury 16 (talent), Lacerate and Feral Charge 20, Pulverize 22, Thrash 30, Upheaval 34, Frenzied
+# Regeneration 36, Barkskin 44, Berserk (talent). Mangle (Bear) and Maul are read by `cooldown()`.
 strategy: druid/bear-dps
 class: druid
 conditions:
@@ -74,6 +74,9 @@ conditions:
   pack: >-
     value("bear dps aoe enabled") and alive(target) and enemies_within(8) >= 3
     and value("unsafe aoe units::8;self") == 0
+  # Skull Bash 200605 is ready, the bot is in a bear form (it is castable in Bestial Fury), and no Feral Charge (16979)
+  # is in flight: the charge's own interrupt lands on arrival, and both would go on the same cast
+  skull_bash_ok: known(200605) and cooldown(200605) == 0 and (in_bear or in_fury) and ms_since_cast(16979) > 1500
 rows:
   # D1: Barkskin when low, or as soon as anything is attacking the bot
   - do: druid barkskin
@@ -85,6 +88,15 @@ rows:
   - do: bear dps frenzied regeneration
     when: known(22842) and cooldown(22842) == 0 and health_pct(self) < 40
     relevance: emergency + 1
+
+  # U1 (dungeon-prereqs S5): Skull Bash the casting target, then a casting enemy healer within reach
+  - do: bear dps skull bash
+    when: skull_bash_ok and in_range(target, 5) and trigger("skull bash")
+    relevance: interrupt + 2
+  - do: bear dps skull bash on enemy healer
+    when: >-
+      skull_bash_ok and in_range("enemy healer target::skull bash", 5) and trigger("skull bash on enemy healer")
+    relevance: interrupt + 1
 
   # F1: Bear Form, when in neither bear form
   - do: bear dps bear form

@@ -71,6 +71,4 @@ PriestReworkActionFactory::PriestReworkActionFactory()
     // The cures, for the healer strategies' PriestHealerCureMultiplier
     creators["priest dispel magic"] = &Make<PriestCure<CastDispelMagicAction>>;
     creators["priest dispel magic on party"] = &Make<PriestCure<CastDispelMagicOnPartyAction>>;
-    creators["priest abolish disease"] = &Make<PriestCure<CastAbolishDiseaseAction>>;
-    creators["priest abolish disease on party"] = &Make<PriestCure<CastAbolishDiseaseOnPartyAction>>;
 }

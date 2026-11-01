@@ -20,8 +20,11 @@ rows:
   - do: revive
     trigger: party member dead
     relevance: critical heal + 10
-  - do: remove curse on party
-    trigger: party member remove curse
+  # Nature's Cure (Magic + Poison, level 18) replaced Remove Curse; poison stays with the Abolish Poison row above.
+  # Not castable in Cat, Bear or Bestial Fury (200425): a Feral bot stays in form out of combat
+  - do: druid natures cure on party
+    when: >-
+      not aura(self, "768,5487,9634,200425") and trigger("party member nature's cure")
     relevance: dispel + 7
   - do: set pet stance
     trigger: new pet

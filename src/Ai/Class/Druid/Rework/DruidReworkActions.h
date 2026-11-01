@@ -26,4 +26,12 @@ public:
     DruidHealerCureAction(PlayerbotAI* botAI) : StockCure(botAI) {}
 };
 
+// Nature's Cure on the party member with a Magic effect to remove (dungeon-prereqs S5: the druid's Magic + Poison
+// dispel, which replaced Remove Curse). Poison stays with the Abolish Poison rows, so this one only answers Magic.
+class CastNaturesCureOnPartyAction : public CurePartyMemberAction
+{
+public:
+    CastNaturesCureOnPartyAction(PlayerbotAI* botAI) : CurePartyMemberAction(botAI, "nature's cure", DISPEL_MAGIC) {}
+};
+
 #endif

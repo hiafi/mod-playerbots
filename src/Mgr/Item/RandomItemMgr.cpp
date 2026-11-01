@@ -1070,16 +1070,30 @@ bool RandomItemMgr::CanEquipArmor(ItemTemplate const* proto, uint8 clazz, uint32
     uint32 const requiredSubClass = [&]() -> uint32
     {
         if (clazz == CLASS_WARRIOR || clazz == CLASS_PALADIN)
-            return level >= 40 ? ITEM_SUBCLASS_ARMOR_PLATE : ITEM_SUBCLASS_ARMOR_MAIL;
+            return ITEM_SUBCLASS_ARMOR_PLATE; // plate is granted at level 1
         if (clazz == CLASS_HUNTER || clazz == CLASS_SHAMAN)
-            return level >= 40 ? ITEM_SUBCLASS_ARMOR_MAIL : ITEM_SUBCLASS_ARMOR_LEATHER;
+            return ITEM_SUBCLASS_ARMOR_MAIL; // mail is granted at level 1
         if (clazz == CLASS_DRUID || clazz == CLASS_ROGUE)
             return ITEM_SUBCLASS_ARMOR_LEATHER;
         return ITEM_SUBCLASS_ARMOR_CLOTH; // mage/warlock/priest
     }();
 
+    // Below 40 the next-lower armor type is still worn (stock has almost no plate/mail that early); from 40 on only
+    // the granted type counts.
+    uint32 const fallbackSubClass = [&]() -> uint32
+    {
+        if (level >= 40)
+            return MAX_ITEM_SUBCLASS_ARMOR; // none
+        if (clazz == CLASS_WARRIOR || clazz == CLASS_PALADIN)
+            return ITEM_SUBCLASS_ARMOR_MAIL;
+        if (clazz == CLASS_HUNTER || clazz == CLASS_SHAMAN)
+            return ITEM_SUBCLASS_ARMOR_LEATHER;
+        return MAX_ITEM_SUBCLASS_ARMOR;
+    }();
+
     // skip armor of wrong subclass (cloaks are exempt)
-    if (proto->InventoryType != INVTYPE_CLOAK && proto->SubClass != requiredSubClass)
+    if (proto->InventoryType != INVTYPE_CLOAK && proto->SubClass != requiredSubClass &&
+        proto->SubClass != fallbackSubClass)
         return false;
 
     // skip stats calculation for poor/normal quality items (grey/white)

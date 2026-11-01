@@ -42,7 +42,7 @@ bool SpellCastUsefulValue::Calculate()
 
     if (qualifier == "windfury weapon" || qualifier == "flametongue weapon" ||
         qualifier == "frostbrand weapon" ||  qualifier == "rockbiter weapon" ||
-        qualifier == "earthliving weapon" || qualifier == "spellstone")
+        qualifier == "earthliving weapon")
     {
         if (Item* item = AI_VALUE2(Item*, "item for spell", spellid);
             item && item->IsInWorld() && item->GetEnchantmentId(TEMP_ENCHANTMENT_SLOT))

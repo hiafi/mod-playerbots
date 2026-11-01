@@ -289,7 +289,7 @@ rows:
     when: es_wanted
     relevance: normal + 7.5
 
-  # Cleansing Totem (poison and disease are the totem's, Cleanse Spirit has no disease) when 2 or more allies carry one
+  # Cleansing Totem (poison and disease are the totem's, Cleanse Spirit has neither) when 2 or more allies carry one
   # and Healing Stream is on cooldown, not in a window
   - do: shaman cleansing totem
     when: >-
@@ -297,16 +297,16 @@ rows:
       and not in_window and water_free
     relevance: normal + 7.2
 
-  # 14: Cleanse Spirit on a curse or a poison (the stock triggers; the disease row is gone). The copies are tagged for
-  # ShamanHealerCureMultiplier, which lets them through only while nobody is under 50%
-  - do: shaman resto cleanse poison on party
-    trigger: party member cleanse spirit poison
+  # 14: Cleanse Spirit on a curse or a magic effect (the stock triggers; the disease and poison rows are gone). The
+  # copies are tagged for ShamanHealerCureMultiplier, which lets them through only while nobody is under 50%
+  - do: shaman resto cleanse magic on party
+    trigger: party member cleanse spirit magic
     relevance: normal + 7.0
   - do: shaman resto cleanse curse on party
     trigger: party member cleanse spirit curse
     relevance: normal + 6.9
-  - do: shaman resto cleanse self poison
-    trigger: cleanse spirit poison
+  - do: shaman resto cleanse self magic
+    trigger: cleanse spirit magic
     relevance: normal + 6.8
   - do: shaman resto cleanse self curse
     trigger: cleanse spirit curse

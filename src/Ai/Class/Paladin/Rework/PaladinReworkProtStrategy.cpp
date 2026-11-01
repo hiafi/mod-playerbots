@@ -63,6 +63,10 @@ void PaladinReworkProtStrategy::InitTriggers(std::vector<TriggerNode*>& triggers
     add("enemy out of melee", { NextAction("reach melee", ACTION_HIGH + 1) });
     add("righteous fury", { NextAction("righteous fury", ACTION_HIGH + 8) });
 
+    // Rebuke 201473 (dungeon-prereqs S3) above Hammer of Justice, which stays as the fallback while Rebuke cools down
+    add("rebuke interrupt", { NextAction("rebuke", ACTION_INTERRUPT + 2) });
+    add("rebuke on enemy healer", { NextAction("rebuke on enemy healer", ACTION_INTERRUPT + 1) });
+
     // From the stock GenericPaladinStrategy
     add("hammer of justice interrupt", { NextAction("hammer of justice", ACTION_INTERRUPT) });
     add("hammer of justice on enemy healer", { NextAction("hammer of justice on enemy healer", ACTION_INTERRUPT) });
