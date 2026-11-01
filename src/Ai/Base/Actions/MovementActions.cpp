@@ -1891,10 +1891,10 @@ bool AvoidAoeAction::AvoidAuraWithDynamicObj()
     name << spellInfo->SpellName[LOCALE_enUS];  // << "] (aura)";
     if (FleePosition(dynOwner->GetPosition(), radius))
     {
+        lastMoveTimer = getMSTime();
         if (sPlayerbotAIConfig.TellWhenAvoidAoe && lastTellTimer < time(NULL) - 10)
         {
             lastTellTimer = time(NULL);
-            lastMoveTimer = getMSTime();
             std::ostringstream out;
             out << "I'm avoiding " << name.str() << " (" << spellInfo->Id << ")" << " Radius " << radius << " - [Aura]";
             bot->Say(out.str(), LANG_UNIVERSAL);
@@ -1959,10 +1959,10 @@ bool AvoidAoeAction::AvoidGameObjectWithDamage()
         name << spellInfo->SpellName[LOCALE_enUS];  // << "] (object)";
         if (FleePosition(go->GetPosition(), radius))
         {
+            lastMoveTimer = getMSTime();
             if (sPlayerbotAIConfig.TellWhenAvoidAoe && lastTellTimer < time(NULL) - 10)
             {
                 lastTellTimer = time(NULL);
-                lastMoveTimer = getMSTime();
                 std::ostringstream out;
                 out << "I'm avoiding " << name.str() << " (" << spellInfo->Id << ")" << " Radius " << radius
                     << " - [Trap]";
@@ -1990,7 +1990,7 @@ bool AvoidAoeAction::AvoidUnitWithDamageAura()
         }
         if (!unit->HasUnitFlag(UNIT_FLAG_NOT_SELECTABLE))
         {
-            return false;
+            continue;
         }
         Unit::AuraEffectList const& aurasPeriodicTriggerSpell =
             unit->GetAuraEffectsByType(SPELL_AURA_PERIODIC_TRIGGER_SPELL);
@@ -2010,7 +2010,7 @@ bool AvoidAoeAction::AvoidUnitWithDamageAura()
                     continue;
                 if (sPlayerbotAIConfig.AoeAvoidSpellWhitelist.find(triggerSpellInfo->Id) !=
                     sPlayerbotAIConfig.AoeAvoidSpellWhitelist.end())
-                    return false;
+                    continue;
                 for (int j = 0; j < MAX_SPELL_EFFECTS; j++)
                 {
                     if (triggerSpellInfo->Effects[j].Effect == SPELL_EFFECT_SCHOOL_DAMAGE)
@@ -2026,15 +2026,16 @@ bool AvoidAoeAction::AvoidUnitWithDamageAura()
                         name << triggerSpellInfo->SpellName[LOCALE_enUS];  //<< "] (unit)";
                         if (FleePosition(unit->GetPosition(), radius))
                         {
+                            lastMoveTimer = getMSTime();
                             if (sPlayerbotAIConfig.TellWhenAvoidAoe && lastTellTimer < time(NULL) - 10)
                             {
                                 lastTellTimer = time(NULL);
-                                lastMoveTimer = getMSTime();
                                 std::ostringstream out;
                                 out << "I'm avoiding " << name.str() << " (" << triggerSpellInfo->Id << ")"
                                     << " Radius " << radius << " - [Unit Trigger]";
                                 bot->Say(out.str(), LANG_UNIVERSAL);
                             }
+                            return true;
                         }
                     }
                 }
