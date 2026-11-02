@@ -50,6 +50,27 @@ constexpr uint32 DANGER_ATTACKERS = 4;
 constexpr float TELEPORT_DIST_SQ = 60.0f * 60.0f;
 // The loose enemy search radius (Earth Shock reaches 20-25 yd, Chain Lightning 30)
 constexpr float LOOSE_ENEMY_RANGE = 30.0f;
+// Static Shock's ranks: from level 45 the Rockbiter tank keeps its own Lightning Shield (core DPS balance pass 1031
+// round S1, 2026-11-02, user ruling: shaman package)
+constexpr uint32 SPELL_STATIC_SHOCK_R1 = 51525;
+constexpr uint32 SPELL_STATIC_SHOCK_R2 = 51526;
+constexpr uint32 SPELL_STATIC_SHOCK_R3 = 51527;
+
+// A tank that runs on its own Lightning Shield and takes no Earth Shield: it holds its own Lightning Shield, or it is a
+// Rockbiter shaman with Static Shock (the tank bot's `storm_tank`, enh-tank.yaml), so a Restoration bot's Earth Shield
+// never locks its Lightning Shield out. The two elemental shields exclude each other on one unit.
+bool IsLightningShieldTank(Player const* player)
+{
+    if (!player)
+        return false;
+
+    if (player->HasAura(SPELL_LIGHTNING_SHIELD, player->GetGUID()))
+        return true;
+
+    return player->HasAura(SPELL_ROCKBITER_WEAPON) &&
+           (player->HasAura(SPELL_STATIC_SHOCK_R1) || player->HasAura(SPELL_STATIC_SHOCK_R2) ||
+            player->HasAura(SPELL_STATIC_SHOCK_R3));
+}
 }  // namespace
 
 uint8 ShamanActiveElementalValue::Calculate() { return ActiveElementalMask(bot); }
@@ -443,7 +464,9 @@ ObjectGuid ShamanEarthShieldTargetValue::CalculateGuid()
         }
     }
 
-    if (holder)
+    // A Lightning Shield tank (DPS balance pass 1031 S1) never keeps the shield: it moves on, and the charges left on
+    // the tank run out without a refresh, which lets its Lightning Shield back on
+    if (holder && !IsLightningShieldTank(holder))
     {
         Group* group = bot->GetGroup();
         Unit* mainTank = group ? botAI->GetUnit(PlayerbotAI::GetMainTankGuid(group)) : nullptr;
@@ -452,7 +475,17 @@ ObjectGuid ShamanEarthShieldTargetValue::CalculateGuid()
     }
 
     Unit* tank = AI_VALUE(Unit*, "effective tank");
-    return tank ? tank->GetGUID() : ObjectGuid::Empty;
+    Player* tankPlayer = tank ? tank->ToPlayer() : nullptr;
+    if (tank && !IsLightningShieldTank(tankPlayer))
+        return tank->GetGUID();
+
+    // The effective tank runs on Lightning Shield: the next living tank in heal range that does not, or nobody
+    for (Player* member : ai::group::GetGroupPlayers(bot))
+        if (member != bot && member != tank && member->IsAlive() && PlayerbotAI::IsTank(member) &&
+            ai::group::IsInHealRange(bot, member) && !IsLightningShieldTank(member))
+            return member->GetGUID();
+
+    return ObjectGuid::Empty;
 }
 
 uint32 ShamanNextImbueValue::Calculate()

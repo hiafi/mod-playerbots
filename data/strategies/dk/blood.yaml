@@ -27,7 +27,7 @@
 # Approximations (the guide's Definitions and State sections against what the bot can read):
 # - Recent damage = value "dk recent damage": the health the bot lost in the last 5 s as a percent of its maximum
 #   (a module tracker; the core's Death Strike record is not readable without the core header, S1-HANDOFF U31). A heal
-#   between two samples hides part of a drop. "A big hit" = recent damage >= 25. The value is sampled when it is read,
+#   between two samples hides part of a drop. "A big hit" = recent damage >= 55 (R6, 2026-11-02: was 25). The value is sampled when it is read,
 #   so the Rune Tap row (the first off-the-GCD row) reads it unconditionally on every tick.
 # - Shroud of Purgatory active = aura(self, 203146); Purgatory's cooldown = aura(self, 203147) (the lockout debuff).
 # - Crimson Scourge active = aura(self, 203137) (the buff; there is no action button glow in 3.3.5).
@@ -61,8 +61,11 @@ conditions:
   target_alive: alive(target)
   rp: value("dk runic power")
   recent: value("dk recent damage")
-  # Hurt: the Death Strike trigger of the guide (health below 70% or a big hit). The tracker is read first
-  hurt: recent >= 25 or health_pct(self) < 70
+  # Hurt: the Death Strike trigger of the guide (health below 45% or a big hit). The tracker is read first.
+  # DPS balance pass 1031 R6 (2026-11-02, Blood survival diagnosis): was recent >= 25 or below 70%, which fired after a
+  # single boss hit (about 30% of the bar), so each Death Strike healed about 45% of one hit; pooling to 55 / 45 gave
+  # the standard build 49.5 -> 70.3 s and Worms 79.9 -> 105.5 s in the survive scenario (15 iterations each)
+  hurt: recent >= 55 or health_pct(self) < 45
   healthy: health_pct(self) >= 85
   shroud: aura(self, 203146)
   blood_rune: value("dk runes ready::blood") >= 1
@@ -117,7 +120,7 @@ rows:
   - do: dk death strike
     when: known(49998) and alive(target) and shroud
     relevance: normal + 9.9
-  # S2: Death Strike with 40 Runic Power or more after a big hit or below 70% health
+  # S2: Death Strike with 40 Runic Power or more after a big hit or below 45% health
   - do: dk death strike hurt
     when: known(49998) and alive(target) and rp >= 40 and hurt
     relevance: normal + 9.8
@@ -204,9 +207,10 @@ rows:
   # than stand idle ("whenever Runic Power is near full", Blood doc section 9: at full health it banks a Blood Shield).
   # A Death Strike costs no rune. Its own qualified name keeps it out of the basket of the Death Strike rows above.
   # In the dps scenario of the tank sim the health is refilled every step, so "hurt" never holds when the bot acts and
-  # Runic Power only goes out through line 3 (90); this row takes it out at 70 (S1 fix pass, F3 and F4)
+  # Runic Power only goes out through line 3 (90); this row takes it out at 70 (S1 fix pass, F3 and F4). R6 (2026-11-02):
+  # only at 85% health or more, so below that the bot pools for the hurt line (S2) or the 90 Runic Power line
   - do: dk death strike::fill
-    when: known(49998) and alive(target) and rp >= 70
+    when: known(49998) and alive(target) and rp >= 70 and healthy
     relevance: normal + 8.6
 
   # ---- Pulling ----

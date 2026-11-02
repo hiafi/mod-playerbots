@@ -22,8 +22,10 @@
 # while Rampage is due (known, 3 s or less on its cooldown) and not free (no Blood Rush, no Recklessness with Merciless
 # rank 3). The language has no
 # arithmetic, so "N plus Reserve" is a named condition with the sum written out: `res_N` = not reserve_on or rage >=
-# N + 50 (Execute spends its 15 plus up to 15 more, so its gate is `res_30`). Heroic Strike is the
-# guide's `(rage >= 55 and not reserve_on) or rage >= 90`. Pummel and Enraged Regeneration are documented exemptions
+# N + 50 (Execute spends its 15 plus up to 15 more, so its gate is `res_30`). Heroic Strike is
+# `(rage >= 40 and not reserve_on) or rage >= 65` (the guide's 55 / 90 until 2026-11-02, DPS balance pass 1031 round
+# R5, user ruling: the 55 / 90 gate left 6-8 globals a fight idle at 60-90 rage and 8-12% of the rage lost to the cap;
+# 65 is Rampage's 50 plus Heroic Strike's 15, 40 keeps Whirlwind's 25 after it). Cleave with exactly 2 enemies: 45 / 70. Pummel and Enraged Regeneration are documented exemptions
 # (utility / emergency heal), and so are the free casts (they cost nothing). The Death Wish pool is 60 (Q13: it
 # costs 10 and the point is a paid Rampage right after), the execute-phase Execute uses res_30 (guide: 75), and the
 # above-20% Whirlwind carries no Reserve (the guide's line 4); the execute-phase Whirlwind does (its line 4).
@@ -210,17 +212,18 @@ rows:
       not pack and not execute_ph and known(1464) and cooldown(1464) == 0 and alive(target)
       and rage >= 15 and res_15
     relevance: normal + 9.6
-  # 9. Heroic Strike (Cleave with exactly 2 enemies): rage 55 with no Reserve, or 90 or more. Before Bloodthirst
+  # 9. Heroic Strike (Cleave with exactly 2 enemies): rage 40 with no Reserve, or 65 or more (Cleave 45 / 70; R5,
+  # 2026-11-02: was 55 / 90 for both). Before Bloodthirst
   # (20) the dump is plain: Heroic Strike at 15 (Cleave at 20).
   - do: fury heroic strike
     when: >-
       not pack and not two and not execute_ph and known(78) and alive(target)
-      and ((known(23881) and ((rage >= 55 and not reserve_on) or rage >= 90))
+      and ((known(23881) and ((rage >= 40 and not reserve_on) or rage >= 65))
       or (not known(23881) and rage >= 15))
     relevance: normal + 9.55
   - do: fury cleave::dump
     when: >-
       two and not execute_ph and known(845) and alive(target)
-      and ((known(23881) and ((rage >= 55 and not reserve_on) or rage >= 90))
+      and ((known(23881) and ((rage >= 45 and not reserve_on) or rage >= 70))
       or (not known(23881) and rage >= 20))
     relevance: normal + 9.55

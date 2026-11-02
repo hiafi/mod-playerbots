@@ -101,10 +101,31 @@ std::vector<SealRule> const& RetributionRules(bool pack)
     return pack ? packRules : single;
 }
 
-std::vector<SealRule> const& ProtectionRules()
+// Protection (user ruling 2026-11-02, DPS balance pass 1031 round R5): a seal runs 10 s, then sits Primed for 20 s
+// until the next Judgement unleashes it, and every seal has its own 30 s cooldown. So the single-target cycle walks
+// the seals instead of waiting on one: Righteousness (its Judgement is the strongest single-target unleash), then
+// Command, then Wisdom as the third seal while mana is not full. Seal of Wisdom goes first below 40% mana: its unleash
+// restores 50% of base mana over 5 s and its passive can restore 20% of base mana per hit, but the unleash only
+// arrives after the 10 s window, so the threshold leaves lead time. There is no hysteresis state: a seal is picked
+// only in the gaps between seals, and Wisdom's own 30 s cooldown keeps it from being picked again at once. Packs (3+
+// enemies within 8 yd) keep Command, whose passive cleaves and whose Deliverance unleashes 5 targets, apart from the
+// low-mana Wisdom. The learned / cooldown / already-active checks in Calculate() skip any seal that is not castable.
+constexpr uint8 PROT_WISDOM_FIRST_MANA_PCT = 40;   // Wisdom ahead of everything below this mana
+constexpr uint8 PROT_WISDOM_FILLER_MANA_PCT = 75;  // Wisdom as the third seal below this mana
+
+std::vector<SealRule> const& ProtectionRules(bool pack)
 {
-    static std::vector<SealRule> const rules = {{SPELL_SEAL_OF_COMMAND, Always}};
-    return rules;
+    static std::vector<SealRule> const single = {
+        {SPELL_SEAL_OF_WISDOM, [](SealContext const& ctx) { return ctx.selfManaPct < PROT_WISDOM_FIRST_MANA_PCT; }},
+        {SPELL_SEAL_OF_RIGHTEOUSNESS, Always},
+        {SPELL_SEAL_OF_COMMAND, Always},
+        {SPELL_SEAL_OF_WISDOM, [](SealContext const& ctx) { return ctx.selfManaPct < PROT_WISDOM_FILLER_MANA_PCT; }},
+    };
+    static std::vector<SealRule> const packRules = {
+        {SPELL_SEAL_OF_WISDOM, [](SealContext const& ctx) { return ctx.selfManaPct < PROT_WISDOM_FIRST_MANA_PCT; }},
+        {SPELL_SEAL_OF_COMMAND, Always},
+    };
+    return pack ? packRules : single;
 }
 
 std::vector<SealRule> const& HolyRules()
@@ -145,7 +166,7 @@ uint32 PaladinSealChoiceValue::Calculate()
             rules = &HolyRules();
             break;
         case PaladinSpec::Protection:
-            rules = &ProtectionRules();
+            rules = &ProtectionRules(AI_VALUE2(uint8, "enemies within", "8") >= PACK_ENEMY_COUNT);
             break;
         default:
             rules = &RetributionRules(AI_VALUE2(uint8, "enemies within", "8") >= PACK_ENEMY_COUNT);
