@@ -333,6 +333,9 @@ public:
 // sticks to its holder: the Player carrying the bot's shield stays the target while it is a tank, or while the group
 // has no living main tank (a most-attacked member that flips every few seconds is no reason to move it). Otherwise
 // the effective tank. A missing unit when there is none.
+// A Lightning Shield tank (its own Lightning Shield up, or Rockbiter with Static Shock: the Enhancement tank from level
+// 45, DPS balance pass 1031 round S1) is skipped as holder and as target: the shield goes to the next living tank in
+// heal range, or nobody (the Restoration shaman shields someone else).
 class ShamanEarthShieldTargetValue : public GuidCachedUnitValue
 {
 public:
@@ -402,8 +405,11 @@ protected:
 };
 
 // A Restoration shaman other than the bot is in the group, alive and in heal range. Its Earth Shield goes on the tank
-// (resto.yaml skips a target that already holds any elemental shield), so the Enhancement tank casts no shield of its
-// own while one is there: neither Lightning Shield nor Earth Shield may strip or lock out the healer's.
+// (resto.yaml skips a target that already holds any elemental shield), so an Enhancement tank below Static Shock casts
+// no shield of its own while one is there: neither Lightning Shield nor Earth Shield may strip or lock out the
+// healer's.
+// From Static Shock the tank keeps its own Lightning Shield regardless and the Restoration bot skips it
+// (ShamanEarthShieldTargetValue); enh-tank.yaml reads this value only below that.
 class ShamanRestoShamanInGroupValue : public BoolCalculatedValue
 {
 public:

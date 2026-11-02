@@ -48,6 +48,12 @@ rows:
       (not known(200197) or cooldown(200197) > 0) and health_pct("tank first heal target::40,40") < 40
     relevance: emergency + 4
 
+  # R5: Shadowfiend under 50% mana (trained at 38): it returns about 45-50% of the bar over its 15 sec (5% per
+  # swing), so the bot casts it while all of that still fits; above every routine heal so it goes out on the next GCD
+  - do: priest shadowfiend
+    when: known(34433) and cooldown(34433) == 0 and mana(self) < 50 and alive(target)
+    relevance: emergency + 2
+
   # PR16: Power Word: Shield on itself under 35% when something is hitting it and no Weakened Soul is up
   - do: priest self shield
     when: health_pct(self) < 35 and value("my attacker count") > 0 and not aura(self, 6788)
@@ -82,10 +88,13 @@ rows:
     when: value("party members below::75") >= 3
     relevance: normal + 8.5
 
-  # 10: Circle of Healing on the heal cluster centre when 3+ allies within 15 yd are under 85%
+  # 10: Circle of Healing on the heal cluster centre when 3+ allies within 15 yd are under 85%, on cooldown: above
+  # Prayer of Healing (row 9), whose condition holds whenever 3+ are hurt, so at a lower relevance Circle of Healing
+  # was only ever cast when Prayer of Healing was unaffordable (R5, 2026-11-02; never once Prayer of Healing became the
+  # cheaper of the two)
   - do: holy circle of healing::15,85
     when: known(34861) and cooldown(34861) == 0 and value("heal cluster count::15,85") >= 3
-    relevance: normal + 8.0
+    relevance: normal + 8.7
 
   # 11: Lightwell when 2+ allies are under 80% and none stands yet: at the injured cluster when 2 or more are within
   # 20 yd of each other, else at the tank (PR36); a cast time, so only standing still

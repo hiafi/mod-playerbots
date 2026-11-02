@@ -46,6 +46,10 @@ conditions:
   lava_ok: not moving(self) or aura(self, "202569,16166")
   # Thunderstorm's cooldown (one rank; Call of Thunder's capstone doubles its mana restore, 10% to 20%)
   ts_ready: known(51490) and cooldown(51490) == 0
+  # Rising Flames' stacks build only while the Magma Totem or the Fire Elemental is out (creature 300277 in the Fire slot,
+  # or the Fire window): with another Fire totem (Searing) there is nothing to wait for (DPS balance pass 1031 round S1,
+  # 2026-11-02, Revision 4's Rising Flames fix, YAML only)
+  rf_source: value("shaman totem entry::fire") == 300277 or value("shaman elemental time left::fire") > 0
   # Flame Shock is worth casting on a target that lives, and only when it is missing (or at the Fire refresh moment)
   fs_wanted: >-
     known(8050) and cooldown(8050) == 0 and (boss(target) or elite(target) or lifetime(target) > 8)
@@ -151,6 +155,12 @@ rows:
     relevance: normal + 7.0
 
   # ---- Packs (3 or more enemies around the target) ----
+  # Order (DPS balance pass 1031 round S1, 2026-11-02, user ruling: shaman package; proposal Revision 4 section R4.3,
+  # kept by Revision 5): Earthquake 9.7 > Earth Shock at 10 Echo 9.6 (the best damage per mana) > Chain Lightning 9.55 >
+  # Fire Nova 9.45 > Flame Shock 8.8 > Lava Burst only on Lava Surge or Elemental Mastery 8.7 > Elemental Blast 8.6 >
+  # Icefury Frost Shock 8.5 > Thunderstorm 8.3 > Lightning Bolt. Earthquake grows 25% per extra enemy inside it, Chain
+  # Lightning has no per-jump falloff, and the big three (Chain Lightning, Fire Nova, Magma) cost 12 / 12 / 18% of base
+  # mana, so the pack rows lean on them.
   # 2: Earthquake at the pack's center on cooldown when it has not moved in the last 2 s
   - do: shaman pack earthquake
     when: >-
@@ -161,26 +171,34 @@ rows:
 
   # 3: Magma Totem at the pack's center is in "shaman/totems-fire" (it shares the Fire slot with the Fire Elemental)
 
-  # 4: Fire Nova from the Fire slot's totem or the Fire Elemental at 5 Rising Flames, or on cooldown without the
-  # capstone. The action wants the source within 8 yd of the target
-  - do: shaman fire nova
-    when: >-
-      not pooling and pack and known(1535) and cooldown(1535) == 0 and value("shaman totem active::fire")
-      and (not known(16544) or stacks(self, 202583) >= 5) and value("unsafe aoe units::8") == 0
-    relevance: normal + 9.5
+  # Earth Shock at 10 Echo (9.6, was 8.4): the best damage per mana of the pack rows
+  - do: shaman pack earth shock
+    when: not pooling and pack and known(8042) and cooldown(8042) == 0 and stacks(self, 202565) >= 10
+    relevance: normal + 9.6
 
-  # 5: Chain Lightning on cooldown (the Unrelenting Storm stacks come with it)
+  # 5: Chain Lightning on cooldown (the Unrelenting Storm stacks come with it); 9.55 (was 9.45), above Fire Nova
   - do: shaman pack chain lightning
     when: >-
       not pooling and pack and known(421) and cooldown(421) == 0 and lightning_ok and value("unsafe aoe units::10") == 0
+    relevance: normal + 9.55
+
+  # 4: Fire Nova from the Fire slot's totem or the Fire Elemental at 5 Rising Flames, or on cooldown without the
+  # capstone or without a stack source (`rf_source`). The action wants the source within 8 yd of the target. 9.45 (was
+  # 9.5)
+  - do: shaman fire nova
+    when: >-
+      not pooling and pack and known(1535) and cooldown(1535) == 0 and value("shaman totem active::fire")
+      and (not known(16544) or stacks(self, 202583) >= 5 or not rf_source) and value("unsafe aoe units::8") == 0
     relevance: normal + 9.45
 
-  # 6: Flame Shock on the primary target when missing, then Lava Burst on cooldown
+  # 6: Flame Shock on the primary target when missing, then Lava Burst only with Lava Surge or Elemental Mastery (its
+  # damage per mana is the worst on a pack; the mana goes to Chain Lightning)
   - do: shaman pack flame shock
     when: not pooling and pack and fs_wanted
     relevance: normal + 8.8
   - do: shaman pack lava burst
-    when: not pooling and pack and known(51505) and cooldown(51505) == 0 and lava_ok
+    when: >-
+      not pooling and pack and known(51505) and cooldown(51505) == 0 and lava_ok and aura(self, "202569,16166")
     relevance: normal + 8.7
 
   # 7: Elemental Blast on cooldown, then Frost Shock with Icefury on a different target than the last (or 4 s on)
@@ -192,11 +210,6 @@ rows:
       pack and known(8056) and cooldown(8056) == 0 and charges(self, 202566) >= 1
       and (not value("target is last target of::8056") or ms_since_cast(8056) > 4000)
     relevance: normal + 8.5
-
-  # 8: Earth Shock at 10 Echo
-  - do: shaman pack earth shock
-    when: not pooling and pack and known(8042) and cooldown(8042) == 0 and stacks(self, 202565) >= 10
-    relevance: normal + 8.4
 
   # 9: Thunderstorm when stacked on the bot (a peel: 2 or more enemies within 10 yd and something attacking the bot), or
   # for mana when no enemy is within 10 yd. Never when the tank holds the pack within 10 yd of the bot: "has aggro"

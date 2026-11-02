@@ -16,12 +16,16 @@
 #
 # Rules this file keeps:
 # - Rockbiter is never swapped while tanking (no swap row; the one imbue row only puts Rockbiter back).
-# - The shield: Earth Shield on self by default, Lightning Shield when 3 or more enemies attack the bot; the shield the
-#   bot has is kept up (<= 2 charges). The healer's Earth Shield wins (user ruling 2026-10-21, S3b-1 review M2): while
+# - The shield (DPS balance pass 1031 round S1, 2026-11-02, user ruling: shaman package): from Static Shock (level 45,
+#   `storm_tank`) Lightning Shield is the tank's shield at every attacker count, kept at 3 charges or more, and the bot
+#   never casts Earth Shield (its Rockbiter talents make the orbs heal, arc and fire on absorbed hits). It replaces a
+#   leftover Earth Shield of its own; another shaman's Earth Shield on the bot (a human's) is respected, no recast over
+#   it (no ping-pong). Restoration bots skip a tank like this (ShamanEarthShieldTargetValue), so a grouped Restoration
+#   shaman no longer holds it back. Below 45 the old rule stays: Earth Shield on self by default, Lightning Shield when
+#   3 or more enemies attack the bot; the healer's Earth Shield wins (user ruling 2026-10-21, S3b-1 review M2): while
 #   another shaman's Earth Shield is on the bot, or a Restoration shaman is grouped and in range, the bot casts no
-#   shield of its own at all. The two elemental shields exclude each other on one unit whoever cast them, so a Lightning
-#   Shield or a self Earth Shield would strip or lock out the healer's (S2b-1 M1: the casters would ping-pong). The two
-#   shields are never cast over each other either.
+#   shield of its own at all. The two elemental shields exclude each other on one unit whoever cast them (S2b-1 M1: the
+#   casters would ping-pong).
 # - Taunt rows use "shaman loose enemy": an attacker of a group member that is not another tank, within 30 yd, and not
 #   taunt-immune (ShamanReworkValues.cpp). Chain Lightning takes the loose enemy as its primary when Earth Shock is on
 #   cooldown.
@@ -51,6 +55,9 @@ conditions:
   # The shield state: the bot's own Earth Shield or Lightning Shield, or another shaman's Earth Shield
   mine_es: aura(self, 974, own)
   mine_ls: aura(self, 324)
+  # Static Shock learned (level 45): the Lightning Shield tank (aura(), not known(): passive talent ranks are not in the
+  # spellbook)
+  storm_tank: aura(self, "51525,51526,51527")
   other_es: aura(self, 974) and not aura(self, 974, own)
   worth_fs: boss(target) or elite(target) or lifetime(target) > 8
   # Living Earth ready; it is on the global cooldown, 10 s cooldown
@@ -127,6 +134,13 @@ rows:
     when: known(421) and cooldown(421) == 0 and target_alive and stacks(self, 53817) >= 5 and enemies_within(10) >= 2
     relevance: normal + 9.85
 
+  # Packs, Lightning Shield tank: Chain Lightning on cooldown at 3 or more enemies within 10 yd while the bot's own
+  # Lightning Shield is up (Anticipation: 2 more jumps; its capstone strikes each enemy attacking the bot with an orb).
+  # Below Earth Shock, above Stormstrike. Its own basket (the `::pack` qualifier) so it never merges with the 2-enemy row
+  - do: shaman tank chain lightning::pack
+    when: known(421) and cooldown(421) == 0 and target_alive and pack3 and mine_ls
+    relevance: normal + 9.75
+
   # 2: Earth Shock on cooldown (15 Stoneskin, high threat, taunts its target)
   - do: shaman tank earth shock
     when: known(8042) and cooldown(8042) == 0 and target_alive
@@ -162,20 +176,24 @@ rows:
     when: known(403) and target_alive and stacks(self, 53817) >= 5
     relevance: normal + 9.2
 
-  # 7: shield upkeep. The shield the bot has is kept at 3 charges or more; with none, Earth Shield on self (Lightning
-  # Shield with 3+ attackers on the bot, or without Earth Shield); never over another shield, and none at all while
-  # another shaman's Earth Shield is on the bot or a Restoration shaman is grouped (its Earth Shield wins)
+  # 7: shield upkeep. From Static Shock (`storm_tank`): Lightning Shield always, kept at 3 charges or more, over the bot's
+  # own Earth Shield but never over another shaman's. Below it: the shield the bot has is kept at 3 charges or more; with
+  # none, Earth Shield on self (Lightning Shield with 3+ attackers on the bot, or without Earth Shield); never over
+  # another shield, and none at all while another shaman's Earth Shield is on the bot or a Restoration shaman is grouped
+  # (its Earth Shield wins)
   - do: shaman tank earth shield self
     when: >-
-      known(974) and not other_es and not mine_ls and not resto_around
+      known(974) and not storm_tank and not other_es and not mine_ls and not resto_around
       and ((mine_es and charges(self, 974, own) <= 2)
       or (not mine_es and value("my attacker count") < 3))
     relevance: normal + 8.9
   - do: shaman tank lightning shield
     when: >-
-      known(324) and not aura(self, 974) and not resto_around
+      known(324) and not other_es
+      and ((storm_tank and (not mine_ls or charges(self, 324) <= 2))
+      or (not storm_tank and not aura(self, 974) and not resto_around
       and ((mine_ls and charges(self, 324) <= 2)
-      or (not mine_ls and (value("my attacker count") >= 3 or not known(974))))
+      or (not mine_ls and (value("my attacker count") >= 3 or not known(974))))))
     relevance: normal + 8.8
 
   # 9: Lightning Bolt as filler at range
@@ -189,22 +207,29 @@ strategy: shaman/nc-enh-tank
 class: shaman
 conditions:
   other_es: aura(self, 974) and not aura(self, 974, own)
+  # Static Shock learned (level 45): Lightning Shield is the shield from here (DPS balance pass 1031 round S1)
+  storm_tank: aura(self, "51525,51526,51527")
 rows:
   # Rockbiter Weapon, from level 1 (the value gives Rockbiter for a tank build and 0 while it is up)
   - do: shaman nc imbue
     when: value("shaman next imbue") != 0
     relevance: high + 2
 
-  # Earth Shield on self by default, and kept at 3 charges or more; no shield at all while another shaman's Earth Shield
-  # is on the bot or a Restoration shaman is grouped (the healer's wins), never over a Lightning Shield. Lightning
-  # Shield only before Earth Shield is learned (level 25)
+  # From Static Shock (`storm_tank`, level 45): Lightning Shield, kept at 3 charges or more, over the bot's own Earth
+  # Shield but never over another shaman's; no Earth Shield. Below it: Earth Shield on self by default, and kept at 3
+  # charges or more; no shield at all while another shaman's Earth Shield is on the bot or a Restoration shaman is
+  # grouped (the healer's wins), never over a Lightning Shield. Lightning Shield only before Earth Shield is learned
+  # (level 25)
   - do: shaman tank earth shield self
     when: >-
-      known(974) and not other_es and not aura(self, 324) and not value("shaman resto shaman in group")
+      known(974) and not storm_tank and not other_es and not aura(self, 324)
+      and not value("shaman resto shaman in group")
       and (not aura(self, 974, own) or charges(self, 974, own) <= 2)
     relevance: high
   - do: shaman tank lightning shield
     when: >-
-      known(324) and not aura(self, 974) and not known(974) and not value("shaman resto shaman in group")
-      and (not aura(self, 324) or charges(self, 324) <= 2)
+      known(324) and not other_es
+      and ((storm_tank and (not aura(self, 324) or charges(self, 324) <= 2))
+      or (not storm_tank and not aura(self, 974) and not known(974) and not value("shaman resto shaman in group")
+      and (not aura(self, 324) or charges(self, 324) <= 2)))
     relevance: high - 0.1
