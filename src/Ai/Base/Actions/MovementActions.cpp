@@ -1891,10 +1891,10 @@ bool AvoidAoeAction::AvoidAuraWithDynamicObj()
     name << spellInfo->SpellName[LOCALE_enUS];  // << "] (aura)";
     if (FleePosition(dynOwner->GetPosition(), radius))
     {
+        lastMoveTimer = getMSTime();
         if (sPlayerbotAIConfig.TellWhenAvoidAoe && lastTellTimer < time(NULL) - 10)
         {
             lastTellTimer = time(NULL);
-            lastMoveTimer = getMSTime();
             std::ostringstream out;
             out << "I'm avoiding " << name.str() << " (" << spellInfo->Id << ")" << " Radius " << radius << " - [Aura]";
             bot->Say(out.str(), LANG_UNIVERSAL);
@@ -1959,10 +1959,10 @@ bool AvoidAoeAction::AvoidGameObjectWithDamage()
         name << spellInfo->SpellName[LOCALE_enUS];  // << "] (object)";
         if (FleePosition(go->GetPosition(), radius))
         {
+            lastMoveTimer = getMSTime();
             if (sPlayerbotAIConfig.TellWhenAvoidAoe && lastTellTimer < time(NULL) - 10)
             {
                 lastTellTimer = time(NULL);
-                lastMoveTimer = getMSTime();
                 std::ostringstream out;
                 out << "I'm avoiding " << name.str() << " (" << spellInfo->Id << ")" << " Radius " << radius
                     << " - [Trap]";
@@ -1990,7 +1990,7 @@ bool AvoidAoeAction::AvoidUnitWithDamageAura()
         }
         if (!unit->HasUnitFlag(UNIT_FLAG_NOT_SELECTABLE))
         {
-            return false;
+            continue;
         }
         Unit::AuraEffectList const& aurasPeriodicTriggerSpell =
             unit->GetAuraEffectsByType(SPELL_AURA_PERIODIC_TRIGGER_SPELL);
@@ -2010,7 +2010,7 @@ bool AvoidAoeAction::AvoidUnitWithDamageAura()
                     continue;
                 if (sPlayerbotAIConfig.AoeAvoidSpellWhitelist.find(triggerSpellInfo->Id) !=
                     sPlayerbotAIConfig.AoeAvoidSpellWhitelist.end())
-                    return false;
+                    continue;
                 for (int j = 0; j < MAX_SPELL_EFFECTS; j++)
                 {
                     if (triggerSpellInfo->Effects[j].Effect == SPELL_EFFECT_SCHOOL_DAMAGE)
@@ -2026,15 +2026,16 @@ bool AvoidAoeAction::AvoidUnitWithDamageAura()
                         name << triggerSpellInfo->SpellName[LOCALE_enUS];  //<< "] (unit)";
                         if (FleePosition(unit->GetPosition(), radius))
                         {
+                            lastMoveTimer = getMSTime();
                             if (sPlayerbotAIConfig.TellWhenAvoidAoe && lastTellTimer < time(NULL) - 10)
                             {
                                 lastTellTimer = time(NULL);
-                                lastMoveTimer = getMSTime();
                                 std::ostringstream out;
                                 out << "I'm avoiding " << name.str() << " (" << triggerSpellInfo->Id << ")"
                                     << " Radius " << radius << " - [Unit Trigger]";
                                 bot->Say(out.str(), LANG_UNIVERSAL);
                             }
+                            return true;
                         }
                     }
                 }
@@ -2308,7 +2309,11 @@ Position CombatFormationMoveAction::AverageGroupPos(float dis, bool ranged, bool
         averageX += member->GetPositionX();
         averageY += member->GetPositionY();
         averageZ += member->GetPositionZ();
+        cnt++;
     }
+    if (cnt == 0)
+        return bot->GetPosition();
+
     averageX /= cnt;
     averageY /= cnt;
     averageZ /= cnt;
@@ -2776,17 +2781,18 @@ bool MoveFromGroupAction::Execute(Event event)
 
 bool MoveAwayFromCreatureAction::Execute(Event /*event*/)
 {
-    GuidVector targets = AI_VALUE(GuidVector, "nearest npcs");
+    // Candidate positions lie up to maxMoveDistance from the bot, and a creature matters if it is within range of one
+    constexpr float maxMoveDistance = 30.0f;
 
-    // Find all creatures with the specified Id
+    // The "nearest npcs" value only lists living units, so dead creatures need a direct grid search
+    std::list<Creature*> candidates;
+    bot->GetCreatureListWithEntryInGrid(candidates, creatureId, maxMoveDistance + range);
+
     std::vector<Unit*> creatures;
-    for (auto const& guid : targets)
+    for (Creature* creature : candidates)
     {
-        Unit* unit = botAI->GetUnit(guid);
-        if (unit && (alive && unit->IsAlive()) && unit->GetEntry() == creatureId)
-        {
-            creatures.push_back(unit);
-        }
+        if (creature->IsAlive() == alive)
+            creatures.push_back(creature);
     }
 
     if (creatures.empty())
@@ -2805,7 +2811,7 @@ bool MoveAwayFromCreatureAction::Execute(Event /*event*/)
     for (int i = 0; i < directions; ++i)
     {
         float angle = (i * 2 * M_PI) / directions;
-        for (float distance = increment; distance <= 30.0f; distance += increment)
+        for (float distance = increment; distance <= maxMoveDistance; distance += increment)
         {
             float moveX = bot->GetPositionX() + distance * cos(angle);
             float moveY = bot->GetPositionY() + distance * sin(angle);
@@ -2866,7 +2872,7 @@ bool MoveAwayFromPlayerWithDebuffAction::Execute(Event /*event*/)
     for (GroupReference* gref = group->GetFirstMember(); gref; gref = gref->next())
     {
         Player* player = gref->GetSource();
-        if (player && player->IsAlive() && player->HasAura(spellId))
+        if (player && player != bot && player->IsAlive() && player->HasAura(spellId))
         {
             debuffedPlayers.push_back(player);
         }
