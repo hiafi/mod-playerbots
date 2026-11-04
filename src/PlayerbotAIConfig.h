@@ -302,6 +302,7 @@ public:
     uint32 RandomBotAccountCount;
     bool RandomBotRandomPassword;
     bool DeleteRandomBotAccounts;
+    bool ExpansionRacesAnyExpansion;
     uint32 RandomBotGuildCount, RandomBotGuildSizeMax;
     bool DeleteRandomBotGuilds;
     std::vector<uint32> PvpProhibitedZoneIds;

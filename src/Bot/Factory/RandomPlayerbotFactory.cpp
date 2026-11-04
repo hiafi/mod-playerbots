@@ -105,8 +105,9 @@ bool RandomPlayerbotFactory::DeathKnightsAllowed(uint32 expansion)
 
 bool RandomPlayerbotFactory::IsValidRaceClassCombination(uint8 race, uint8 cls, uint32 expansion)
 {
-    // skip expansion races if not playing with expansion
-    if (expansion < EXPANSION_THE_BURNING_CRUSADE && (race == RACE_BLOODELF || race == RACE_DRAENEI))
+    // skip expansion races if not playing with expansion, unless the server keeps them in every phase
+    if (expansion < EXPANSION_THE_BURNING_CRUSADE && (race == RACE_BLOODELF || race == RACE_DRAENEI) &&
+        !sPlayerbotAIConfig.ExpansionRacesAnyExpansion)
         return false;
 
     // skip the Death Knight unless the server lets one be played: a WotLK expansion, or (a server that rewrites the
