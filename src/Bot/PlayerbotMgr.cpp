@@ -1238,15 +1238,23 @@ std::vector<std::string> PlayerbotHolder::HandlePlayerbotCommand(char const* arg
         // The cache is an unordered_set: its iteration order does not change between calls, so the first
         // eligible character is always the same one. Walk a shuffled copy when a random one is wanted,
         // and the cache itself otherwise, so the default path copies nothing.
-        ObjectGuid picked = ObjectGuid::Empty;
-        if (sPlayerbotAIConfig.AddClassRandomCharacter)
+        auto const pickFromPool = [&](std::unordered_set<ObjectGuid> const& pool) -> ObjectGuid
         {
-            std::vector<ObjectGuid> candidates(guidCache.begin(), guidCache.end());
+            if (!sPlayerbotAIConfig.AddClassRandomCharacter)
+                return pickFirstEligible(pool);
+
+            std::vector<ObjectGuid> candidates(pool.begin(), pool.end());
             Acore::Containers::RandomShuffle(candidates);
-            picked = pickFirstEligible(candidates);
-        }
-        else
-            picked = pickFirstEligible(guidCache);
+            return pickFirstEligible(candidates);
+        };
+
+        ObjectGuid picked = pickFromPool(guidCache);
+
+        // No free character on the master's side (a pre-TBC server has no Alliance Shaman at all): take one
+        // from the other faction when the two factions may group.
+        if (picked.IsEmpty() && sWorld->getBoolConfig(CONFIG_ALLOW_TWO_SIDE_INTERACTION_GROUP))
+            picked = pickFromPool(sRandomPlayerbotMgr.addclassCache[RandomPlayerbotMgr::GetTeamClassIdx(
+                teamId != TEAM_ALLIANCE, claz)]);
 
         if (picked.IsEmpty())
         {

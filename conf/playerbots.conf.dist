@@ -110,6 +110,13 @@ Playerbots.RandomBotAccountPrefix = "rndbot"
 # like to recreate randombots, set the number back to 0 and rerun the Worldserver.
 Playerbots.DeleteRandomBotAccounts = 0
 
+# Create Blood Elf and Draenei bots even when the server expansion is below The Burning Crusade, for
+# servers that keep every race playable from the start (e.g. a mod-progression vanilla phase that
+# still lets players create them). Applies to bots created after the change; existing bots keep
+# their race until the bot accounts are deleted and recreated.
+# Default: 0 (only with Expansion 1 or higher)
+Playerbots.ExpansionRacesAnyExpansion = 0
+
 # Disable randombots when no real players are logged in
 # Default: 0 (randombots will login when server starts)
 # If enabled, randombots will only log in 30 seconds (default) after a real player logs in, and will

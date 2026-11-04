@@ -582,6 +582,7 @@ bool PlayerbotAIConfig::Initialize()
     RandomBotAccountPrefix = sConfigMgr->GetOption<std::string>("Playerbots.RandomBotAccountPrefix", "rndbot");
     RandomBotAccountCount = sConfigMgr->GetOption<int32>("Playerbots.RandomBotAccountCount", 0);
     DeleteRandomBotAccounts = sConfigMgr->GetOption<bool>("Playerbots.DeleteRandomBotAccounts", false);
+    ExpansionRacesAnyExpansion = sConfigMgr->GetOption<bool>("Playerbots.ExpansionRacesAnyExpansion", false);
     RandomBotGuildCount = sConfigMgr->GetOption<int32>("Playerbots.RandomBotGuildCount", 20);
     RandomBotGuildSizeMax = sConfigMgr->GetOption<int32>("Playerbots.RandomBotGuildSizeMax", 15);
     DeleteRandomBotGuilds = sConfigMgr->GetOption<bool>("Playerbots.DeleteRandomBotGuilds", false);
