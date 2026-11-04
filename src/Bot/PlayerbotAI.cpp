@@ -1124,7 +1124,9 @@ void PlayerbotAI::HandleCommand(uint32 type, std::string const text, Player* fro
         (filtered.size() > 3 && filtered.substr(0, 3) == "do "))
     {
         std::string const action = filtered.substr(filtered.find(" ") + 1);
-        DoSpecificAction(action);
+        // Custom: mod-boss-mechanics hook (dungeon mechanics M4) - the "do" source, as the other two chat paths pass,
+        // so the Engine::SetExecuteActionGate veto can tell a human order apart
+        DoSpecificAction(action, Event("do", "", fromPlayer));
     }
     else if (type != CHAT_MSG_WHISPER && filtered.size() > 6 && filtered.substr(0, 6) == "queue ")
     {

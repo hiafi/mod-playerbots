@@ -42,6 +42,8 @@ public:
     bool Execute(Event event) override;
     bool isUseful() override;
     bool isPossible() override;
+    // Custom: mod-boss-mechanics hook (dungeon mechanics M4) - the stored id the action casts
+    uint32 GetCastSpellId() override { return _spellId; }
 
 protected:
     // Whether the position value is worth using right now (e.g. a big enough cluster). When false the action

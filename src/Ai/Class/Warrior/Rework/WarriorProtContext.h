@@ -37,6 +37,8 @@ public:
     bool isPossible() override;
     bool Execute(Event event) override;
     ActionThreatType getThreatType() override { return ActionThreatType::Aoe; }
+    // Custom: mod-boss-mechanics hook (dungeon mechanics M4) - the stored id the action casts
+    uint32 GetCastSpellId() override { return _spellId; }
 
 private:
     uint32 _spellId;

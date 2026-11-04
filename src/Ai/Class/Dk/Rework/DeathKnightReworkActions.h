@@ -34,6 +34,8 @@ public:
     bool isPossible() override;
     bool Execute(Event event) override;
     ActionThreatType getThreatType() override { return _threat; }
+    // Custom: mod-boss-mechanics hook (dungeon mechanics M4) - the stored id the action casts
+    uint32 GetCastSpellId() override { return SpellId(); }
 
 protected:
     // The first of the ids the bot has learned, 0 when none

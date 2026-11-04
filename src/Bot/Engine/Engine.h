@@ -59,9 +59,20 @@ private:
     std::list<ActionExecutionListener*> listeners;
 };
 
+// Custom: mod-boss-mechanics hook (dungeon mechanics M4) - Engine::SetExecuteActionGate exists, so a module can build
+// against a fork with or without it
+#define PLAYERBOTS_HAS_EXECUTE_ACTION_GATE 1
+
 class Engine : public PlayerbotAIAware
 {
 public:
+    // Custom: mod-boss-mechanics hook (dungeon mechanics M4) - a veto on the actions run by name
+    // (PlayerbotAI::DoSpecificAction -> ExecuteAction), which skip the multipliers: false refuses the action
+    // (ACTION_RESULT_IMPOSSIBLE). Set once at startup by a module, on the world thread; nullptr (the default) allows
+    // everything. It runs on the bot's map thread and must be cheap and free of side effects.
+    using ExecuteActionGate = bool (*)(PlayerbotAI* botAI, Action* action, Event& event);
+    static void SetExecuteActionGate(ExecuteActionGate gate);
+
     Engine(PlayerbotAI* botAI, AiObjectContext* factory);
 
     virtual void Init();

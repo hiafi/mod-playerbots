@@ -137,6 +137,9 @@ namespace
 CastSpellAction::CastSpellAction(PlayerbotAI* botAI, std::string const spell)
     : Action(botAI, spell), spell(spell), range(botAI->GetRange("spell")) {}
 
+// Custom: mod-boss-mechanics hook (dungeon mechanics M4) - the name lookup Execute casts by
+uint32 CastSpellAction::GetCastSpellId() { return AI_VALUE2(uint32, "spell id", spell); }
+
 bool CastSpellAction::Execute(Event /*event*/)
 {
     if (spell == "conjure food" || spell == "conjure water")

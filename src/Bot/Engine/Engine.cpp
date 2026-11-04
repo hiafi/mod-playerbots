@@ -316,6 +316,14 @@ bool Engine::MultiplyAndPush(
     return pushed;
 }
 
+// Custom: mod-boss-mechanics hook (dungeon mechanics M4) - the module-filled veto on actions run by name
+namespace
+{
+    Engine::ExecuteActionGate sExecuteActionGate = nullptr;
+}
+
+void Engine::SetExecuteActionGate(ExecuteActionGate gate) { sExecuteActionGate = gate; }
+
 ActionResult Engine::ExecuteAction(std::string const name, Event event, std::string const qualifier)
 {
     bool result = false;
@@ -344,6 +352,13 @@ ActionResult Engine::ExecuteAction(std::string const name, Event event, std::str
     }
 
     if (!action->isPossible())
+    {
+        delete actionNode;
+        return ACTION_RESULT_IMPOSSIBLE;
+    }
+
+    // Custom: mod-boss-mechanics hook (dungeon mechanics M4) - the module's veto (Engine::SetExecuteActionGate)
+    if (sExecuteActionGate && !sExecuteActionGate(botAI, action, event))
     {
         delete actionNode;
         return ACTION_RESULT_IMPOSSIBLE;
