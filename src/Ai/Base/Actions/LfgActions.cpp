@@ -10,6 +10,7 @@
 #include "ItemVisitors.h"
 #include "LFGMgr.h"
 #include "Opcodes.h"
+#include "PaladinReworkUtils.h"
 #include "Playerbots.h"
 #include "RandomPlayerbotMgr.h"
 #include "RogueReworkUtils.h"
@@ -69,7 +70,8 @@ uint32 LfgJoinAction::GetRoles()
         case CLASS_PALADIN:
             if (spec == 1)
                 return PLAYER_ROLE_TANK;
-            else if (!spec)
+            // Rework: the Shockadin build (a Holy column-3 talent) queues as damage
+            else if (!spec && !ai::paladin_rework::IsShockadinBuild(bot))
                 return PLAYER_ROLE_HEALER;
             else
                 return PLAYER_ROLE_DAMAGE;

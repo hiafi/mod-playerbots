@@ -128,6 +128,37 @@ std::vector<SealRule> const& ProtectionRules(bool pack)
     return pack ? packRules : single;
 }
 
+// Shockadin (Holy DPS): a mana-hungry melee whose damage is mostly Holy (Holy Shock, Exorcism, Glimmer pulses,
+// Sunlight). Seal of Light first: its unleash buffs Holy damage by 1.25% per stack for 15 s and heals, and its 60 s
+// cooldown keeps it to one window a minute. Righteousness next (the strongest single-target unleash, party haste), then
+// Wisdom as the third seal while mana is not full; Wisdom jumps the queue below 40% mana. Packs (3+ within 8 yd) put
+// Command first for its chained passive and its 5-target Deliverance. Every seal has its own 30 s cooldown, so the
+// learned / cooldown / active checks in Calculate() walk the list in the gaps between seals.
+constexpr uint8 SHOCKADIN_WISDOM_FIRST_MANA_PCT = 40;   // Wisdom ahead of everything below this mana
+constexpr uint8 SHOCKADIN_WISDOM_FILLER_MANA_PCT = 85;  // Wisdom as a later seal below this mana
+
+std::vector<SealRule> const& ShockadinRules(bool pack)
+{
+    static std::vector<SealRule> const single = {
+        {SPELL_SEAL_OF_WISDOM,
+         [](SealContext const& ctx) { return ctx.selfManaPct < SHOCKADIN_WISDOM_FIRST_MANA_PCT; }},
+        {SPELL_SEAL_OF_LIGHT, Always},
+        {SPELL_SEAL_OF_RIGHTEOUSNESS, Always},
+        {SPELL_SEAL_OF_WISDOM,
+         [](SealContext const& ctx) { return ctx.selfManaPct < SHOCKADIN_WISDOM_FILLER_MANA_PCT; }},
+        {SPELL_SEAL_OF_COMMAND, Always},
+    };
+    static std::vector<SealRule> const packRules = {
+        {SPELL_SEAL_OF_WISDOM,
+         [](SealContext const& ctx) { return ctx.selfManaPct < SHOCKADIN_WISDOM_FIRST_MANA_PCT; }},
+        {SPELL_SEAL_OF_COMMAND, Always},
+        {SPELL_SEAL_OF_LIGHT, Always},
+        {SPELL_SEAL_OF_RIGHTEOUSNESS, Always},
+        {SPELL_SEAL_OF_WISDOM, Always},
+    };
+    return pack ? packRules : single;
+}
+
 std::vector<SealRule> const& HolyRules()
 {
     static std::vector<SealRule> const rules = {
@@ -167,6 +198,9 @@ uint32 PaladinSealChoiceValue::Calculate()
             break;
         case PaladinSpec::Protection:
             rules = &ProtectionRules(AI_VALUE2(uint8, "enemies within", "8") >= PACK_ENEMY_COUNT);
+            break;
+        case PaladinSpec::Shockadin:
+            rules = &ShockadinRules(AI_VALUE2(uint8, "enemies within", "8") >= PACK_ENEMY_COUNT);
             break;
         default:
             rules = &RetributionRules(AI_VALUE2(uint8, "enemies within", "8") >= PACK_ENEMY_COUNT);

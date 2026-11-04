@@ -1,0 +1,183 @@
+# Shockadin (Holy DPS) paladin rows, appended to the "shockadin" combat strategy by
+# PaladinReworkShockadinStrategy::InitTriggers. A Holy-tab paladin with a Holy column-3 talent
+# (ai::paladin_rework::IsShockadinBuild) runs these instead of the healer rotation. Guide:
+# docs/reworks/bot-strategy/paladin-shockadin-strat.md in the core repo. Execution order is by relevance, not by
+# position in this file.
+#
+# Spell ids (PaladinData.h): Holy Shock 20473, Daybreak 201211, Awe 201212, enemy Glimmer 201208, Divine Toll 201203,
+# Light's Hammer 201200, Judgement 201060, Deliverance 201061, Primed 201063-201068.
+# AoE rows are gated on `unsafe aoe units` (X11). Holy Shock is only ever cast on enemies: the shockadin actions
+# refuse an ally, so Divine Toll (which follows the last Holy Shock's type) stays in damage mode.
+strategy: paladin/shockadin
+class: paladin
+conditions:
+  # Mode gates: Single and Pack rows need a live current target, and 3+ enemies within 8 yd of the bot is a pack
+  single: alive(target) and enemies_within(8) < 3
+  pack: alive(target) and enemies_within(8) >= 3
+
+  # Primed seal (any of the six, cast by the bot), and Ret's Deliverance pack rule
+  primed: aura(self, "201063,201064,201065,201066,201067,201068", own)
+  deliverance_known: known(201061)
+  primed_pack: >-
+    (aura(self, 201064, own) and enemies_near_target(8) >= 2)
+    or (not aura(self, 201064, own) and enemies_near_target(8) >= 3)
+
+  forbearance: aura(self, "25771,61988")
+
+  # Holy Shock on cooldown is the core: it refreshes Shock and Awe's attack power, the Merciful Strikes window and
+  # Glimmer, adds a seal stack and rolls Awe. Daybreak (201211, from Crusader Strike / Flash of Light via Light's
+  # Fervor) makes the next Shock start no cooldown, so the Shock row is true again right after it: no separate row
+  shock_ready: known(20473) and cooldown(20473) == 0
+  awe: aura(self, 201212, own)
+  exorcism_ready: known("exorcism") and cooldown("exorcism") == 0
+
+  # Divine Toll fires the type of the last Holy Shock. The bot only Shocks enemies, so a Shock in the last minute
+  # means damage mode (ms_since_cast reads infinity when never cast or evicted, which holds Toll until the next Shock)
+  toll_ready: known(201203) and cooldown(201203) == 0 and ms_since_cast(20473) <= 60000
+  # Ret's Execution Sentence gates: the target lives long enough for the Glimmer pulses to pay off
+  target_lasts: >-
+    (boss(target) and health_pct(target) > 25) or (not boss(target) and health_pct(target) > 50)
+
+  # Light's Hammer: 45 s with Unyielding Faith, 15% base mana, 14 s on the ground
+  hammer_ready: known(201200) and cooldown(201200) == 0
+
+  # X11 gates. Around the bot: Holy Wrath (10), Consecration (8). Light's Hammer (10 yd) at the target, or at the
+  # densest cluster for a pack.
+  safe_self_10: value("unsafe aoe units::10;self") == 0
+  safe_self_8: value("unsafe aoe units::8;self") == 0
+  safe_target_10: value("unsafe aoe units::10") == 0
+  safe_target_8: value("unsafe aoe units::8") == 0
+  safe_cluster_10: value("unsafe aoe units::10;cluster") == 0
+
+rows:
+  # Kept from Ret. CombatStrategy only closes to spell range, so without "reach melee" the bot would stand at range
+  - do: reach melee
+    trigger: enemy out of melee
+    relevance: high + 1
+  # Rebuke 201473 first; Hammer of Justice is the fallback while Rebuke is on its 16 s cooldown
+  - do: rebuke
+    when: known(201473) and cooldown(201473) == 0 and trigger("rebuke interrupt")
+    relevance: interrupt + 2
+  - do: rebuke on enemy healer
+    when: known(201473) and cooldown(201473) == 0 and trigger("rebuke on enemy healer")
+    relevance: interrupt + 1
+  - do: hammer of justice
+    trigger: hammer of justice interrupt
+    relevance: interrupt
+  - do: hammer of justice on enemy healer
+    trigger: hammer of justice on enemy healer
+    relevance: interrupt
+  - do: hammer of justice on snare target
+    trigger: hammer of justice on snare target
+    relevance: interrupt
+  - do: hand of freedom on party
+    trigger: hand of freedom on party
+    relevance: high + 4
+
+  # Any mode
+  - do: paladin cast seal
+    trigger: paladin no seal
+    relevance: normal + 7.0
+  - do: divine plea
+    when: value("has mana::self target") and mana(self) < 70
+    relevance: normal + 7.5
+  - do: divine shield
+    when: health(self) < 15 and not forbearance
+    relevance: emergency + 6
+  - do: lay on hands
+    when: health(self) < 10 and (forbearance or not known(642) or cooldown(642) > 0)
+    relevance: emergency + 5
+  - do: divine protection
+    when: health(self) < 35 and value("my attacker count") >= 1
+    relevance: emergency + 4
+  # Self-heal with nobody else to heal: a 1.5 s cast, so standing still. It also rolls Daybreak and cuts the Holy
+  # Shock and Crusader Strike cooldowns (Light's Fervor)
+  - do: flash of light
+    when: alive(target) and health(self) < 40 and not value("party has healer") and not moving(self)
+    relevance: normal + 6.9
+
+  # Single target
+  - do: judgement
+    when: single and primed and (not primed_pack or not deliverance_known)
+    relevance: normal + 6.8
+  - do: deliverance
+    when: single and primed and primed_pack and deliverance_known and safe_target_8
+    relevance: normal + 6.8
+  - do: shockadin holy shock
+    when: single and shock_ready
+    relevance: normal + 6.6
+  # Awe: the next Exorcism is instant and deals 30% more, for 20 s
+  - do: shockadin awe exorcism
+    when: single and awe and exorcism_ready
+    relevance: normal + 6.4
+  - do: shockadin divine toll
+    when: single and toll_ready and (elite(target) or value("attacker count") >= 2) and target_lasts
+    relevance: normal + 6.2
+  - do: avenging wrath
+    when: single and elite(target) and health_pct(target) > 30
+    relevance: normal + 6.0
+  - do: hammer of wrath
+    when: single and health_pct(target) <= 20
+    relevance: normal + 5.5
+  - do: crusader strike
+    when: single
+    relevance: normal + 5.0
+  # 1.5 s cast: standing still only (Awe's instant one is above). Zealous Exorcism cuts its cost by 80% and its
+  # cooldown by 2 s per melee crit
+  - do: shockadin exorcism
+    when: single and exorcism_ready and not moving(self)
+    relevance: normal + 4.5
+  - do: shockadin lights hammer
+    when: >-
+      single and hammer_ready and in_range(target, 30) and (boss(target) or (elite(target) and
+      health_pct(target) > 50)) and mana(self) > 30 and safe_target_10
+    relevance: normal + 4.0
+  - do: holy wrath
+    when: single and in_range(target, 10) and mana(self) > 40 and safe_self_10
+    relevance: normal + 3.0
+  - do: consecration
+    when: single and in_range(target, 8) and mana(self) > 60 and safe_self_8
+    relevance: normal + 2.5
+
+  # Pack: Divine Toll first (5 targets take about 7.5 Shocks' worth and each gets a Glimmer), then Light's Hammer,
+  # then Holy Shock spread to an enemy without the bot's Glimmer (201208) so more Glimmers pulse per Shock (cap 5,
+  # shared). Radiant Exorcism cleaves 2 more enemies by itself.
+  - do: deliverance
+    when: pack and primed and deliverance_known and safe_target_8
+    relevance: normal + 6.8
+  - do: judgement
+    when: pack and primed and not deliverance_known
+    relevance: normal + 6.8
+  - do: shockadin divine toll
+    when: pack and toll_ready
+    relevance: normal + 6.7
+  - do: avenging wrath
+    when: pack and value("elite enemies within::8") >= 4
+    relevance: normal + 6.6
+  - do: shockadin lights hammer on cluster
+    when: pack and hammer_ready and mana(self) > 20 and safe_cluster_10
+    relevance: normal + 6.5
+  - do: shockadin holy shock spread::201208;1;0;0;20;nearest,notarget
+    when: pack and shock_ready and alive("attacker without aura id::201208;1;0;0;20;nearest,notarget")
+    relevance: normal + 6.4
+  - do: shockadin holy shock
+    when: pack and shock_ready
+    relevance: normal + 6.3
+  - do: shockadin awe exorcism
+    when: pack and awe and exorcism_ready
+    relevance: normal + 6.2
+  - do: holy wrath
+    when: pack and enemies_within(10) >= 2 and mana(self) > 20 and safe_self_10
+    relevance: normal + 6.0
+  - do: consecration
+    when: pack and enemies_within(8) >= 3 and mana(self) > 30 and safe_self_8
+    relevance: normal + 5.8
+  - do: hammer of wrath
+    when: pack and health_pct(target) <= 20
+    relevance: normal + 5.5
+  - do: crusader strike
+    when: pack
+    relevance: normal + 5.0
+  - do: shockadin exorcism
+    when: pack and exorcism_ready and not moving(self)
+    relevance: normal + 4.5

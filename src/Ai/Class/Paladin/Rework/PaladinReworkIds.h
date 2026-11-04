@@ -96,6 +96,36 @@ constexpr uint32 SPELL_DAWN_BEFORE_DUSK_1 = 201227;
 constexpr uint32 SPELL_DAWN_BEFORE_DUSK_2 = 201228;
 constexpr uint32 SPELL_DAWN_BEFORE_DUSK_3 = 201229;
 
+// Holy column 3 (Shockadin)
+constexpr uint32 SPELL_GLIMMER_ENEMY_MARKER = 201208;
+constexpr uint32 SPELL_AWE = 201212;
+constexpr uint32 SPELL_SHOCK_AND_AWE_BUFF_1 = 201214;
+constexpr uint32 SPELL_SHOCK_AND_AWE_BUFF_2 = 201215;
+constexpr uint32 SPELL_SHOCK_AND_AWE_BUFF_3 = 201216;
+constexpr uint32 SPELL_EXORCISM = 879;
+constexpr uint32 SPELL_CRUSADER_STRIKE = 35395;
+// Talent rank spells: passive, so tested with HasTalent, never HasSpell
+constexpr uint32 SPELL_ILLUMINATED_STEEL_1 = 201246;
+constexpr uint32 SPELL_ILLUMINATED_STEEL_2 = 201247;
+constexpr uint32 SPELL_ILLUMINATED_STEEL_3 = 201248;
+constexpr uint32 SPELL_MERCIFUL_STRIKES_1 = 201249;
+constexpr uint32 SPELL_MERCIFUL_STRIKES_2 = 201250;
+constexpr uint32 SPELL_MERCIFUL_STRIKES_3 = 201251;
+constexpr uint32 SPELL_ZEALOUS_EXORCISM_1 = 201252;
+constexpr uint32 SPELL_ZEALOUS_EXORCISM_2 = 201253;
+constexpr uint32 SPELL_SUNLIGHT_1 = 201254;
+constexpr uint32 SPELL_SUNLIGHT_2 = 201255;
+constexpr uint32 SPELL_SUNLIGHT_3 = 201256;
+constexpr uint32 SPELL_BLESSED_CRUSADE_1 = 201257;
+constexpr uint32 SPELL_BLESSED_CRUSADE_2 = 201258;
+constexpr uint32 SPELL_BLESSED_CRUSADE_3 = 201259;
+constexpr uint32 SPELL_RADIANT_EXORCISM_1 = 201265;
+constexpr uint32 SPELL_RADIANT_EXORCISM_2 = 201266;
+constexpr uint32 SPELL_RADIANT_EXORCISM_3 = 201267;
+constexpr uint32 SPELL_SHOCK_AND_AWE_1 = 201271;
+constexpr uint32 SPELL_SHOCK_AND_AWE_2 = 201272;
+constexpr uint32 SPELL_SHOCK_AND_AWE_3 = 201273;
+
 // Protection
 constexpr uint32 SPELL_HOLY_SHIELD = 20925;
 constexpr uint32 SPELL_AVENGERS_SHIELD = 31935;
@@ -124,6 +154,15 @@ inline std::vector<uint32> const PALADIN_LIGHTS_GRACE_FLASH = {SPELL_LIGHTS_GRAC
                                                                SPELL_LIGHTS_GRACE_FLASH_3};
 inline std::vector<uint32> const PALADIN_LIGHTS_GRACE_HOLY_LIGHT = {
     SPELL_LIGHTS_GRACE_HOLY_LIGHT_1, SPELL_LIGHTS_GRACE_HOLY_LIGHT_2, SPELL_LIGHTS_GRACE_HOLY_LIGHT_3};
+// Every rank of the Holy column-3 talents that mark a Shockadin build (IsShockadinBuild). Illuminated Steel first: the
+// shockadin premade link takes it at level 10. Judgements of the Pure, Enlightened Judgements and Purifying Power sit
+// in column 3 too but are left out, since a healer may take them.
+inline std::vector<uint32> const PALADIN_SHOCKADIN_TALENTS = {
+    SPELL_ILLUMINATED_STEEL_1, SPELL_ILLUMINATED_STEEL_2, SPELL_ILLUMINATED_STEEL_3, SPELL_MERCIFUL_STRIKES_1,
+    SPELL_MERCIFUL_STRIKES_2,  SPELL_MERCIFUL_STRIKES_3,  SPELL_ZEALOUS_EXORCISM_1,  SPELL_ZEALOUS_EXORCISM_2,
+    SPELL_SUNLIGHT_1,          SPELL_SUNLIGHT_2,          SPELL_SUNLIGHT_3,          SPELL_BLESSED_CRUSADE_1,
+    SPELL_BLESSED_CRUSADE_2,   SPELL_BLESSED_CRUSADE_3,   SPELL_RADIANT_EXORCISM_1,  SPELL_RADIANT_EXORCISM_2,
+    SPELL_RADIANT_EXORCISM_3,  SPELL_SHOCK_AND_AWE_1,     SPELL_SHOCK_AND_AWE_2,     SPELL_SHOCK_AND_AWE_3};
 inline std::vector<uint32> const PALADIN_DAWN_BEFORE_DUSK = {SPELL_DAWN_BEFORE_DUSK_1, SPELL_DAWN_BEFORE_DUSK_2,
                                                              SPELL_DAWN_BEFORE_DUSK_3};
 

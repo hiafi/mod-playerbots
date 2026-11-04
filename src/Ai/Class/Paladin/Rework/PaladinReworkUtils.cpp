@@ -18,12 +18,26 @@ constexpr uint8 PACK_ENEMIES_DEFAULT = 3;
 constexpr uint8 PACK_ENEMIES_PRIMED_COMMAND = 2;
 }  // namespace
 
+bool ai::paladin_rework::IsShockadinBuild(Player* bot)
+{
+    if (!bot || bot->getClass() != CLASS_PALADIN)
+        return false;
+
+    // Passive talents are never in the spellbook, so HasSpell would always be false
+    uint8 const spec = bot->GetActiveSpec();
+    for (uint32 const spellId : PALADIN_SHOCKADIN_TALENTS)
+        if (bot->HasTalent(spellId, spec))
+            return true;
+
+    return false;
+}
+
 PaladinSpec GetPaladinSpec(Player* bot)
 {
     switch (AiFactory::GetPlayerSpecTab(bot))
     {
         case PALADIN_TAB_HOLY:
-            return PaladinSpec::Holy;
+            return IsShockadinBuild(bot) ? PaladinSpec::Shockadin : PaladinSpec::Holy;
         case PALADIN_TAB_PROTECTION:
             return PaladinSpec::Protection;
         default:
