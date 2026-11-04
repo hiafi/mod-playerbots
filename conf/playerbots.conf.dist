@@ -1901,6 +1901,8 @@ Playerbots.PremadeSpecLink.1.4.80 = -0330320130505012210032205013031
 # Paladin rework (custom talent trees): slots 0-2 use the level-60 builds from docs/reworks/bot-strategy/.
 # .80 repeats .60 so a level-80 bot still gets the build (leftover points go to the other trees). The
 # PvP slots 3-5 reuse the PvE builds (no PvP on this server; stock positions point at the old trees).
+# Slot 6 is the Shockadin (Holy DPS) build: any Holy column-3 talent (IsShockadinBuild) marks it, so it runs the
+# "shockadin" melee DPS strategy instead of the healer one, and a leveling bot keeps this link.
 Playerbots.PremadeSpecName.2.0 = holy pve
 Playerbots.PremadeSpecGlyph.2.0 = 41106,43367,45741,43368,43365,41109
 Playerbots.PremadeSpecLink.2.0.60 = 0330333031001020013023031300330310201
@@ -1925,6 +1927,21 @@ Playerbots.PremadeSpecName.2.5 = ret pvp
 Playerbots.PremadeSpecGlyph.2.5 = 41095,43367,41102,43369,43365,45747
 Playerbots.PremadeSpecLink.2.5.60 = 0-0-33300202310030031033300213310130301
 Playerbots.PremadeSpecLink.2.5.80 = 0-0-33300202310030031033300213310130301
+Playerbots.PremadeSpecName.2.6 = shockadin pve
+Playerbots.PremadeSpecGlyph.2.6 = 41103,43367,45746,43368,43369,41098
+# A Holy paladin counts as a Shockadin with 3 of Illuminated Steel, Merciful Strikes, Zealous Exorcism, Sunlight,
+# Blessed Crusade, Radiant Exorcism and Shock and Awe at their top rank, or below level 21 with a rank of any of them
+# (IsShockadinBuild). So the leveling links max three early: Illuminated Steel (level 12), Merciful Strikes (17) and
+# Zealous Exorcism (21), with Spiritual Focus 2 and Unyielding Faith 2 for the row gates. Then rows 0-3 with 20 points
+# so Holy Shock is the 21st (level 30), then the full 51-point build.
+Playerbots.PremadeSpecLink.2.6.10 = 0003
+Playerbots.PremadeSpecLink.2.6.14 = 0203
+Playerbots.PremadeSpecLink.2.6.17 = 02030003
+Playerbots.PremadeSpecLink.2.6.19 = 02030023
+Playerbots.PremadeSpecLink.2.6.21 = 020300230002
+Playerbots.PremadeSpecLink.2.6.30 = 020330330102000301
+Playerbots.PremadeSpecLink.2.6.60 = 0303303301020003013323000030333003021
+Playerbots.PremadeSpecLink.2.6.80 = 0303303301020003013323000030333003021
 
 #
 #
@@ -2513,7 +2530,7 @@ Playerbots.RandomClassSpecIndex.1.4 = 4
 Playerbots.RandomClassSpecProb.2.0 = 30
 Playerbots.RandomClassSpecIndex.2.0 = 0
 # prot pve
-Playerbots.RandomClassSpecProb.2.1 = 40
+Playerbots.RandomClassSpecProb.2.1 = 35
 Playerbots.RandomClassSpecIndex.2.1 = 1
 # ret pve
 Playerbots.RandomClassSpecProb.2.2 = 30
@@ -2527,6 +2544,9 @@ Playerbots.RandomClassSpecIndex.2.4 = 4
 # ret pvp
 Playerbots.RandomClassSpecProb.2.5 = 0
 Playerbots.RandomClassSpecIndex.2.5 = 5
+# shockadin pve
+Playerbots.RandomClassSpecProb.2.6 = 5
+Playerbots.RandomClassSpecIndex.2.6 = 6
 
 #
 #

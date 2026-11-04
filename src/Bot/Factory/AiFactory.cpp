@@ -16,6 +16,7 @@
 #include "Item.h"
 #include "MageAiObjectContext.h"
 #include "PaladinAiObjectContext.h"
+#include "PaladinReworkUtils.h"
 #include "PlayerbotAI.h"
 #include "PlayerbotAIConfig.h"
 #include "Playerbots.h"
@@ -173,7 +174,10 @@ BotRoles AiFactory::GetPlayerRoles(Player* player)
             role = ai::dk_rework::IsTankBuild(player) ? BOT_ROLE_TANK : BOT_ROLE_DPS;
             break;
         case CLASS_PALADIN:
-            if (tab == PALADIN_TAB_HOLY)
+            // Rework: the Shockadin build (IsShockadinBuild) is a melee DPS
+            if (tab == PALADIN_TAB_HOLY && ai::paladin_rework::IsShockadinBuild(player))
+                role = BOT_ROLE_DPS;
+            else if (tab == PALADIN_TAB_HOLY)
                 role = BOT_ROLE_HEALER;
             else if (tab == PALADIN_TAB_PROTECTION)
                 role = BOT_ROLE_TANK;
@@ -360,6 +364,9 @@ void AiFactory::AddDefaultCombatStrategies(Player* player, PlayerbotAI* const fa
         case CLASS_PALADIN:
             if (tab == PALADIN_TAB_PROTECTION)
                 engine->addStrategiesNoInit("prot", "tank assist", "pull", "pull back", "bthreat", "barmor", "cure", nullptr);
+            // Rework: the Shockadin build plays the Holy tab as a melee DPS, with Ret's companions
+            else if (tab == PALADIN_TAB_HOLY && ai::paladin_rework::IsShockadinBuild(player))
+                engine->addStrategiesNoInit("shockadin", "dps assist", "cure", "baoe", nullptr);
             else if (tab == PALADIN_TAB_HOLY)
                 engine->addStrategiesNoInit("holy", "dps assist", "cure", "bcast", nullptr);
             else // if (tab == PALADIN_TAB_RETRIBUTION)
@@ -486,7 +493,8 @@ void AiFactory::AddDefaultCombatStrategies(Player* player, PlayerbotAI* const fa
                 }
                 case CLASS_PALADIN:
                 {
-                    if (tab == PALADIN_TAB_HOLY)
+                    // Rework: a Shockadin already runs a DPS rotation
+                    if (tab == PALADIN_TAB_HOLY && !ai::paladin_rework::IsShockadinBuild(player))
                         engine->addStrategiesNoInit("ret", "baoe", nullptr);
                     break;
                 }
@@ -562,6 +570,9 @@ void AiFactory::AddDefaultNonCombatStrategies(Player* player, PlayerbotAI* const
                 else
                     nonCombatEngine->addStrategy("bmight", false);
             }
+            // Rework: the Shockadin build buffs like Ret, but with Wisdom for its mana
+            else if (tab == PALADIN_TAB_HOLY && ai::paladin_rework::IsShockadinBuild(player))
+                nonCombatEngine->addStrategiesNoInit("dps assist", "bwisdom", "baoe", nullptr);
             else if (tab == PALADIN_TAB_HOLY)
                 nonCombatEngine->addStrategiesNoInit("dps assist", "bwisdom", "bcast", nullptr);
             else

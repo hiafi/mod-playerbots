@@ -35,6 +35,7 @@
 #include "NewRpgStrategy.h"
 #include "ObjectGuid.h"
 #include "ObjectMgr.h"
+#include "PaladinReworkUtils.h"
 #include "PerfMonitor.h"
 #include "Player.h"
 #include "PlayerbotAIConfig.h"
@@ -2040,7 +2041,8 @@ bool PlayerbotAI::IsRanged(Player* player, bool bySpec)
             }
             break;
         case CLASS_PALADIN:
-            if (tab != 0)
+            // Rework: the Shockadin build (IsShockadinBuild) plays the Holy tab in melee
+            if (tab != 0 || ai::paladin_rework::IsShockadinBuild(player))
             {
                 return false;
             }
@@ -2466,7 +2468,8 @@ bool PlayerbotAI::IsHeal(Player* player, bool bySpec)
             }
             break;
         case CLASS_PALADIN:
-            if (tab == PALADIN_TAB_HOLY)
+            // Rework: the Shockadin build is a DPS, not a healer
+            if (tab == PALADIN_TAB_HOLY && !ai::paladin_rework::IsShockadinBuild(player))
             {
                 return true;
             }
@@ -2515,7 +2518,9 @@ bool PlayerbotAI::IsDps(Player* player, bool bySpec)
             }
             break;
         case CLASS_PALADIN:
-            if (tab == PALADIN_TAB_RETRIBUTION)
+            // Rework: the mirror of IsHeal, so the Shockadin build is a DPS
+            if (tab == PALADIN_TAB_RETRIBUTION ||
+                (tab == PALADIN_TAB_HOLY && ai::paladin_rework::IsShockadinBuild(player)))
             {
                 return true;
             }
@@ -5858,6 +5863,8 @@ Item* PlayerbotAI::FindOilFor(Item* weapon) const
                 prioritizedOils = &uPrioritizedWizardOilIds;
             else if (specTab == 2)  // Retribution
                 prioritizedOils = nullptr;
+            else if (ai::paladin_rework::IsShockadinBuild(bot))  // Rework: Holy DPS, spell power and crit
+                prioritizedOils = &uPrioritizedWizardOilIds;
             else  // Holy (specTab == 0) or any other/unspecified spec
                 prioritizedOils = &uPrioritizedManaOilIds;
             break;

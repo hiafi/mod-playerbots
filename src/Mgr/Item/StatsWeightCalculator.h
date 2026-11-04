@@ -70,6 +70,8 @@ private:
     float stats_weights_[STATS_TYPE_MAX];
     bool pvpSpec_ = false;
     bool exclude_resilience_ = false;
+    // Rework: a Holy-tab paladin with the Shockadin build (IsShockadinBuild), weighted as an Intellect melee instead of a healer
+    bool shockadin_ = false;
 };
 
 #endif

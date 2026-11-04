@@ -24,6 +24,7 @@
 #include "Log.h"
 #include "LootMgr.h"
 #include "ObjectMgr.h"
+#include "PaladinReworkUtils.h"
 #include "PerfMonitor.h"
 #include "PetDefines.h"
 #include "Player.h"
@@ -1242,7 +1243,21 @@ void PlayerbotFactory::InitConsumables()
         }
         case CLASS_PALADIN:
         {
-            if (specTab == PALADIN_TAB_HOLY)
+            // Rework: the Shockadin build scales on spell power and crit like a caster
+            if (specTab == PALADIN_TAB_HOLY && ai::paladin_rework::IsShockadinBuild(bot))
+            {
+                std::vector<uint32> wizard_oils = {
+                    BRILLIANT_WIZARD_OIL, SUPERIOR_WIZARD_OIL, WIZARD_OIL, LESSER_WIZARD_OIL, MINOR_WIZARD_OIL };
+                for (uint32 itemId : wizard_oils)
+                {
+                    ItemTemplate const* proto = sObjectMgr->GetItemTemplate(itemId);
+                    if (proto->RequiredLevel > level || level > 75)
+                        continue;
+                    items.push_back({itemId, 2});
+                    break;
+                }
+            }
+            else if (specTab == PALADIN_TAB_HOLY)
             {
                 std::vector<uint32> mana_oils = {
                     BRILLIANT_MANA_OIL, SUPERIOR_MANA_OIL, LESSER_MANA_OIL, MINOR_MANA_OIL };
@@ -1766,6 +1781,12 @@ uint32 PlayerbotFactory::InitTalentsTree(bool increment /*false*/, bool use_temp
         // Rework: Bestial Fury keeps the bear DPS link (slot 7) at any level
         else if (bot->getClass() == CLASS_DRUID && specTab == DRUID_TAB_FERAL && ai::druid_rework::IsBearDpsBuild(bot))
             specTab = 7;
+        // Rework: a bot on the shockadin link (a Holy column-3 talent, taken at level 10) keeps it at any level; the
+        // Holy tab alone would top it up from the healer link (slot 0). Any rank counts here, not the stricter
+        // IsShockadinBuild: the talents read here are the previous level's
+        else if (bot->getClass() == CLASS_PALADIN && specTab == PALADIN_TAB_HOLY &&
+                 ai::paladin_rework::HasShockadinTalents(bot))
+            specTab = ai::paladin_rework::SHOCKADIN_SPEC_SLOT;
         else if (bot->getClass() == CLASS_DRUID && specTab == DRUID_TAB_FERAL && bot->GetLevel() >= 20)
         {
             // Rework: a bear is the build with Elder Hide, not Thick Hide
@@ -4751,8 +4772,11 @@ void PlayerbotFactory::InitGlyphs(bool increment)
     // Paladin PvP exceptions
     if (bot->getClass() == CLASS_PALADIN)
     {
+        // Rework: the shockadin link's glyphs (spec index 6)
+        if (tab == PALADIN_TAB_HOLY && ai::paladin_rework::HasShockadinTalents(bot))
+            tab = ai::paladin_rework::SHOCKADIN_SPEC_SLOT;
         // Holy PvP (spec index 3): If the bot has the Sacred Cleansing talent
-        if (bot->HasAura(SPELL_SACRED_CLEANSING))
+        else if (bot->HasAura(SPELL_SACRED_CLEANSING))
             tab = 3;
         // Protection PvP (spec index 4): If the bot has the Reckoning talent
         else if (bot->HasAura(SPELL_RECKONING))

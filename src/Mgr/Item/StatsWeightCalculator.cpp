@@ -10,6 +10,7 @@
 #include "ItemEnchantmentMgr.h"
 #include "ItemTemplate.h"
 #include "ObjectMgr.h"
+#include "PaladinReworkUtils.h"
 #include "PlayerbotAI.h"
 #include "PlayerbotFactory.h"
 #include "RandomItemMgr.h"
@@ -62,6 +63,7 @@ StatsWeightCalculator::StatsWeightCalculator(Player* player) : player_(player)
     cls = player->getClass();
     lvl = player->GetLevel();
     tab = AiFactory::GetPlayerSpecTab(player);
+    shockadin_ = cls == CLASS_PALADIN && tab == PALADIN_TAB_HOLY && ai::paladin_rework::IsShockadinBuild(player);
     collector_ = std::make_unique<StatsCollector>(type_, cls, lvl);
 
     if (cls == CLASS_DEATH_KNIGHT && tab == DEATH_KNIGHT_TAB_UNHOLY)
@@ -431,6 +433,21 @@ void StatsWeightCalculator::GenerateBasicWeights(Player* player)
         stats_weights_[STATS_TYPE_HASTE] += 1.0f;
         stats_weights_[STATS_TYPE_MANA_REGENERATION] += 0.5f;
     }
+    else if (shockadin_)
+    {
+        // Rework: the Shockadin (Holy DPS). Intellect is the main stat: Shock and Awe turns it into attack power,
+        // Illuminated Steel into melee crit and Holy Guidance into spell power. Then spell power (Holy Shock,
+        // Exorcism, Glimmer and the hybrid Holy spells), crit, haste, strength / attack power and weapon DPS. Hit
+        // and expertise stay out: PvE attacks always connect on this server.
+        stats_weights_[STATS_TYPE_INTELLECT] += 2.0f;
+        stats_weights_[STATS_TYPE_SPELL_POWER] += 1.5f;
+        stats_weights_[STATS_TYPE_CRIT] += 1.4f;
+        stats_weights_[STATS_TYPE_HASTE] += 1.2f;
+        stats_weights_[STATS_TYPE_STRENGTH] += 0.8f;
+        stats_weights_[STATS_TYPE_ATTACK_POWER] += 0.4f;
+        stats_weights_[STATS_TYPE_MANA_REGENERATION] += 0.5f;
+        stats_weights_[STATS_TYPE_MELEE_DPS] += 4.0f;
+    }
     else if ((cls == CLASS_PALADIN && tab == PALADIN_TAB_HOLY) ||
              (cls == CLASS_SHAMAN && tab == SHAMAN_TAB_RESTORATION))
     {
@@ -646,7 +663,7 @@ void StatsWeightCalculator::CalculateItemTypePenalty(ItemTemplate const* proto)
                   player_->CanDualWield()) ||
                  (cls == CLASS_WARRIOR && tab == WARRIOR_TAB_PROTECTION) ||
                  (cls == CLASS_PALADIN && tab == PALADIN_TAB_PROTECTION) ||
-                 (cls == CLASS_PALADIN && tab == PALADIN_TAB_HOLY)))
+                 (cls == CLASS_PALADIN && tab == PALADIN_TAB_HOLY && !shockadin_)))
             {
                 weight_ *= 0.1;
             }
@@ -672,7 +689,8 @@ void StatsWeightCalculator::CalculateItemTypePenalty(ItemTemplate const* proto)
             {
                 weight_ *= 0.65;
             }
-            if (cls == CLASS_PALADIN && tab == PALADIN_TAB_HOLY)
+            // Rework: the Shockadin takes any weapon, a two-hander included
+            if (cls == CLASS_PALADIN && tab == PALADIN_TAB_HOLY && !shockadin_)
             {
                 weight_ *= 0.8;
             }

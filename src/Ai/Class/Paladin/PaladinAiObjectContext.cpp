@@ -26,6 +26,7 @@
 #include "PaladinReworkTriggers.h"
 #include "PaladinRetActions.h"
 #include "PaladinSealValues.h"
+#include "PaladinShockadinContext.h"
 #include "PaladinTriggers.h"
 #include "Playerbots.h"
 #include "TankPaladinStrategy.h"
@@ -113,6 +114,7 @@ public:
         creators["holy"] = &PaladinCombatStrategyFactoryInternal::holy;
         creators["heal"] = &PaladinCombatStrategyFactoryInternal::holy;
         creators["offheal"] = &PaladinCombatStrategyFactoryInternal::offheal;
+        creators["shockadin"] = &PaladinCombatStrategyFactoryInternal::shockadin;
     }
 
 private:
@@ -124,6 +126,8 @@ private:
     static Strategy* holy(PlayerbotAI* botAI) { return new PaladinReworkHolyStrategy(botAI); }
     // Stock offheal minus its name-based aura press, which the rework's aura cooldowns make unsafe
     static Strategy* offheal(PlayerbotAI* botAI) { return new PaladinReworkOffhealStrategy(botAI); }
+    // The Holy DPS build (IsShockadinBuild): a sibling of ret / holy / prot, so a respec swaps the shell
+    static Strategy* shockadin(PlayerbotAI* botAI) { return new PaladinReworkShockadinStrategy(botAI); }
 };
 
 class PaladinTriggerFactoryInternal : public NamedObjectContext<Trigger>
@@ -587,6 +591,7 @@ void PaladinAiObjectContext::BuildSharedActionContexts(SharedNamedObjectContextL
     actionContexts.Add(new PaladinAiObjectContextInternal());
     actionContexts.Add(new PaladinProtActionFactory());
     actionContexts.Add(new PaladinHolyActionFactory());
+    actionContexts.Add(new PaladinShockadinActionFactory());
 }
 
 void PaladinAiObjectContext::BuildSharedTriggerContexts(SharedNamedObjectContextList<Trigger>& triggerContexts)
