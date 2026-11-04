@@ -70,7 +70,7 @@ uint32 LfgJoinAction::GetRoles()
         case CLASS_PALADIN:
             if (spec == 1)
                 return PLAYER_ROLE_TANK;
-            // Rework: the Shockadin build (a Holy column-3 talent) queues as damage
+            // Rework: the Shockadin build (IsShockadinBuild) queues as damage
             else if (!spec && !ai::paladin_rework::IsShockadinBuild(bot))
                 return PLAYER_ROLE_HEALER;
             else

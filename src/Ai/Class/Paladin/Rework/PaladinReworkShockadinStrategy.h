@@ -13,7 +13,7 @@
 class PlayerbotAI;
 
 // The Shockadin (Holy DPS) rotation for the reworked paladin, registered as the "shockadin" combat strategy: a Holy-tab
-// paladin with a Holy column-3 talent (ai::paladin_rework::IsShockadinBuild). A melee DPS, like Ret.
+// paladin with the Shockadin build (ai::paladin_rework::IsShockadinBuild). A melee DPS, like Ret.
 class PaladinReworkShockadinStrategy : public CombatStrategy
 {
 public:

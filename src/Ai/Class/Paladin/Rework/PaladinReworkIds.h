@@ -154,15 +154,17 @@ inline std::vector<uint32> const PALADIN_LIGHTS_GRACE_FLASH = {SPELL_LIGHTS_GRAC
                                                                SPELL_LIGHTS_GRACE_FLASH_3};
 inline std::vector<uint32> const PALADIN_LIGHTS_GRACE_HOLY_LIGHT = {
     SPELL_LIGHTS_GRACE_HOLY_LIGHT_1, SPELL_LIGHTS_GRACE_HOLY_LIGHT_2, SPELL_LIGHTS_GRACE_HOLY_LIGHT_3};
-// Every rank of the Holy column-3 talents that mark a Shockadin build (IsShockadinBuild). Illuminated Steel first: the
-// shockadin premade link takes it at level 10. Judgements of the Pure, Enlightened Judgements and Purifying Power sit
-// in column 3 too but are left out, since a healer may take them.
-inline std::vector<uint32> const PALADIN_SHOCKADIN_TALENTS = {
-    SPELL_ILLUMINATED_STEEL_1, SPELL_ILLUMINATED_STEEL_2, SPELL_ILLUMINATED_STEEL_3, SPELL_MERCIFUL_STRIKES_1,
-    SPELL_MERCIFUL_STRIKES_2,  SPELL_MERCIFUL_STRIKES_3,  SPELL_ZEALOUS_EXORCISM_1,  SPELL_ZEALOUS_EXORCISM_2,
-    SPELL_SUNLIGHT_1,          SPELL_SUNLIGHT_2,          SPELL_SUNLIGHT_3,          SPELL_BLESSED_CRUSADE_1,
-    SPELL_BLESSED_CRUSADE_2,   SPELL_BLESSED_CRUSADE_3,   SPELL_RADIANT_EXORCISM_1,  SPELL_RADIANT_EXORCISM_2,
-    SPELL_RADIANT_EXORCISM_3,  SPELL_SHOCK_AND_AWE_1,     SPELL_SHOCK_AND_AWE_2,     SPELL_SHOCK_AND_AWE_3};
+// The Holy column-3 talents that mark a Shockadin build, one rank list each, lowest rank first (IsShockadinBuild,
+// HasShockadinTalents). Illuminated Steel first: the shockadin premade link takes it at level 10. Judgements of the
+// Pure, Enlightened Judgements and Purifying Power sit in column 3 too but are left out, since a healer may take them.
+inline std::vector<std::vector<uint32>> const PALADIN_SHOCKADIN_TALENTS = {
+    {SPELL_ILLUMINATED_STEEL_1, SPELL_ILLUMINATED_STEEL_2, SPELL_ILLUMINATED_STEEL_3},
+    {SPELL_MERCIFUL_STRIKES_1, SPELL_MERCIFUL_STRIKES_2, SPELL_MERCIFUL_STRIKES_3},
+    {SPELL_ZEALOUS_EXORCISM_1, SPELL_ZEALOUS_EXORCISM_2},
+    {SPELL_SUNLIGHT_1, SPELL_SUNLIGHT_2, SPELL_SUNLIGHT_3},
+    {SPELL_BLESSED_CRUSADE_1, SPELL_BLESSED_CRUSADE_2, SPELL_BLESSED_CRUSADE_3},
+    {SPELL_RADIANT_EXORCISM_1, SPELL_RADIANT_EXORCISM_2, SPELL_RADIANT_EXORCISM_3},
+    {SPELL_SHOCK_AND_AWE_1, SPELL_SHOCK_AND_AWE_2, SPELL_SHOCK_AND_AWE_3}};
 inline std::vector<uint32> const PALADIN_DAWN_BEFORE_DUSK = {SPELL_DAWN_BEFORE_DUSK_1, SPELL_DAWN_BEFORE_DUSK_2,
                                                              SPELL_DAWN_BEFORE_DUSK_3};
 

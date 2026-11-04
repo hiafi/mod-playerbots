@@ -1929,9 +1929,16 @@ Playerbots.PremadeSpecLink.2.5.60 = 0-0-33300202310030031033300213310130301
 Playerbots.PremadeSpecLink.2.5.80 = 0-0-33300202310030031033300213310130301
 Playerbots.PremadeSpecName.2.6 = shockadin pve
 Playerbots.PremadeSpecGlyph.2.6 = 41103,43367,45746,43368,43369,41098
-# Illuminated Steel first (level 10): without a column-3 point the bot is a Holy healer and would take the healer link.
-# Then rows 0-3 with 20 points so Holy Shock is the 21st (level 30), then the full 51-point build.
+# A Holy paladin counts as a Shockadin with 3 of Illuminated Steel, Merciful Strikes, Zealous Exorcism, Sunlight,
+# Blessed Crusade, Radiant Exorcism and Shock and Awe at their top rank, or below level 21 with a rank of any of them
+# (IsShockadinBuild). So the leveling links max three early: Illuminated Steel (level 12), Merciful Strikes (17) and
+# Zealous Exorcism (21), with Spiritual Focus 2 and Unyielding Faith 2 for the row gates. Then rows 0-3 with 20 points
+# so Holy Shock is the 21st (level 30), then the full 51-point build.
 Playerbots.PremadeSpecLink.2.6.10 = 0003
+Playerbots.PremadeSpecLink.2.6.14 = 0203
+Playerbots.PremadeSpecLink.2.6.17 = 02030003
+Playerbots.PremadeSpecLink.2.6.19 = 02030023
+Playerbots.PremadeSpecLink.2.6.21 = 020300230002
 Playerbots.PremadeSpecLink.2.6.30 = 020330330102000301
 Playerbots.PremadeSpecLink.2.6.60 = 0303303301020003013323000030333003021
 Playerbots.PremadeSpecLink.2.6.80 = 0303303301020003013323000030333003021

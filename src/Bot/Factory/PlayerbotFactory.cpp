@@ -1781,10 +1781,11 @@ uint32 PlayerbotFactory::InitTalentsTree(bool increment /*false*/, bool use_temp
         // Rework: Bestial Fury keeps the bear DPS link (slot 7) at any level
         else if (bot->getClass() == CLASS_DRUID && specTab == DRUID_TAB_FERAL && ai::druid_rework::IsBearDpsBuild(bot))
             specTab = 7;
-        // Rework: a Shockadin (Holy column-3 talent, taken at level 10) keeps the shockadin link at any level; the
-        // Holy tab alone would top it up from the healer link (slot 0)
+        // Rework: a bot on the shockadin link (a Holy column-3 talent, taken at level 10) keeps it at any level; the
+        // Holy tab alone would top it up from the healer link (slot 0). Any rank counts here, not the stricter
+        // IsShockadinBuild: the talents read here are the previous level's
         else if (bot->getClass() == CLASS_PALADIN && specTab == PALADIN_TAB_HOLY &&
-                 ai::paladin_rework::IsShockadinBuild(bot))
+                 ai::paladin_rework::HasShockadinTalents(bot))
             specTab = ai::paladin_rework::SHOCKADIN_SPEC_SLOT;
         else if (bot->getClass() == CLASS_DRUID && specTab == DRUID_TAB_FERAL && bot->GetLevel() >= 20)
         {
@@ -4771,8 +4772,8 @@ void PlayerbotFactory::InitGlyphs(bool increment)
     // Paladin PvP exceptions
     if (bot->getClass() == CLASS_PALADIN)
     {
-        // Rework: the Shockadin build's glyphs (spec index 6)
-        if (tab == PALADIN_TAB_HOLY && ai::paladin_rework::IsShockadinBuild(bot))
+        // Rework: the shockadin link's glyphs (spec index 6)
+        if (tab == PALADIN_TAB_HOLY && ai::paladin_rework::HasShockadinTalents(bot))
             tab = ai::paladin_rework::SHOCKADIN_SPEC_SLOT;
         // Holy PvP (spec index 3): If the bot has the Sacred Cleansing talent
         else if (bot->HasAura(SPELL_SACRED_CLEANSING))

@@ -27,9 +27,18 @@ namespace ai::paladin_rework
 // Shockadin on it, since the Holy tab alone would send it to the healer link (slot 0).
 constexpr uint32 SHOCKADIN_SPEC_SLOT = 6;
 
-// The paladin has any rank of a Holy column-3 talent in its active spec (PALADIN_SHOCKADIN_TALENTS): it plays the
-// Holy tab as a melee DPS, whatever else it has. The healer premade link takes none of them.
+// A Shockadin needs this many of the PALADIN_SHOCKADIN_TALENTS at their top rank, so a Holy healer can dabble in
+// column 3 and still count as a healer. Below SHOCKADIN_LEVELING_LEVEL any rank of one counts: the shockadin premade
+// link maxes its third one (Zealous Exorcism) at level 21.
+constexpr uint8 SHOCKADIN_MAXED_TALENTS = 3;
+constexpr uint8 SHOCKADIN_LEVELING_LEVEL = 21;
+
+// The paladin plays the Holy tab as a melee DPS (see SHOCKADIN_MAXED_TALENTS): strategies, roles, gear
 bool IsShockadinBuild(Player* bot);
+
+// The paladin has any rank of a PALADIN_SHOCKADIN_TALENTS talent: a bot on the shockadin premade link, which
+// PlayerbotFactory keeps on that link and its glyphs. The healer premade link takes none of them.
+bool HasShockadinTalents(Player* bot);
 
 }  // namespace ai::paladin_rework
 

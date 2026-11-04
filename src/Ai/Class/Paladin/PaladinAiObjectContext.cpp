@@ -126,7 +126,7 @@ private:
     static Strategy* holy(PlayerbotAI* botAI) { return new PaladinReworkHolyStrategy(botAI); }
     // Stock offheal minus its name-based aura press, which the rework's aura cooldowns make unsafe
     static Strategy* offheal(PlayerbotAI* botAI) { return new PaladinReworkOffhealStrategy(botAI); }
-    // The Holy DPS build (a Holy column-3 talent): a sibling of ret / holy / prot, so a respec swaps the shell
+    // The Holy DPS build (IsShockadinBuild): a sibling of ret / holy / prot, so a respec swaps the shell
     static Strategy* shockadin(PlayerbotAI* botAI) { return new PaladinReworkShockadinStrategy(botAI); }
 };
 

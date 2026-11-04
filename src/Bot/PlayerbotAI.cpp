@@ -2041,7 +2041,7 @@ bool PlayerbotAI::IsRanged(Player* player, bool bySpec)
             }
             break;
         case CLASS_PALADIN:
-            // Rework: the Shockadin build (a Holy column-3 talent) plays the Holy tab in melee
+            // Rework: the Shockadin build (IsShockadinBuild) plays the Holy tab in melee
             if (tab != 0 || ai::paladin_rework::IsShockadinBuild(player))
             {
                 return false;

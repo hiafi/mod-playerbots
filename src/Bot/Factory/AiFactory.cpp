@@ -174,7 +174,7 @@ BotRoles AiFactory::GetPlayerRoles(Player* player)
             role = ai::dk_rework::IsTankBuild(player) ? BOT_ROLE_TANK : BOT_ROLE_DPS;
             break;
         case CLASS_PALADIN:
-            // Rework: the Shockadin build (a Holy column-3 talent) is a melee DPS
+            // Rework: the Shockadin build (IsShockadinBuild) is a melee DPS
             if (tab == PALADIN_TAB_HOLY && ai::paladin_rework::IsShockadinBuild(player))
                 role = BOT_ROLE_DPS;
             else if (tab == PALADIN_TAB_HOLY)
