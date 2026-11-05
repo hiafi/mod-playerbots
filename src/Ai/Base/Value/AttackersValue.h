@@ -29,9 +29,9 @@ public:
     static bool IsValidTarget(Unit* attacker, Player* bot);
 
     // Custom: mod-boss-mechanics hook (dungeon mechanics M5) - a module's veto on possible targets (a boss's ignore
-    // list), read by IsPossibleTarget and so by every attacker, RTI, skull and assist pick: false drops the unit. Set
-    // once at startup by a module, on the world thread; nullptr (the default) keeps every unit. It runs on the bot's
-    // map thread for many units per tick and must be cheap and leave the game state alone.
+    // list), read by IsPossibleTarget for creatures and so by every attacker, RTI, skull and assist pick: false drops
+    // the unit. Set once at startup by a module, on the world thread; nullptr (the default) keeps every unit. It runs
+    // on the bot's map thread for many units per tick and must be cheap and leave the game state alone.
     using TargetFilter = bool (*)(Unit* unit, Player* bot);
     static void SetTargetFilter(TargetFilter filter);
 
