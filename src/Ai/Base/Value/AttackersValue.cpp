@@ -11,6 +11,15 @@
 #include "Playerbots.h"
 #include "ReputationMgr.h"
 #include "ServerFacade.h"
+#include <atomic>
+
+namespace
+{
+    // Custom: mod-boss-mechanics hook (dungeon mechanics M5) - see AttackersValue::SetTargetFilter
+    std::atomic<AttackersValue::TargetFilter> sTargetFilter{ nullptr };
+}
+
+void AttackersValue::SetTargetFilter(TargetFilter filter) { sTargetFilter.store(filter, std::memory_order_relaxed); }
 
 GuidVector AttackersValue::Calculate()
 {
@@ -209,6 +218,12 @@ bool AttackersValue::IsPossibleTarget(Unit* attacker, Player* bot, float /*range
     {
         if (c->IsInEvadeMode())
             return false;
+
+        // Custom: mod-boss-mechanics hook (dungeon mechanics M5) - the module's ignore list (SetTargetFilter), after
+        // the cheap checks and before the claim rules below return early
+        if (AttackersValue::TargetFilter filter = sTargetFilter.load(std::memory_order_relaxed))
+            if (!filter(attacker, bot))
+                return false;
 
         bool leaderHasThreat = false;
         if (bot->GetGroup() && botAI->GetMaster())
