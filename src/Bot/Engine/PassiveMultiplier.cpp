@@ -27,6 +27,9 @@ PassiveMultiplier::PassiveMultiplier(PlayerbotAI* botAI) : Multiplier(botAI, "pa
         allowedParts.push_back("move from group");
         allowedParts.push_back("stay");
         allowedParts.push_back("chat shortcut");
+        // Custom: mod-boss-mechanics hook (dungeon mechanics M5) - a passive bot (after `flee`) still dodges, holds
+        // and faces for boss mechanics; that module names its attack, kick and dispel actions without this part
+        allowedParts.push_back("boss mechanic");
     }
 }
 
