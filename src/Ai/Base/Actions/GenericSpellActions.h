@@ -13,6 +13,10 @@
 #include "UseItemAction.h"
 #include "Value.h"
 
+// Custom: mod-boss-mechanics hook (dungeon mechanics M4) - CastSpellAction::GetCastSpellId() exists, so a module can
+// build against a fork with or without it
+#define PLAYERBOTS_HAS_CAST_SPELL_ID 1
+
 class PlayerbotAI;
 class Unit;
 class WorldObject;
@@ -34,6 +38,11 @@ public:
     }
 
     std::string const getSpell() { return spell; }
+
+    // Custom: mod-boss-mechanics hook (dungeon mechanics M4) - the spell this action casts, for observers that judge a
+    // cast before it runs (the mod-boss-mechanics lock). The default is the spellbook lookup of the action's spell
+    // name, the id Execute casts; an action that casts a stored id overrides it. 0 when the bot knows no such spell.
+    virtual uint32 GetCastSpellId();
 
 protected:
     std::string spell;
