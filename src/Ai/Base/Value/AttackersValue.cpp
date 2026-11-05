@@ -12,6 +12,14 @@
 #include "ReputationMgr.h"
 #include "ServerFacade.h"
 
+namespace
+{
+    // Custom: mod-boss-mechanics hook (dungeon mechanics M5) - see AttackersValue::SetTargetFilter
+    AttackersValue::TargetFilter sTargetFilter = nullptr;
+}
+
+void AttackersValue::SetTargetFilter(TargetFilter filter) { sTargetFilter = filter; }
+
 GuidVector AttackersValue::Calculate()
 {
     std::unordered_set<Unit*> targets;
@@ -159,6 +167,10 @@ bool AttackersValue::IsPossibleTarget(Unit* attacker, Player* bot, float /*range
     // Skip targets that are immune to all damage (e.g., Ice Block, Divine Shield)
     if (attacker->IsImmunedToDamage(SPELL_SCHOOL_MASK_NORMAL) &&
         attacker->IsImmunedToDamage(SPELL_SCHOOL_MASK_MAGIC))
+        return false;
+
+    // Custom: mod-boss-mechanics hook (dungeon mechanics M5) - the module's ignore list (SetTargetFilter)
+    if (sTargetFilter && !sTargetFilter(attacker, bot))
         return false;
 
     // Relationship checks
