@@ -316,6 +316,15 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
         inCombat = false;
     }
 
+    // Custom: mod-boss-mechanics hook (Shadowfang Keep F1) - a mind-controlled bot (a boss's charm, Arugal's Turned)
+    // has no will of its own, as a player loses client control: the core's charm AI drives it, and the engine waits
+    // for the release instead of casting and moving against it. A vehicle passenger keeps its engine.
+    if (bot->IsCharmed() && !bot->GetVehicle())
+    {
+        YieldThread(bot, GetReactDelay());
+        return;
+    }
+
     bool doMinimalReaction = minimal || !AllowActivity(REACT_ACTIVITY);
     if (UpdateAIReaction(elapsed, doMinimalReaction, !bot->IsInFlight()))
         return;

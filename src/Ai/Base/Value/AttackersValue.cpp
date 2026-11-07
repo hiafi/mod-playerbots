@@ -17,9 +17,29 @@ namespace
 {
     // Custom: mod-boss-mechanics hook (dungeon mechanics M5) - see AttackersValue::SetTargetFilter
     std::atomic<AttackersValue::TargetFilter> sTargetFilter{ nullptr };
+    // Custom: mod-boss-mechanics hook (Shadowfang Keep F1) - see AttackersValue::SetHostileTeammateFilter
+    std::atomic<AttackersValue::HostileTeammateFilter> sHostileTeammateFilter{ nullptr };
 }
 
 void AttackersValue::SetTargetFilter(TargetFilter filter) { sTargetFilter.store(filter, std::memory_order_relaxed); }
+
+void AttackersValue::SetHostileTeammateFilter(HostileTeammateFilter filter)
+{
+    sHostileTeammateFilter.store(filter, std::memory_order_relaxed);
+}
+
+bool AttackersValue::IsHostileTeammate(Unit* unit, Player* bot)
+{
+    HostileTeammateFilter const filter = sHostileTeammateFilter.load(std::memory_order_relaxed);
+    if (!filter || !unit || !bot || unit == bot || !unit->IsPlayer() || !unit->IsCharmed() || !unit->IsAlive())
+        return false;
+
+    Player* teammate = unit->ToPlayer();
+    if (teammate->GetTeamId(true) != bot->GetTeamId(true) || !teammate->IsInWorld() || !teammate->IsInMap(bot))
+        return false;
+
+    return filter(teammate, bot);
+}
 
 GuidVector AttackersValue::Calculate()
 {
@@ -32,7 +52,11 @@ GuidVector AttackersValue::Calculate()
     AddAttackersOf(bot, targets);
 
     if (Group* group = bot->GetGroup())
+    {
         AddAttackersOf(group, targets);
+        // Custom: mod-boss-mechanics hook (Shadowfang Keep F1) - turned teammates are on no threat list
+        AddHostileTeammates(group, targets);
+    }
 
     RemoveNonThreating(targets);
 
@@ -86,6 +110,24 @@ void AttackersValue::AddAttackersOf(Group* group, std::unordered_set<Unit*>& tar
             continue;
 
         AddAttackersOf(member, targets);
+    }
+}
+
+// Custom: mod-boss-mechanics hook (Shadowfang Keep F1) - the group's turned teammates (IsHostileTeammate)
+void AttackersValue::AddHostileTeammates(Group* group, std::unordered_set<Unit*>& targets)
+{
+    if (!sHostileTeammateFilter.load(std::memory_order_relaxed))
+        return;
+
+    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+    {
+        Player* member = ref->GetSource();
+        if (!member || member == bot || member->GetMapId() != bot->GetMapId() ||
+            ServerFacade::instance().GetDistance2d(bot, member) > sPlayerbotAIConfig.SightDistance)
+            continue;
+
+        if (IsHostileTeammate(member, bot))
+            targets.insert(member);
     }
 }
 
@@ -173,6 +215,11 @@ bool AttackersValue::IsPossibleTarget(Unit* attacker, Player* bot, float /*range
     // Relationship checks
     if (attacker->IsFriendlyTo(bot))
         return false;
+
+    // Custom: mod-boss-mechanics hook (Shadowfang Keep F1) - a turned teammate is a target; the PvP rules below are
+    // about opponents and would turn it away (it carries its charmer's PvP state)
+    if (IsHostileTeammate(attacker, bot))
+        return bot->CanSeeOrDetect(attacker);
 
     // Critter exception
     if (attacker->GetCreatureType() == CREATURE_TYPE_CRITTER && !attacker->IsInCombat())

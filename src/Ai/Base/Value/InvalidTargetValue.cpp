@@ -22,7 +22,9 @@ bool InvalidTargetValue::Calculate()
                target->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE) || target->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE_2) ||
                !target->IsVisible() || !target->IsAlive() || target->IsPolymorphed() ||
                (target->IsCharmed() && target->IsPlayer() &&  // only a mind-controlled teammate is off limits
-                target->ToPlayer()->GetTeamId(true) == bot->GetTeamId(true)) ||
+                target->ToPlayer()->GetTeamId(true) == bot->GetTeamId(true) &&
+                // Custom: mod-boss-mechanics hook (Shadowfang Keep F1) - unless a boss turned it against the group
+                !AttackersValue::IsHostileTeammate(target, bot)) ||
                target->HasFearAura() || target->HasUnitState(UNIT_STATE_ISOLATED) || target->IsFriendlyTo(bot) ||
                !AttackersValue::IsValidTarget(target, bot);
     }

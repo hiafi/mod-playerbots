@@ -5,6 +5,7 @@
  */
 
 #include "AttackAction.h"
+#include "AttackersValue.h"
 #include "CreatureAI.h"
 #include "Event.h"
 #include "LastMovementValue.h"
@@ -102,8 +103,9 @@ bool AttackAction::Attack(Unit* target, bool /*with_pet*/ /*true*/)
     }
 
     // Check if bot OR target is in prohibited zone/area (skip for duels)
+    // Custom: mod-boss-mechanics hook (Shadowfang Keep F1) - a turned teammate is no PvP opponent
     if ((target->IsPlayer() || target->IsPet()) &&
-        (!bot->duel || bot->duel->Opponent != target) &&
+        (!bot->duel || bot->duel->Opponent != target) && !AttackersValue::IsHostileTeammate(target, bot) &&
         (sPlayerbotAIConfig.IsPvpProhibited(bot->GetZoneId(), bot->GetAreaId()) ||
         sPlayerbotAIConfig.IsPvpProhibited(target->GetZoneId(), target->GetAreaId())))
     {
