@@ -41,6 +41,33 @@ bool AttackersValue::IsHostileTeammate(Unit* unit, Player* bot)
     return filter(teammate, bot);
 }
 
+bool AttackersValue::IsTurnedTeammate(Player* bot)
+{
+    HostileTeammateFilter const filter = sHostileTeammateFilter.load(std::memory_order_relaxed);
+    if (!filter || !bot || !bot->IsCharmed() || !bot->IsAlive() || !bot->IsInWorld())
+        return false;
+
+    Unit* charmer = bot->GetCharmer();
+    if (!charmer || !charmer->IsCreature())
+        return false;
+
+    // Its own view first (the filter reads the bot's encounter descriptor), then any group member bot's.
+    if (filter(bot, bot))
+        return true;
+
+    if (Group* group = bot->GetGroup())
+    {
+        for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+        {
+            Player* member = ref->GetSource();
+            if (member && member != bot && IsHostileTeammate(bot, member))
+                return true;
+        }
+    }
+
+    return false;
+}
+
 GuidVector AttackersValue::Calculate()
 {
     std::unordered_set<Unit*> targets;

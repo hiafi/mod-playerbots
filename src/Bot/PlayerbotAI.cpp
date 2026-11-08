@@ -6,6 +6,7 @@
 
 #include "PlayerbotAI.h"
 #include "AiFactory.h"
+#include "AttackersValue.h"
 #include "BudgetValues.h"
 #include "ChannelMgr.h"
 #include "CharacterPackets.h"
@@ -316,10 +317,12 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
         inCombat = false;
     }
 
-    // Custom: mod-boss-mechanics hook (Shadowfang Keep F1) - a mind-controlled bot (a boss's charm, Arugal's Turned)
-    // has no will of its own, as a player loses client control: the core's charm AI drives it, and the engine waits
-    // for the release instead of casting and moving against it. A vehicle passenger keeps its engine.
-    if (bot->IsCharmed() && !bot->GetVehicle())
+    // Custom: mod-boss-mechanics hook (Shadowfang Keep F1) - a turned teammate (Arugal's Turned: charmed by a creature
+    // and carrying an aura the boss mechanics name hostile) has no will of its own, as a player loses client control:
+    // the core's charm AI drives it, and the engine waits for the release instead of casting and moving against it.
+    // Every other charm keeps the engine running as before (ICC Lady Deathwhisper's Dominate Mind: the dominated bot
+    // cyclones itself from its own strategy). A vehicle passenger keeps its engine.
+    if (bot->IsCharmed() && !bot->GetVehicle() && AttackersValue::IsTurnedTeammate(bot))
     {
         YieldThread(bot, GetReactDelay());
         return;

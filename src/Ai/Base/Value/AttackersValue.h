@@ -46,6 +46,10 @@ public:
     using HostileTeammateFilter = bool (*)(Player* teammate, Player* bot);
     static void SetHostileTeammateFilter(HostileTeammateFilter filter);
     static bool IsHostileTeammate(Unit* unit, Player* bot);
+    // Custom: mod-boss-mechanics hook (Shadowfang Keep F1) - `bot` itself is a turned teammate: charmed by a creature
+    // and named by the filter, in its own view or in a group member bot's. Any other charm (a stock raid's mind
+    // control, a player's charm) is not, so stock strategies that act from inside a charmed bot keep working.
+    static bool IsTurnedTeammate(Player* bot);
 
 private:
     void AddAttackersOf(Group* group, std::unordered_set<Unit*>& targets);
