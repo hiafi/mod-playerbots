@@ -19,6 +19,9 @@ PassiveMultiplier::PassiveMultiplier(PlayerbotAI* botAI) : Multiplier(botAI, "pa
         allowedActions.push_back("reset botAI");
         allowedActions.push_back("check mount state");
         allowedActions.push_back("lfg");
+        // Custom: the reworked Scholomance (mod-dungeon-bosses) - a passive bot strapped to the Work Bench still
+        // presses Wrench Free (it is the bench's spell, not an attack)
+        allowedActions.push_back("scholo wrench free");
     }
 
     if (allowedParts.empty())
