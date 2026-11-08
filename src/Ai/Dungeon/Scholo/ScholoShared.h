@@ -37,6 +37,30 @@ Creature* GetSeatedWorkBench(Player* bot);
 // True while Gandling holds the bot in a classroom behind a shut gate (a solo lesson).
 bool IsDetained(Player* bot);
 
+// The study's units a detained bot must never move toward: Darkmaster Gandling and his Expelled Students.
+inline constexpr uint32 NPC_GANDLING = 1853;
+inline constexpr uint32 NPC_EXPELLED_STUDENT = 300544;
+
+// A detained bot's moves toward a unit stay inside its classroom: the gate is a door the navmesh does not know, and a
+// move spline is not collision-checked, so any chase or reach toward a unit beyond it would walk through it. Its group
+// (players), Gandling and his Expelled Students are always on the other side; a gate's bars may not block line of
+// sight, and a bot at the gate stands within 30 yd of the study's edge, so those are refused by kind. A lesson's own
+// units (specimens, the echo, the fortunes) stand near the student, in sight and in range.
+inline constexpr float DETENTION_MOVE_RANGE = 30.0f;
+
+inline constexpr bool IsStudyUnit(uint32 entry)
+{
+    return entry == NPC_GANDLING || entry == NPC_EXPELLED_STUDENT;
+}
+
+// Whether a detained bot's move toward a unit is refused: `targetIsOther` (not the bot itself: the boss mechanics
+// dodges target the bot), the target a player or a study unit, in line of sight, and the 2D distance to it.
+constexpr bool DetentionBlocksUnitMove(bool targetIsOther, bool targetIsPlayer, bool targetIsStudyUnit, bool inLos,
+                                       float distance)
+{
+    return targetIsOther && (targetIsPlayer || targetIsStudyUnit || !inLos || distance > DETENTION_MOVE_RANGE);
+}
+
 }
 
 #endif

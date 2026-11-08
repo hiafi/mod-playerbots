@@ -45,13 +45,24 @@ float ScholoDetentionMultiplier::GetValue(Action* action)
         return 1.0f;
 
     if (!IsDetained(bot))
-        return 1.0f;
+    {
+        // The study's side of the gate: a bot never follows or reaches toward a detained player (its master, a heal
+        // target) either; the path would run through the shut gate.
+        Player* toward = dynamic_cast<FollowAction*>(action) ? botAI->GetMaster() : nullptr;
+        if (!toward)
+            if (Unit* target = action->GetTarget())
+                toward = target->ToPlayer();
+        return toward && toward != bot && IsDetained(toward) ? 0.0f : 1.0f;
+    }
 
     if (dynamic_cast<FollowAction*>(action))
         return 0.0f;
 
     Unit* target = action->GetTarget();
-    if (target && target != bot && !bot->IsWithinLOSInMap(target))
+    if (target && target != bot &&
+        DetentionBlocksUnitMove(true, target->IsPlayer(),
+                                target->IsCreature() && IsStudyUnit(target->ToCreature()->GetEntry()),
+                                bot->IsWithinLOSInMap(target), bot->GetExactDist2d(target)))
         return 0.0f;
 
     return 1.0f;
