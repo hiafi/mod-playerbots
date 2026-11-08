@@ -25,6 +25,7 @@
 #include "TbcDungeonTriggerContext.h"
 #include "TriggerContext.h"
 #include "UldTriggerContext.h"
+#include "VanillaDungeonTriggerContext.h"
 #include "VoATriggerContext.h"
 #include "WorldPacketTriggerContext.h"
 #include "WotlkDungeonTriggerContext.h"
@@ -55,6 +56,8 @@ void AiObjectContext::BuildSharedTriggerContexts(
     triggerContexts.Add(new RaidOnyxiaTriggerContext());
     triggerContexts.Add(new RaidIccTriggerContext());
     triggerContexts.Add(new RaidRsTriggerContext());
+    // Custom: the reworked Scholomance (mod-dungeon-bosses)
+    triggerContexts.Add(new VanillaDungeonScholomanceTriggerContext());
     triggerContexts.Add(new TbcDungeonAuchenaiCryptsTriggerContext());
     triggerContexts.Add(new TbcDungeonSethekkHallsTriggerContext());
     triggerContexts.Add(new TbcDungeonMechanarTriggerContext());

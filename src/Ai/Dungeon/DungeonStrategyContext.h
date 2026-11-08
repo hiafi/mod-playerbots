@@ -22,6 +22,7 @@
 #include "OCStrategy.h"
 #include "PoSStrategy.h"
 #include "RampStrategy.h"
+#include "ScholoStrategy.h"
 #include "SethStrategy.h"
 #include "Strategy.h"
 #include "TOCStrategy.h"
@@ -36,7 +37,8 @@ public:
     DungeonStrategyContext() : NamedObjectContext<Strategy>(false, true)
     {
         // Vanilla
-        // ...
+        // Custom: the reworked Scholomance (mod-dungeon-bosses)
+        creators["vanilla-scholo"] = &DungeonStrategyContext::vanilla_scholo;  // Scholomance
 
         // Burning Crusade
         creators["tbc-ac"] = &DungeonStrategyContext::tbc_ac;           // Auchindoun: Auchenai Crypts
@@ -65,6 +67,7 @@ public:
     }
 
 private:
+    static Strategy* vanilla_scholo(PlayerbotAI* botAI) { return new VanillaDungeonScholomanceStrategy(botAI); }
     static Strategy* tbc_ac(PlayerbotAI* botAI) { return new TbcDungeonAuchenaiCryptsStrategy(botAI); }
     static Strategy* tbc_seth(PlayerbotAI* botAI) { return new TbcDungeonSethekkHallsStrategy(botAI); }
     static Strategy* tbc_mech(PlayerbotAI* botAI) { return new TbcDungeonMechanarStrategy(botAI); }
