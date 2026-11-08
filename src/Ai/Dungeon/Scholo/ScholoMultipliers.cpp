@@ -13,9 +13,24 @@
 
 using namespace ScholoShared;
 
+namespace
+{
+    // mod-boss-mechanics plain actions (not MovementAction / CastSpellAction) that can take the tick on a seated bot:
+    // "boss mechanic hold" returns true every tick while the brain holds (EMERGENCY + 5, above Wrench Free), "face"
+    // turns in place (EMERGENCY + 4), "boss kick" sits at Wrench Free's relevance (STAGE-R-B-REPORT N-2).
+    bool IsSeatedBlocker(std::string const& name)
+    {
+        return name == "boss mechanic hold" || name == "boss mechanic face" || name == "boss kick";
+    }
+}
+
 float ScholoWorkBenchSeatedMultiplier::GetValue(Action* action)
 {
-    if (!dynamic_cast<MovementAction*>(action) && !dynamic_cast<CastSpellAction*>(action))
+    if (!action)
+        return 1.0f;
+
+    if (!dynamic_cast<MovementAction*>(action) && !dynamic_cast<CastSpellAction*>(action) &&
+        !IsSeatedBlocker(action->getName()))
         return 1.0f;
 
     if (!GetSeatedWorkBench(bot))

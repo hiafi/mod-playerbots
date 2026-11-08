@@ -10,8 +10,8 @@
 #include "Multiplier.h"
 
 // Strapped into the Work Bench, the bot can neither move (the bench is rooted, yet the seat reports CAN_CONTROL, so a
-// MoveTo "succeeds" on the bench) nor cast its own spells. Drops those actions so none of them takes the tick that
-// Wrench Free needs.
+// MoveTo "succeeds" on the bench) nor cast its own spells. Drops those actions, and the boss mechanics hold, face and
+// kick actions, so none of them takes the tick that Wrench Free needs.
 class ScholoWorkBenchSeatedMultiplier : public Multiplier
 {
 public:
