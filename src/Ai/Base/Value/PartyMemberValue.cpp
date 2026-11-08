@@ -5,6 +5,7 @@
  */
 
 #include "PartyMemberValue.h"
+#include "AttackersValue.h"
 #include "Corpse.h"
 #include "Group.h"
 #include "Pet.h"
@@ -108,7 +109,9 @@ bool PartyMemberValue::Check(Unit* player)
     // return player && player != bot && player->GetMapId() == bot->GetMapId() && bot->IsWithinDistInMap(player,
     // sPlayerbotAIConfig.SightDistance, false);
     bool isGM = player->ToPlayer() && player->ToPlayer()->IsGameMaster();
+    // Custom: mod-boss-mechanics hook (Shadowfang Keep F1) - no buffs or cures for a teammate turned against the group
     return player && player->GetMapId() == bot->GetMapId() && !isGM &&
+           !AttackersValue::IsHostileTeammate(player, bot) &&
            bot->GetDistance(player) < sPlayerbotAIConfig.SpellDistance * 2 &&
            bot->IsWithinLOS(player->GetPositionX(), player->GetPositionY(), player->GetPositionZ());
 }

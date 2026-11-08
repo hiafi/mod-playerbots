@@ -5,6 +5,7 @@
  */
 
 #include "AoeHealValues.h"
+#include "AttackersValue.h"
 #include "PlayerbotAIConfig.h"
 #include "Playerbots.h"
 
@@ -30,6 +31,10 @@ uint8 AoeHealValue::Calculate()
     {
         Player* player = ObjectAccessor::FindPlayer(itr->guid);
         if (!player || !player->IsAlive())
+            continue;
+
+        // Custom: mod-boss-mechanics hook (Shadowfang Keep F1) - a turned teammate is not one to heal
+        if (AttackersValue::IsHostileTeammate(player, bot))
             continue;
 
         if (player->GetDistance(bot) >= sPlayerbotAIConfig.SightDistance)
