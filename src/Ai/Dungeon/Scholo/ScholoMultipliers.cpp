@@ -59,8 +59,10 @@ float ScholoDetentionMultiplier::GetValue(Action* action)
         return 0.0f;
 
     Unit* target = action->GetTarget();
-    if (target && target != bot &&
-        DetentionBlocksUnitMove(true, target->IsPlayer(),
+    if (!target || target == bot)
+        return DetentionAllowsSelfMove(action->getName()) ? 1.0f : 0.0f;
+
+    if (DetentionBlocksUnitMove(true, target->IsPlayer(),
                                 target->IsCreature() && IsStudyUnit(target->ToCreature()->GetEntry()),
                                 bot->IsWithinLOSInMap(target), bot->GetExactDist2d(target)))
         return 0.0f;

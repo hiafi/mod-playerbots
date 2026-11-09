@@ -22,8 +22,10 @@ public:
 // Detained by Gandling, the bot is alone behind a shut classroom gate that the navmesh does not know. Drops the follow
 // and any move toward a player, Gandling or an Expelled Student, or toward a unit out of sight or out of the room's
 // reach (ScholoShared::DetentionBlocksUnitMove: a gate's bars may not block sight), so the bot neither paths through
-// the gate to its master nor to a target on the other side. Moves inside the room (the lesson, the boss mechanics
-// dodges) stay. On the study's side, no bot follows or reaches toward a detained player (its master, a heal target).
+// the gate to its master nor to a target on the other side. A move to a point of its own (stay, guard, formation, flee)
+// is dropped too; the dodges stay (ScholoShared::DetentionAllowsSelfMove: the boss mechanics move, "avoid aoe"), and
+// so do moves toward the lesson's units. On the study's side, no bot follows or reaches toward a detained player (its
+// master, a heal target).
 class ScholoDetentionMultiplier : public Multiplier
 {
 public:

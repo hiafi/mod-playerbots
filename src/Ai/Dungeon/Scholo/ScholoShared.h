@@ -61,6 +61,14 @@ constexpr bool DetentionBlocksUnitMove(bool targetIsOther, bool targetIsPlayer, 
     return targetIsOther && (targetIsPlayer || targetIsStudyUnit || !inLos || distance > DETENTION_MOVE_RANGE);
 }
 
+// A detained bot's moves that target itself (or nothing) go to a point of their own: a stay or guard position, a
+// formation slot, a flee, a random or travel move, any of which can lie beyond the gate (R-C GANDLING N-9). Only the
+// dodges stay: the boss mechanics move (the lessons' telegraphs, mod-boss-mechanics) and the generic AoE step.
+inline bool DetentionAllowsSelfMove(std::string const& actionName)
+{
+    return actionName == "boss mechanic move" || actionName == "avoid aoe";
+}
+
 }
 
 #endif
