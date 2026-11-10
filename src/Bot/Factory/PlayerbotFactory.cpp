@@ -11,6 +11,7 @@
 #include "AiObjectContext.h"
 #include "ArenaTeam.h"
 #include "ArenaTeamMgr.h"
+#include "Config.h"
 #include "DBCStores.h"
 #include "DBCStructure.h"
 #include "DeathKnightReworkUtils.h"
@@ -53,6 +54,7 @@
 #include <unordered_set>
 #include <utility>
 
+#include <algorithm>
 #include <array>
 #include <utility>
 
@@ -206,6 +208,29 @@ bool PlayerbotFactory::IsSecondaryTradeSkill(uint16 skillId)
     }
 }
 
+bool PlayerbotFactory::IsTradeSkill(uint16 skillId)
+{
+    // Gathering is matched by skill id: the crafting rework moves it out of the primary category, a stock core
+    // keeps it there.
+    return IsPrimaryTradeSkill(skillId) || IsSecondaryTradeSkill(skillId) || IsGatheringTradeSkill(skillId);
+}
+
+uint32 PlayerbotFactory::GetProfessionSkillCap()
+{
+    // The crafting rework core script sits every profession at Custom.Professions.SkillCap. It is only in play
+    // when the skillline override has taken gathering out of the primary category; on a stock core (or with the
+    // script disabled) this returns 0 and bots keep the old level * 5 skill values.
+    // Read once, clamped to Apprentice..Grand Master like the core script (custom_professions.cpp).
+    static bool const enabled = sConfigMgr->GetOption<bool>("Custom.Professions.Enable", true, false);
+    static uint32 const cap = std::clamp<uint32>(sConfigMgr->GetOption<uint32>("Custom.Professions.SkillCap", 300, false),
+                                                 75, 450);
+
+    if (!enabled || IsPrimaryTradeSkill(SKILL_MINING))
+        return 0;
+
+    return cap;
+}
+
 uint16 PlayerbotFactory::GetTrainerSpellTradeSkill(Trainer::Spell const* trainerSpell)
 {
     if (!trainerSpell)
@@ -215,7 +240,7 @@ uint16 PlayerbotFactory::GetTrainerSpellTradeSkill(Trainer::Spell const* trainer
     {
         if (SpellLearnSkillNode const* learnSkill = sSpellMgr->GetSpellLearnSkill(spellId))
         {
-            if (IsPrimaryTradeSkill(learnSkill->skill) || IsSecondaryTradeSkill(learnSkill->skill))
+            if (IsTradeSkill(learnSkill->skill))
                 return learnSkill->skill;
         }
 
@@ -223,7 +248,7 @@ uint16 PlayerbotFactory::GetTrainerSpellTradeSkill(Trainer::Spell const* trainer
         for (auto itr = bounds.first; itr != bounds.second; ++itr)
         {
             uint16 const skillId = itr->second->SkillLine;
-            if (IsPrimaryTradeSkill(skillId) || IsSecondaryTradeSkill(skillId))
+            if (IsTradeSkill(skillId))
                 return skillId;
         }
 
@@ -231,7 +256,7 @@ uint16 PlayerbotFactory::GetTrainerSpellTradeSkill(Trainer::Spell const* trainer
     };
 
     uint16 const requiredSkill = static_cast<uint16>(trainerSpell->ReqSkillLine);
-    if (IsPrimaryTradeSkill(requiredSkill) || IsSecondaryTradeSkill(requiredSkill))
+    if (IsTradeSkill(requiredSkill))
         return requiredSkill;
 
     if (uint16 const skillId = getSpellTradeSkill(trainerSpell->SpellId))
@@ -273,23 +298,28 @@ bool PlayerbotFactory::IsTrainerSpellAllowedForBot(Player* bot, Trainer::Trainer
     if (IsSecondaryTradeSkill(skillId))
         return true;
 
-    if (!IsPrimaryTradeSkill(skillId))
+    // Every random bot learns all three gathering skills. On a stock core gathering still takes a primary slot, so
+    // the trainer's own free-slot check decides there.
+    if (IsGatheringTradeSkill(skillId))
+        return true;
+
+    if (!IsCraftingTradeSkill(skillId))
         return false;
 
     uint16 const firstSkill = sRandomPlayerbotMgr.GetValue(bot, "firstSkill");
     uint16 const secondSkill = sRandomPlayerbotMgr.GetValue(bot, "secondSkill");
 
-    if ((IsPrimaryTradeSkill(firstSkill) && skillId == firstSkill) ||
-        (IsPrimaryTradeSkill(secondSkill) && skillId == secondSkill))
+    if ((IsCraftingTradeSkill(firstSkill) && skillId == firstSkill) ||
+        (IsCraftingTradeSkill(secondSkill) && skillId == secondSkill))
         return true;
 
-    if (IsPrimaryTradeSkill(firstSkill) || IsPrimaryTradeSkill(secondSkill))
+    if (IsCraftingTradeSkill(firstSkill) || IsCraftingTradeSkill(secondSkill))
         return false;
 
     uint32 knownPrimarySkills = 0;
     for (uint32 tradeSkill : tradeSkills)
     {
-        if (IsPrimaryTradeSkill(tradeSkill) && bot->HasSkill(tradeSkill))
+        if (IsCraftingTradeSkill(tradeSkill) && bot->HasSkill(tradeSkill))
             ++knownPrimarySkills;
     }
 
@@ -346,71 +376,112 @@ uint32 PlayerbotFactory::GetProfessionStarterSpell(uint16 skillId)
 
 std::vector<PlayerbotFactory::WeightedProfessionPair> PlayerbotFactory::GetClassProfessionPairs(Player* bot)
 {
+    // Crafting rework: every bot gets all three gathering skills for free, so the pairs are two crafting
+    // professions. Weights per class add up to 100.
     switch (bot->getClass())
     {
         case CLASS_WARRIOR:
-            return {{SKILL_MINING, SKILL_BLACKSMITHING, 45},
-                    {SKILL_MINING, SKILL_ENGINEERING, 30},
-                    {SKILL_MINING, SKILL_JEWELCRAFTING, 15},
-                    {SKILL_HERBALISM, SKILL_ALCHEMY, 10}};
+            return {{SKILL_BLACKSMITHING, SKILL_ENGINEERING, 30},
+                    {SKILL_BLACKSMITHING, SKILL_JEWELCRAFTING, 25},
+                    {SKILL_ENGINEERING, SKILL_JEWELCRAFTING, 15},
+                    {SKILL_BLACKSMITHING, SKILL_ALCHEMY, 10},
+                    {SKILL_ENGINEERING, SKILL_ALCHEMY, 10},
+                    {SKILL_BLACKSMITHING, SKILL_INSCRIPTION, 5},
+                    {SKILL_JEWELCRAFTING, SKILL_INSCRIPTION, 5}};
         case CLASS_PALADIN:
-            return {{SKILL_MINING, SKILL_BLACKSMITHING, 45},
-                    {SKILL_MINING, SKILL_JEWELCRAFTING, 30},
-                    {SKILL_MINING, SKILL_ENGINEERING, 15},
-                    {SKILL_HERBALISM, SKILL_ALCHEMY, 10}};
+            return {{SKILL_BLACKSMITHING, SKILL_JEWELCRAFTING, 30},
+                    {SKILL_BLACKSMITHING, SKILL_ENGINEERING, 20},
+                    {SKILL_ENGINEERING, SKILL_JEWELCRAFTING, 15},
+                    {SKILL_BLACKSMITHING, SKILL_ALCHEMY, 15},
+                    {SKILL_JEWELCRAFTING, SKILL_ALCHEMY, 10},
+                    {SKILL_BLACKSMITHING, SKILL_INSCRIPTION, 5},
+                    {SKILL_JEWELCRAFTING, SKILL_INSCRIPTION, 5}};
         case CLASS_DEATH_KNIGHT:
-            return {{SKILL_MINING, SKILL_BLACKSMITHING, 45},
-                    {SKILL_MINING, SKILL_ENGINEERING, 35},
-                    {SKILL_MINING, SKILL_JEWELCRAFTING, 20}};
+            return {{SKILL_BLACKSMITHING, SKILL_ENGINEERING, 30},
+                    {SKILL_BLACKSMITHING, SKILL_JEWELCRAFTING, 25},
+                    {SKILL_ENGINEERING, SKILL_JEWELCRAFTING, 20},
+                    {SKILL_BLACKSMITHING, SKILL_ALCHEMY, 10},
+                    {SKILL_JEWELCRAFTING, SKILL_ALCHEMY, 5},
+                    {SKILL_BLACKSMITHING, SKILL_INSCRIPTION, 5},
+                    {SKILL_ENGINEERING, SKILL_INSCRIPTION, 5}};
         case CLASS_HUNTER:
-            return {{SKILL_SKINNING, SKILL_LEATHERWORKING, 45},
-                    {SKILL_MINING, SKILL_ENGINEERING, 35},
-                    {SKILL_HERBALISM, SKILL_ALCHEMY, 10},
-                    {SKILL_MINING, SKILL_JEWELCRAFTING, 10}};
+            return {{SKILL_LEATHERWORKING, SKILL_ENGINEERING, 30},
+                    {SKILL_LEATHERWORKING, SKILL_JEWELCRAFTING, 15},
+                    {SKILL_ENGINEERING, SKILL_JEWELCRAFTING, 15},
+                    {SKILL_LEATHERWORKING, SKILL_ALCHEMY, 15},
+                    {SKILL_ENGINEERING, SKILL_ALCHEMY, 10},
+                    {SKILL_LEATHERWORKING, SKILL_INSCRIPTION, 10},
+                    {SKILL_JEWELCRAFTING, SKILL_ALCHEMY, 5}};
         case CLASS_ROGUE:
-            return {{SKILL_SKINNING, SKILL_LEATHERWORKING, 35},
-                    {SKILL_HERBALISM, SKILL_ALCHEMY, 25},
-                    {SKILL_MINING, SKILL_ENGINEERING, 25},
-                    {SKILL_MINING, SKILL_JEWELCRAFTING, 10},
-                    {SKILL_HERBALISM, SKILL_INSCRIPTION, 5}};
+            return {{SKILL_LEATHERWORKING, SKILL_ENGINEERING, 25},
+                    {SKILL_LEATHERWORKING, SKILL_ALCHEMY, 20},
+                    {SKILL_LEATHERWORKING, SKILL_JEWELCRAFTING, 15},
+                    {SKILL_ENGINEERING, SKILL_ALCHEMY, 15},
+                    {SKILL_ENGINEERING, SKILL_JEWELCRAFTING, 10},
+                    {SKILL_LEATHERWORKING, SKILL_INSCRIPTION, 10},
+                    {SKILL_ALCHEMY, SKILL_INSCRIPTION, 5}};
         case CLASS_DRUID:
-            return {{SKILL_SKINNING, SKILL_LEATHERWORKING, 35},
-                    {SKILL_HERBALISM, SKILL_ALCHEMY, 35},
-                    {SKILL_HERBALISM, SKILL_INSCRIPTION, 20},
-                    {SKILL_MINING, SKILL_JEWELCRAFTING, 10}};
+            return {{SKILL_LEATHERWORKING, SKILL_ALCHEMY, 30},
+                    {SKILL_LEATHERWORKING, SKILL_INSCRIPTION, 20},
+                    {SKILL_LEATHERWORKING, SKILL_JEWELCRAFTING, 15},
+                    {SKILL_ALCHEMY, SKILL_INSCRIPTION, 15},
+                    {SKILL_JEWELCRAFTING, SKILL_ALCHEMY, 10},
+                    {SKILL_LEATHERWORKING, SKILL_ENGINEERING, 5},
+                    {SKILL_JEWELCRAFTING, SKILL_INSCRIPTION, 5}};
         case CLASS_SHAMAN:
-            return {{SKILL_HERBALISM, SKILL_ALCHEMY, 35},
-                    {SKILL_SKINNING, SKILL_LEATHERWORKING, 25},
-                    {SKILL_HERBALISM, SKILL_INSCRIPTION, 25},
-                    {SKILL_MINING, SKILL_JEWELCRAFTING, 15}};
+            return {{SKILL_LEATHERWORKING, SKILL_ALCHEMY, 25},
+                    {SKILL_LEATHERWORKING, SKILL_INSCRIPTION, 20},
+                    {SKILL_LEATHERWORKING, SKILL_JEWELCRAFTING, 15},
+                    {SKILL_ALCHEMY, SKILL_INSCRIPTION, 15},
+                    {SKILL_LEATHERWORKING, SKILL_ENGINEERING, 10},
+                    {SKILL_JEWELCRAFTING, SKILL_ALCHEMY, 10},
+                    {SKILL_ENGINEERING, SKILL_ALCHEMY, 5}};
         case CLASS_PRIEST:
-            return {{SKILL_TAILORING, SKILL_ENCHANTING, 45},
-                    {SKILL_HERBALISM, SKILL_INSCRIPTION, 30},
-                    {SKILL_HERBALISM, SKILL_ALCHEMY, 25}};
+            return {{SKILL_TAILORING, SKILL_ENCHANTING, 35},
+                    {SKILL_TAILORING, SKILL_ALCHEMY, 15},
+                    {SKILL_TAILORING, SKILL_INSCRIPTION, 15},
+                    {SKILL_ENCHANTING, SKILL_INSCRIPTION, 10},
+                    {SKILL_ENCHANTING, SKILL_ALCHEMY, 10},
+                    {SKILL_TAILORING, SKILL_JEWELCRAFTING, 10},
+                    {SKILL_ALCHEMY, SKILL_INSCRIPTION, 5}};
         case CLASS_MAGE:
-            return {{SKILL_TAILORING, SKILL_ENCHANTING, 50},
-                    {SKILL_HERBALISM, SKILL_ALCHEMY, 25},
-                    {SKILL_HERBALISM, SKILL_INSCRIPTION, 25}};
+            return {{SKILL_TAILORING, SKILL_ENCHANTING, 40},
+                    {SKILL_TAILORING, SKILL_ALCHEMY, 15},
+                    {SKILL_TAILORING, SKILL_INSCRIPTION, 15},
+                    {SKILL_ENCHANTING, SKILL_INSCRIPTION, 10},
+                    {SKILL_ENCHANTING, SKILL_ALCHEMY, 10},
+                    {SKILL_TAILORING, SKILL_JEWELCRAFTING, 5},
+                    {SKILL_ALCHEMY, SKILL_INSCRIPTION, 5}};
         case CLASS_WARLOCK:
         default:
-            return {{SKILL_TAILORING, SKILL_ENCHANTING, 50},
-                    {SKILL_HERBALISM, SKILL_ALCHEMY, 25},
-                    {SKILL_HERBALISM, SKILL_INSCRIPTION, 25}};
+            return {{SKILL_TAILORING, SKILL_ENCHANTING, 40},
+                    {SKILL_TAILORING, SKILL_ALCHEMY, 15},
+                    {SKILL_TAILORING, SKILL_INSCRIPTION, 15},
+                    {SKILL_ENCHANTING, SKILL_INSCRIPTION, 10},
+                    {SKILL_ENCHANTING, SKILL_ALCHEMY, 10},
+                    {SKILL_TAILORING, SKILL_ENGINEERING, 5},
+                    {SKILL_ALCHEMY, SKILL_INSCRIPTION, 5}};
     }
 }
 
 std::vector<PlayerbotFactory::WeightedProfessionPair> PlayerbotFactory::GetRandomProfessionPairs()
 {
-    return {{SKILL_MINING, SKILL_BLACKSMITHING, 20},
-            {SKILL_MINING, SKILL_ENGINEERING, 18},
-            {SKILL_MINING, SKILL_JEWELCRAFTING, 16},
-            {SKILL_SKINNING, SKILL_LEATHERWORKING, 18},
-            {SKILL_HERBALISM, SKILL_ALCHEMY, 18},
-            {SKILL_HERBALISM, SKILL_INSCRIPTION, 14},
-            {SKILL_TAILORING, SKILL_ENCHANTING, 10},
-            {SKILL_HERBALISM, SKILL_MINING, 6},
-            {SKILL_HERBALISM, SKILL_SKINNING, 5},
-            {SKILL_MINING, SKILL_SKINNING, 5}};
+    // Class independent roll, weights add up to 100.
+    return {{SKILL_BLACKSMITHING, SKILL_ENGINEERING, 11},
+            {SKILL_BLACKSMITHING, SKILL_JEWELCRAFTING, 11},
+            {SKILL_BLACKSMITHING, SKILL_ALCHEMY, 6},
+            {SKILL_ENGINEERING, SKILL_JEWELCRAFTING, 9},
+            {SKILL_ENGINEERING, SKILL_ALCHEMY, 6},
+            {SKILL_LEATHERWORKING, SKILL_ENGINEERING, 7},
+            {SKILL_LEATHERWORKING, SKILL_JEWELCRAFTING, 7},
+            {SKILL_LEATHERWORKING, SKILL_ALCHEMY, 7},
+            {SKILL_LEATHERWORKING, SKILL_INSCRIPTION, 5},
+            {SKILL_TAILORING, SKILL_ENCHANTING, 12},
+            {SKILL_TAILORING, SKILL_ALCHEMY, 5},
+            {SKILL_TAILORING, SKILL_INSCRIPTION, 4},
+            {SKILL_ENCHANTING, SKILL_ALCHEMY, 3},
+            {SKILL_ENCHANTING, SKILL_INSCRIPTION, 2},
+            {SKILL_ALCHEMY, SKILL_INSCRIPTION, 5}};
 }
 
 std::pair<uint16, uint16> PlayerbotFactory::ChooseProfessionPair(
@@ -421,7 +492,7 @@ std::pair<uint16, uint16> PlayerbotFactory::ChooseProfessionPair(
         totalWeight += pair.weight;
 
     if (!totalWeight)
-        return {SKILL_HERBALISM, SKILL_ALCHEMY};
+        return {SKILL_ALCHEMY, SKILL_INSCRIPTION};
 
     uint32 roll = urand(1, totalWeight);
     for (WeightedProfessionPair const& pair : professionPairs)
@@ -477,7 +548,7 @@ uint16 PlayerbotFactory::ChooseSingleProfession(std::vector<WeightedProfessionPa
         selectedPool = &craftingSkills;
 
     if (!selectedPool || selectedPool->empty())
-        return SKILL_HERBALISM;
+        return SKILL_ALCHEMY;
 
     uint32 totalWeight = 0;
     for (std::pair<uint16, uint32> const& skill : *selectedPool)
@@ -3144,17 +3215,19 @@ void PlayerbotFactory::InitTradeSkills()
                                                               ? GetClassProfessionPairs(bot)
                                                               : GetRandomProfessionPairs();
 
+    // "Primary" here means the crafting professions that take one of the MaxPrimaryTradeSkill slots. Gathering is
+    // handled apart: every random bot learns all three, and with the crafting rework they no longer take a slot.
     std::vector<uint16> knownPrimarySkills;
     for (uint32 tradeSkill : tradeSkills)
     {
-        if (IsPrimaryTradeSkill(tradeSkill) && bot->HasSkill(tradeSkill))
+        if (IsCraftingTradeSkill(tradeSkill) && bot->HasSkill(tradeSkill))
             knownPrimarySkills.push_back(static_cast<uint16>(tradeSkill));
     }
 
     std::vector<uint16> primarySkills;
     auto addPrimarySkill = [&primarySkills, maxPrimaryTradeSkills](uint16 skillId)
     {
-        if (!skillId || !IsPrimaryTradeSkill(skillId) || primarySkills.size() >= maxPrimaryTradeSkills)
+        if (!skillId || !IsCraftingTradeSkill(skillId) || primarySkills.size() >= maxPrimaryTradeSkills)
             return;
 
         if (std::find(primarySkills.begin(), primarySkills.end(), skillId) == primarySkills.end())
@@ -3212,7 +3285,7 @@ void PlayerbotFactory::InitTradeSkills()
         {
             for (uint32 tradeSkill : tradeSkills)
             {
-                if (IsPrimaryTradeSkill(tradeSkill) && tradeSkill != primarySkills.front())
+                if (IsCraftingTradeSkill(tradeSkill) && tradeSkill != primarySkills.front())
                 {
                     addPrimarySkill(static_cast<uint16>(tradeSkill));
                     break;
@@ -3232,12 +3305,12 @@ void PlayerbotFactory::InitTradeSkills()
             bot->SetSkill(skillId, 0, 0, 0);
     }
 
-    SetRandomSkill(SKILL_FIRST_AID);
-    SetRandomSkill(SKILL_FISHING);
-    SetRandomSkill(SKILL_COOKING);
+    // Gathering goes last so that, on a stock core where it still takes primary slots, the crafting choice wins.
+    static constexpr std::array<uint16, 3> gatheringSkills = {SKILL_HERBALISM, SKILL_MINING, SKILL_SKINNING};
 
     std::vector<uint16> skillsToLearn = {SKILL_FIRST_AID, SKILL_FISHING, SKILL_COOKING};
     skillsToLearn.insert(skillsToLearn.end(), primarySkills.begin(), primarySkills.end());
+    skillsToLearn.insert(skillsToLearn.end(), gatheringSkills.begin(), gatheringSkills.end());
 
     uint32 selectedPrimaryStarterSpells = 0;
     for (uint16 skillId : primarySkills)
@@ -3264,13 +3337,21 @@ void PlayerbotFactory::InitTradeSkills()
         bot->learnSpell(spellId, false);
     }
 
-    for (uint16 skillId : primarySkills)
-        SetRandomSkill(skillId);
+    // Skill value (and, with the rework, the rank spells) for everything the bot ended up with.
+    uint32 slotsUsed = 0;
+    for (uint16 skillId : skillsToLearn)
+    {
+        uint32 const spellId = GetProfessionStarterSpell(skillId);
+        if (!spellId || !bot->HasSpell(spellId))
+            continue;
+
+        SetProfessionSkill(skillId);
+        if (IsPrimaryTradeSkill(skillId))
+            ++slotsUsed;
+    }
 
     bot->SetFreePrimaryProfessions(
-        static_cast<uint16>(maxPrimaryTradeSkills > primarySkills.size()
-                                ? maxPrimaryTradeSkills - primarySkills.size()
-                                : 0));
+        static_cast<uint16>(maxPrimaryTradeSkills > slotsUsed ? maxPrimaryTradeSkills - slotsUsed : 0));
 
     InitTradeSpecializations();
 }
@@ -3635,6 +3716,38 @@ void PlayerbotFactory::SetRandomSkill(uint16 id)
 
     // if (!bot->HasSkill(id) || value > curValue)
     bot->SetSkill(id, step, value, maxValue);
+}
+
+void PlayerbotFactory::SetProfessionSkill(uint16 id)
+{
+    uint32 const cap = GetProfessionSkillCap();
+    if (!cap)
+    {
+        SetRandomSkill(id);
+        return;
+    }
+
+    // Crafting rework: like a player, a bot sits at the cap with every rank spell up to it known. Rank spells
+    // chain from the starter spell (Apprentice -> Journeyman -> ...); each carries its own skill ceiling.
+    if (uint32 spellId = GetProfessionStarterSpell(id); spellId && bot->HasSpell(spellId))
+    {
+        while ((spellId = sSpellMgr->GetNextSpellInChain(spellId)))
+        {
+            SpellLearnSkillNode const* node = sSpellMgr->GetSpellLearnSkill(spellId);
+            if (!node || node->skill != id || node->maxvalue > cap)
+                break;
+
+            if (!bot->HasSpell(spellId))
+                bot->learnSpell(spellId, false);
+        }
+    }
+
+    // Step is the last rank at or under the cap (75 skill per rank), as the core script sets it. Never lower a
+    // skill a bot already has above the cap.
+    uint16 const step = static_cast<uint16>(std::clamp<uint32>(cap / 75, 1, 6));
+    uint16 const value = static_cast<uint16>(std::max<uint32>(bot->GetPureSkillValue(id), cap));
+    uint16 const maxValue = static_cast<uint16>(std::max<uint32>(bot->GetPureMaxSkillValue(id), cap));
+    bot->SetSkill(id, std::max(bot->GetSkillStep(id), step), value, maxValue);
 }
 
 void PlayerbotFactory::InitAvailableSpells()
