@@ -149,9 +149,19 @@ bool LfgJoinAction::JoinLFG()
 
         auto const& botLevel = bot->GetLevel();
 
+        // The level window comes from LFGMgr, not the DBC row: mod-content-gate moves the random queue windows
+        // (Random Classic runs to the level cap while Outland is closed; a closed expansion's random queue gets
+        // minimum level 255), and LFGMgr's lock check uses the same window.
+        LFGDungeonData const* lfgData = sLFGMgr->GetLFGDungeon(dungeon->ID);
+        if (!lfgData)
+            continue;
+
+        uint8 const minLevel = lfgData->minlevel;
+        uint8 const maxLevel = lfgData->maxlevel;
+
         /*LFG_TYPE_RANDOM on classic is 15-58 so bot over level 25 will never queue*/
-        if ((dungeon->MinLevel && (botLevel < dungeon->MinLevel || botLevel > dungeon->MaxLevel)) ||
-            (botLevel > dungeon->MinLevel + 10 && dungeon->TypeID == LFG_TYPE_DUNGEON))
+        if ((minLevel && (botLevel < minLevel || botLevel > maxLevel)) ||
+            (botLevel > minLevel + 10 && dungeon->TypeID == LFG_TYPE_DUNGEON))
             continue;
 
         // LFG level ranges run past the expansion cap: Stratholme is 55-65.
