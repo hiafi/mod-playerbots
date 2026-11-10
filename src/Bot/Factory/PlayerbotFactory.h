@@ -172,6 +172,10 @@ private:
     static uint16 GetTrainerSpellTradeSkill(Trainer::Spell const* trainerSpell);
     static bool IsGatheringTradeSkill(uint16 skillId);
     static bool IsCraftingTradeSkill(uint16 skillId);
+    static bool IsTradeSkill(uint16 skillId);
+    // Crafting rework: Custom.Professions.SkillCap when the core has moved gathering to the secondary category and
+    // the profession script is enabled; 0 on a stock core (bots then keep the level based skill values).
+    static uint32 GetProfessionSkillCap();
     static uint32 GetProfessionStarterSpell(uint16 skillId);
     static std::vector<WeightedProfessionPair> GetClassProfessionPairs(Player* bot);
     static std::vector<WeightedProfessionPair> GetRandomProfessionPairs();
@@ -193,6 +197,7 @@ private:
     bool InitBlacksmithingSpecialization();
     void UpdateTradeSkills();
     void SetRandomSkill(uint16 id);
+    void SetProfessionSkill(uint16 id);
     void ClearSpells();
     void ClearSkills();
     void InitTalents(uint32 specNo);
