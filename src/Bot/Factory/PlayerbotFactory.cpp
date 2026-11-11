@@ -64,6 +64,19 @@ namespace
     constexpr uint32 ITEM_ETERNAL_BELT_BUCKLE = 41611;  // Eternal Belt Buckle (consumable)
     constexpr uint32 ENCHANT_SOCKET_BELT = 3729;        // "Socket Belt" -> adds 1 prismatic socket
     constexpr uint8 ETERNAL_BELT_BUCKLE_LEVEL = 70;     // required level of the buckle
+
+    // Crafting rework C5 gems (core apps/dbc-tools/lib/crafting_gems_data.py): items 70720-70899. Vanilla had no gems,
+    // so at level 60 and below a bot uses these only; above 60 they compete with the stock gems as usual.
+    constexpr uint32 CUSTOM_GEM_FIRST = 70720;
+    constexpr uint32 CUSTOM_GEM_LAST = 70899;
+    constexpr uint32 GEM_META_KALEIDOSCOPIC = 70810; // damage dealers
+    constexpr uint32 GEM_META_BULWARK = 70813;       // tanks
+    constexpr uint32 GEM_META_WELLSPRING = 70814;    // healers
+
+    bool IsCustomGem(uint32 itemId)
+    {
+        return itemId >= CUSTOM_GEM_FIRST && itemId <= CUSTOM_GEM_LAST;
+    }
 }
 
 // A non-zero prismatic enchantment is the socket marker, so the belt already has its extra socket.
@@ -5521,7 +5534,13 @@ void PlayerbotFactory::ApplyEnchantAndGemsNew(bool /*destroyOld*/)
         if (!gemProperties)
             continue;
 
-        if (sPlayerbotAIConfig.LimitEnchantExpansion && bot->GetLevel() <= 70 && enchantGem >= 39900)
+        // The custom gems sit above 39900 but are vanilla-tier: exempt them, and keep stock (TBC/WotLK) gems off
+        // bots at level 60 and below.
+        if (sPlayerbotAIConfig.LimitEnchantExpansion && bot->GetLevel() <= 70 && enchantGem >= 39900 &&
+            !IsCustomGem(enchantGem))
+            continue;
+
+        if (sPlayerbotAIConfig.LimitEnchantExpansion && bot->GetLevel() <= 60 && !IsCustomGem(enchantGem))
             continue;
 
         uint32 requiredLevel = gemTemplate->ItemLevel;
@@ -5640,6 +5659,30 @@ void PlayerbotFactory::ApplyEnchantAndGemsNew(bool /*destroyOld*/)
             bool const isPrismatic = !socketColor && hasPrismaticSocket && socketIndex == firstPrismatic;
             if (!socketColor && !isPrismatic)
                 continue;
+
+            // Meta socket: the custom metas score nothing in the stat weights (their effect is scripted), so pick by
+            // role (crafting rework C5): tank Bulwark, healer Wellspring, everyone else Kaleidoscopic. Above 60 the
+            // stock gems and the loop below decide, as before.
+            if (socketColor == SOCKET_COLOR_META && bot->GetLevel() <= 60)
+            {
+                uint32 const metaGem = PlayerbotAI::IsTank(bot, true) ? GEM_META_BULWARK :
+                    PlayerbotAI::IsHeal(bot, true) ? GEM_META_WELLSPRING : GEM_META_KALEIDOSCOPIC;
+                if (std::find(availableGems.begin(), availableGems.end(), metaGem) == availableGems.end())
+                    continue;
+
+                ItemTemplate const* metaTemplate = sObjectMgr->GetItemTemplate(metaGem);
+                GemPropertiesEntry const* metaProperties =
+                    metaTemplate ? sGemPropertiesStore.LookupEntry(metaTemplate->GemProperties) : nullptr;
+                if (!metaProperties || !metaProperties->spellitemenchantement)
+                    continue;
+
+                bot->ApplyEnchantment(item, EnchantmentSlot(enchant_slot), false);
+                item->SetEnchantment(EnchantmentSlot(enchant_slot), metaProperties->spellitemenchantement, 0, 0,
+                                     bot->GetGUID());
+                bot->ApplyEnchantment(item, EnchantmentSlot(enchant_slot), true);
+                curCount = GetCurrentGemsCount();
+                continue;
+            }
 
             int32 enchantIdChosen = -1;
             bool jewelersGemChosen;
