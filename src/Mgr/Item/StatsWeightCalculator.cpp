@@ -7,6 +7,8 @@
 #include "StatsWeightCalculator.h"
 #include "AiFactory.h"
 #include "DBCStores.h"
+#include "DeathKnightReworkUtils.h"
+#include "DruidReworkUtils.h"
 #include "ItemEnchantmentMgr.h"
 #include "ItemTemplate.h"
 #include "ObjectMgr.h"
@@ -14,10 +16,13 @@
 #include "PlayerbotAI.h"
 #include "PlayerbotFactory.h"
 #include "RandomItemMgr.h"
+#include "RogueReworkUtils.h"
+#include "ShamanReworkUtils.h"
 #include "SharedDefines.h"
 #include "SpellAuraDefines.h"
 #include "SpellMgr.h"
 #include "StatsCollector.h"
+#include "StatsWeightSimTable.h"
 #include "Unit.h"
 #include <memory>
 
@@ -247,7 +252,70 @@ void StatsWeightCalculator::GenerateWeights(Player* player)
 {
     GenerateBasicWeights(player);
     GenerateAdditionalWeights(player);
+    ApplySimWeights(player);
     ApplyWeightFinetune(player);
+}
+
+// Rework: the build a bot's simmed weight row is keyed on, beside its class and spec tab (StatsWeightSimTable.h)
+ai::stat_weights::SimBuild StatsWeightCalculator::GetSimBuild(Player* player) const
+{
+    using ai::stat_weights::SimBuild;
+    switch (cls)
+    {
+        case CLASS_PALADIN:
+            if (shockadin_)
+                return SimBuild::Shockadin;
+            break;
+        case CLASS_DRUID:
+            if (tab == DRUID_TAB_FERAL)
+            {
+                if (ai::druid_rework::IsBearDpsBuild(player))
+                    return SimBuild::BearDps;
+                if (PlayerbotAI::IsTank(player))
+                    return SimBuild::Tank;
+            }
+            break;
+        case CLASS_SHAMAN:
+            if (ai::shaman_rework::IsTankBuild(player))
+                return SimBuild::Tank;
+            break;
+        case CLASS_ROGUE:
+            if (ai::rogue_rework::IsTankBuild(player))
+                return SimBuild::Tank;
+            break;
+        case CLASS_DEATH_KNIGHT:
+            if (ai::dk_rework::IsTankBuild(player))
+                return SimBuild::Tank;
+            break;
+        default:
+            break;
+    }
+    return SimBuild::Default;
+}
+
+// Rework: the sim-derived weights (bot-stat-weights, 2026-11-10) replace the hand-set ones for every stat the sims
+// measured, after the class blocks and the talent adjustments above (the sims ran with those talents and buffs, so
+// they are already in the numbers). Stats the sims could not measure keep the class block's value: weapon DPS, armor,
+// mana regeneration, the defensive ratings of a non-tank, and the negative off-role weights.
+void StatsWeightCalculator::ApplySimWeights(Player* player)
+{
+    // Hit and Expertise do nothing in PvE on this server: players always hit and are never dodged or parried
+    // (docs/Systems.md, section 2). PvP hit is unchanged, so a PvP spec keeps its class block's value.
+    if (!pvpSpec_)
+    {
+        stats_weights_[STATS_TYPE_HIT] = 0.0f;
+        stats_weights_[STATS_TYPE_EXPERTISE] = 0.0f;
+    }
+
+    ai::stat_weights::SimBuild const build = GetSimBuild(player);
+    ai::stat_weights::SimSpecWeights const* row = ai::stat_weights::FindSimSpecWeights(cls, tab, build);
+    if (!row && build != ai::stat_weights::SimBuild::Default)
+        row = ai::stat_weights::FindSimSpecWeights(cls, tab, ai::stat_weights::SimBuild::Default);
+    if (!row)
+        return;
+
+    for (ai::stat_weights::SimStatWeight const& weight : row->Weights)
+        stats_weights_[weight.Stat] = weight.Weight;
 }
 
 void StatsWeightCalculator::GenerateBasicWeights(Player* player)
