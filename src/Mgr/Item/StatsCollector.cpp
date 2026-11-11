@@ -631,6 +631,20 @@ void StatsCollector::CollectByItemStatType(uint32 itemStatType, int32 val)
         case ITEM_MOD_ARMOR_PENETRATION_RATING:
             stats[STATS_TYPE_ARMOR_PENETRATION] += val;
             break;
+        // Rework: the custom rated stats. Every role can use them, so no collector-type gate. This one switch also
+        // serves stat enchants (gems, socket bonuses, random properties and suffixes: CollectEnchantStats).
+        case ITEM_MOD_MASTERY_RATING:
+            stats[STATS_TYPE_MASTERY] += val;
+            break;
+        case ITEM_MOD_VERSATILITY_RATING:
+            stats[STATS_TYPE_VERSATILITY] += val;
+            break;
+        case ITEM_MOD_COOLDOWN_RATING:
+            stats[STATS_TYPE_COOLDOWN_HASTE] += val;
+            break;
+        case ITEM_MOD_PROC_RATING:
+            stats[STATS_TYPE_PROC_CHANCE] += val;
+            break;
         case ITEM_MOD_SPELL_POWER:
             stats[STATS_TYPE_SPELL_POWER] += val;
             stats[STATS_TYPE_HEAL_POWER] += val;
@@ -794,6 +808,19 @@ void StatsCollector::HandleApplyAura(SpellEffectInfo const& effectInfo, float mu
                             break;
                         case CR_ARMOR_PENETRATION:
                             stats[STATS_TYPE_ARMOR_PENETRATION] += val * multiplier;
+                            break;
+                        // Rework: the custom rated stats on an equip or proc spell
+                        case CR_MASTERY:
+                            stats[STATS_TYPE_MASTERY] += val * multiplier;
+                            break;
+                        case CR_VERSATILITY:
+                            stats[STATS_TYPE_VERSATILITY] += val * multiplier;
+                            break;
+                        case CR_COOLDOWN_HASTE:
+                            stats[STATS_TYPE_COOLDOWN_HASTE] += val * multiplier;
+                            break;
+                        case CR_PROC_CHANCE:
+                            stats[STATS_TYPE_PROC_CHANCE] += val * multiplier;
                             break;
                         default:
                             break;

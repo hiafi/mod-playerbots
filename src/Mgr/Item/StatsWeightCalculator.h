@@ -10,6 +10,11 @@
 #include "Player.h"
 #include "StatsCollector.h"
 
+namespace ai::stat_weights
+{
+enum class SimBuild : uint8;
+}
+
 #define ITEM_SUBCLASS_MASK_SINGLE_HAND                                                                        \
     ((1 << ITEM_SUBCLASS_WEAPON_AXE) | (1 << ITEM_SUBCLASS_WEAPON_MACE) | (1 << ITEM_SUBCLASS_WEAPON_SWORD) | \
      (1 << ITEM_SUBCLASS_WEAPON_DAGGER) | (1 << ITEM_SUBCLASS_WEAPON_FIST))
@@ -54,6 +59,8 @@ public:
 
     void ApplyOverflowPenalty(Player* player);
     void ApplyWeightFinetune(Player* player);
+    void ApplySimWeights(Player* player);
+    ai::stat_weights::SimBuild GetSimBuild(Player* player) const;
 
 private:
     Player* player_;
