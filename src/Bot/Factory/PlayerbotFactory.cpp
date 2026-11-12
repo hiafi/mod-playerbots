@@ -77,6 +77,29 @@ namespace
     {
         return itemId >= CUSTOM_GEM_FIRST && itemId <= CUSTOM_GEM_LAST;
     }
+
+    // Crafting rework C6 enchants (core apps/dbc-tools/lib/crafting_enchants_data.py): SpellItemEnchantment 5800-5999,
+    // applied by item use spells far above the stock expansion cutoffs. Bots take them whatever LimitEnchantExpansion
+    // says (the endgame set carries MinLevel 60, which the enchant level check below enforces).
+    constexpr uint32 CUSTOM_ENCHANT_FIRST = 5800;
+    constexpr uint32 CUSTOM_ENCHANT_LAST = 5999;
+    // The C6 Thorium Belt Buckle's prismatic socket enchant (MinLevel 60), the buckle at level 60-70 when the bot is
+    // held to an earlier expansion.
+    constexpr uint32 ENCHANT_CUSTOM_SOCKET_BELT = 5930;
+    constexpr uint8 CUSTOM_BELT_BUCKLE_LEVEL = 60;
+
+    bool IsCustomEnchantSpell(SpellInfo const* spellInfo)
+    {
+        for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+        {
+            if (spellInfo->Effects[i].Effect != SPELL_EFFECT_ENCHANT_ITEM)
+                continue;
+            uint32 const enchantId = spellInfo->Effects[i].MiscValue;
+            if (enchantId >= CUSTOM_ENCHANT_FIRST && enchantId <= CUSTOM_ENCHANT_LAST)
+                return true;
+        }
+        return false;
+    }
 }
 
 // A non-zero prismatic enchantment is the socket marker, so the belt already has its extra socket.
@@ -92,18 +115,29 @@ static bool TryApplyBeltBuckle(Player* bot, Item* waist)
         return false;
     if (HasBeltBuckleSocket(waist))
         return false;
-    if (bot->GetLevel() < ETERNAL_BELT_BUCKLE_LEVEL)
+
+    // A belt with three template sockets has no room for a fourth (Spell::CheckItems refuses the buckle).
+    uint8 templateSockets = 0;
+    for (uint8 i = 0; i < MAX_GEM_SOCKETS; ++i)
+        if (waist->GetTemplate()->Socket[i].Color)
+            ++templateSockets;
+    if (templateSockets >= MAX_GEM_SOCKETS)
         return false;
 
-    // The buckle is a WotLK item; leave it alone when the bot is held back to an earlier expansion.
-    if (sPlayerbotAIConfig.LimitEnchantExpansion && bot->GetLevel() <= 70)
+    // The Eternal Belt Buckle is a WotLK item; a bot held back to an earlier expansion takes the crafting rework C6
+    // Thorium Belt Buckle from level 60 instead.
+    bool const heldBack = sPlayerbotAIConfig.LimitEnchantExpansion && bot->GetLevel() <= 70;
+    uint32 const socketEnchant = heldBack ? ENCHANT_CUSTOM_SOCKET_BELT : ENCHANT_SOCKET_BELT;
+    if (bot->GetLevel() < (heldBack ? CUSTOM_BELT_BUCKLE_LEVEL : ETERNAL_BELT_BUCKLE_LEVEL))
+        return false;
+    if (!sSpellItemEnchantmentStore.LookupEntry(socketEnchant))
         return false;
 
     bot->ApplyEnchantment(waist, PRISMATIC_ENCHANTMENT_SLOT, false);
-    waist->SetEnchantment(PRISMATIC_ENCHANTMENT_SLOT, ENCHANT_SOCKET_BELT, 0, 0, bot->GetGUID());
+    waist->SetEnchantment(PRISMATIC_ENCHANTMENT_SLOT, socketEnchant, 0, 0, bot->GetGUID());
     bot->ApplyEnchantment(waist, PRISMATIC_ENCHANTMENT_SLOT, true);
 
-    if (bot->HasItemCount(ITEM_ETERNAL_BELT_BUCKLE, 1))
+    if (!heldBack && bot->HasItemCount(ITEM_ETERNAL_BELT_BUCKLE, 1))
         bot->DestroyItemCount(ITEM_ETERNAL_BELT_BUCKLE, 1, true);
 
     return true;
@@ -5590,11 +5624,14 @@ void PlayerbotFactory::ApplyEnchantAndGemsNew(bool /*destroyOld*/)
             if (requiredLevel > bot->GetLevel())
                 continue;
 
-            // disable next expansion enchantments
-            if (sPlayerbotAIConfig.LimitEnchantExpansion && bot->GetLevel() <= 60 && enchantSpell >= 27899)
+            // disable next expansion enchantments (the crafting rework enchants are this server's own, never cut)
+            bool const customEnchant = IsCustomEnchantSpell(spellInfo);
+            if (sPlayerbotAIConfig.LimitEnchantExpansion && bot->GetLevel() <= 60 && enchantSpell >= 27899 &&
+                !customEnchant)
                 continue;
 
-            if (sPlayerbotAIConfig.LimitEnchantExpansion && bot->GetLevel() <= 70 && enchantSpell >= 44483)
+            if (sPlayerbotAIConfig.LimitEnchantExpansion && bot->GetLevel() <= 70 && enchantSpell >= 44483 &&
+                !customEnchant)
                 continue;
 
             for (uint8 j = 0; j < MAX_SPELL_EFFECTS; ++j)
