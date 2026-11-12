@@ -80,7 +80,8 @@ namespace
 
     // Crafting rework C6 enchants (core apps/dbc-tools/lib/crafting_enchants_data.py): SpellItemEnchantment 5800-5999,
     // applied by item use spells far above the stock expansion cutoffs. Bots take them whatever LimitEnchantExpansion
-    // says (the endgame set carries MinLevel 60, which the enchant level check below enforces).
+    // says, and at 60 and below nothing else (the endgame set carries MinLevel 60, which the enchant level check below
+    // enforces).
     constexpr uint32 CUSTOM_ENCHANT_FIRST = 5800;
     constexpr uint32 CUSTOM_ENCHANT_LAST = 5999;
     // The C6 Thorium Belt Buckle's prismatic socket enchant (MinLevel 60), the buckle at level 60-70 when the bot is
@@ -5624,10 +5625,11 @@ void PlayerbotFactory::ApplyEnchantAndGemsNew(bool /*destroyOld*/)
             if (requiredLevel > bot->GetLevel())
                 continue;
 
-            // disable next expansion enchantments (the crafting rework enchants are this server's own, never cut)
+            // disable next expansion enchantments (the crafting rework enchants are this server's own, never cut).
+            // At 60 and below a bot takes the crafting rework enchants only, as players can (the stock stat enchants
+            // left the trainers), like the C5 gems.
             bool const customEnchant = IsCustomEnchantSpell(spellInfo);
-            if (sPlayerbotAIConfig.LimitEnchantExpansion && bot->GetLevel() <= 60 && enchantSpell >= 27899 &&
-                !customEnchant)
+            if (sPlayerbotAIConfig.LimitEnchantExpansion && bot->GetLevel() <= 60 && !customEnchant)
                 continue;
 
             if (sPlayerbotAIConfig.LimitEnchantExpansion && bot->GetLevel() <= 70 && enchantSpell >= 44483 &&
