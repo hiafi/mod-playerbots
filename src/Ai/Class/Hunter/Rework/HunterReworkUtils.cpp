@@ -94,9 +94,11 @@ bool IsAreaSpell(SpellInfo const* spellInfo)
     if (HasAreaEffect(spellInfo))
         return true;
 
-    // Venomous Cloud's area sits on the spell its TRIGGER_SPELL effect casts; one level is enough
+    // Venomous Cloud's area sits on the spell its TRIGGER_SPELL effect casts, Burrow Attack's on the pulse its periodic
+    // trigger aura casts; one level is enough
     for (SpellEffectInfo const& effect : spellInfo->GetEffects())
-        if (effect.Effect == SPELL_EFFECT_TRIGGER_SPELL && effect.TriggerSpell)
+        if (effect.TriggerSpell && (effect.Effect == SPELL_EFFECT_TRIGGER_SPELL ||
+                                    effect.ApplyAuraName == SPELL_AURA_PERIODIC_TRIGGER_SPELL))
             if (SpellInfo const* triggered = sSpellMgr->GetSpellInfo(effect.TriggerSpell);
                 triggered && HasAreaEffect(triggered))
                 return true;

@@ -69,8 +69,8 @@ public:
 };
 
 // The pet autocast toggle under the rework policy (only active with Playerbots.HunterRework): the basic attack and
-// the buff or debuff utility stay on as the base decides; Web Pull, Cower, Dash, Last Stand and Bullheaded are off;
-// Growl is on only while the bot is not grouped.
+// the buff or debuff utility stay on as the base decides; Web Pull, the slot 3 utilities, the manual raid cooldowns and
+// Cower are off; Growl is on only while the bot is not grouped.
 class HunterPetAutocastAction : public TogglePetSpellAutoCastAction
 {
 public:
