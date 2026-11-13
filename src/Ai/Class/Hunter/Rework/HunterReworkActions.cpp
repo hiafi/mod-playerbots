@@ -51,10 +51,41 @@ bool HunterPetAutocastAction::IsAutocastWanted(Pet* pet, SpellInfo const* spellI
     switch (spellInfo->Id)
     {
         case SPELL_WEB_PULL:
+        case SPELL_PET_LICK_YOUR_WOUNDS:
+        case SPELL_PET_PROWL:
+        case SPELL_PET_TAIL_SWEEP:
+        case SPELL_PET_FRENZIED_REGENERATION:
+        case SPELL_PET_ANCIENT_HYSTERIA:
+        case SPELL_PET_ETERNAL_GUARDIAN:
+        case SPELL_PET_SCAVENGE:
+        case SPELL_PET_INFECTED_BITE:
+        case SPELL_PET_LONG_STRIDE:
+        case SPELL_PET_HEALING_DUST:
+        case SPELL_PET_PARALYTIC_STING:
+        case SPELL_PET_EARTHSHAKING_STOMP:
+        case SPELL_PET_MOLTEN_HIDE:
+        case SPELL_PET_SPIRIT_MEND:
+        case SPELL_PET_EARTHEN_BULWARK:
+        case SPELL_PET_BOAR_CHARGE:
+        case SPELL_PET_BAD_ATTITUDE:
+        case SPELL_PET_SHELL_SHIELD:
+        case SPELL_PET_BUBBLE_SHIELD:
+        case SPELL_PET_DISARMING_PINCER:
+        case SPELL_PET_PUMMEL:
+        case SPELL_PET_WARP:
+        case SPELL_PET_BURROW:
+        case SPELL_PET_LEAD_THE_HERD:
+        case SPELL_PET_SONIC_BLAST:
+        case SPELL_PET_SNATCH:
+        case SPELL_PET_GALE_BARRIER:
+        case SPELL_PET_BLINDING_FLASH:
+        case SPELL_PET_CHITINOUS_SHELL:
+        case SPELL_PET_SHED_SKIN:
+        case SPELL_PET_RESTORATIVE_SPORES:
+        case SPELL_PET_NETHER_PULSE:
+        case SPELL_PET_FROST_NOVA:
+        case SPELL_PET_SWARM_SHIELD:
         case SPELL_COWER:
-        case SPELL_DASH:
-        case SPELL_LAST_STAND:
-        case SPELL_BULLHEADED:
             return false;
         case SPELL_GROWL:
             return !bot->GetGroup();
