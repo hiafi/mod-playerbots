@@ -50,6 +50,12 @@ constexpr uint32 SPELL_DASH = 61684;
 constexpr uint32 SPELL_LAST_STAND = 53478;
 constexpr uint32 SPELL_BULLHEADED = 53490;
 constexpr uint32 SPELL_WEB_PULL = 201718;
+// hunter-pet-families F0: the finished kits' slot 3 utilities, manual for players (core SeatDefaultPetBar never turns
+// them on). Kept off until B1's data-driven classifier replaces this list.
+constexpr uint32 SPELL_PET_LICK_YOUR_WOUNDS = 201983;
+constexpr uint32 SPELL_PET_PROWL = 201984;
+constexpr uint32 SPELL_PET_TAIL_SWEEP = 201985;
+constexpr uint32 SPELL_PET_FRENZIED_REGENERATION = 201986;
 
 // Trap Launcher: traps are thrown, 30 yd
 constexpr float TRAP_RANGE = 30.0f;

@@ -51,6 +51,10 @@ bool HunterPetAutocastAction::IsAutocastWanted(Pet* pet, SpellInfo const* spellI
     switch (spellInfo->Id)
     {
         case SPELL_WEB_PULL:
+        case SPELL_PET_LICK_YOUR_WOUNDS:
+        case SPELL_PET_PROWL:
+        case SPELL_PET_TAIL_SWEEP:
+        case SPELL_PET_FRENZIED_REGENERATION:
         case SPELL_COWER:
         case SPELL_DASH:
         case SPELL_LAST_STAND:
