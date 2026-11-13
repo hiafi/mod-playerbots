@@ -52,7 +52,9 @@ void AutoMaintenanceOnLevelupAction::AutoTeleportForLevel()
 
 void AutoMaintenanceOnLevelupAction::AutoPickTalents()
 {
-    if (!sPlayerbotAIConfig.AutoPickTalents || !sRandomPlayerbotMgr.IsRandomBot(bot))
+    bool const isRandomBot = sRandomPlayerbotMgr.IsRandomBot(bot);
+    if (!(isRandomBot ? sPlayerbotAIConfig.AutoPickTalents
+                      : sPlayerbotAIConfig.AutoPickTalentsForPlayerControlledBots))
         return;
 
     if (bot->GetFreeTalentPoints() <= 0)
@@ -69,7 +71,7 @@ void AutoMaintenanceOnLevelupAction::AutoPickTalents()
     bool const firstWarriorPoint = bot->getClass() == CLASS_WARRIOR && noTalentPoints;
 
     PlayerbotFactory factory(bot, bot->GetLevel());
-    uint32 const specIndex = factory.InitTalentsTree(true, true, true);
+    uint32 const specIndex = factory.InitTalentsTree(true, true, isRandomBot);
     if (firstDeathKnightPoint || firstRoguePoint || firstWarriorPoint)
         sRandomPlayerbotMgr.SetValue(bot->GetGUID().GetCounter(), "specNo", specIndex + 1);
 

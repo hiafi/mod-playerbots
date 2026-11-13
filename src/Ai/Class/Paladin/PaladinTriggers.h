@@ -52,21 +52,6 @@ INTERRUPT_TRIGGER(RepentanceInterruptTrigger, "repentance");
 INTERRUPT_TRIGGER(RebukeInterruptSpellTrigger, "rebuke");
 INTERRUPT_HEALER_TRIGGER(RebukeOnEnemyHealerTrigger, "rebuke");
 
-class BlessingOnPartyTrigger : public BuffOnPartyTrigger
-{
-public:
-    BlessingOnPartyTrigger(PlayerbotAI* botAI)
-        : BuffOnPartyTrigger(botAI, "blessing of kings,blessing of might,blessing of wisdom", 4 * IN_MILLISECONDS) {}
-};
-
-class BlessingTrigger : public BuffTrigger
-{
-public:
-    BlessingTrigger(PlayerbotAI* botAI) : BuffTrigger(botAI, "blessing of sanctuary", 4 * IN_MILLISECONDS) {}
-
-    bool IsActive() override;
-};
-
 class HammerOfJusticeInterruptSpellTrigger : public InterruptSpellTrigger
 {
 public:
@@ -202,46 +187,6 @@ public:
         : BuffOnMainTankTrigger(botAI, "sacred shield", false) {}
 };
 
-class BlessingOfKingsOnPartyTrigger : public BlessingOnPartyTrigger
-{
-public:
-    BlessingOfKingsOnPartyTrigger(PlayerbotAI* botAI)
-        : BlessingOnPartyTrigger(botAI)
-    {
-        spell = "blessing of kings";
-    }
-};
-
-class BlessingOfWisdomOnPartyTrigger : public BlessingOnPartyTrigger
-{
-public:
-    BlessingOfWisdomOnPartyTrigger(PlayerbotAI* botAI)
-        : BlessingOnPartyTrigger(botAI)
-    {
-        spell = "blessing of might,blessing of wisdom";
-    }
-};
-
-class BlessingOfMightOnPartyTrigger : public BlessingOnPartyTrigger
-{
-public:
-    BlessingOfMightOnPartyTrigger(PlayerbotAI* botAI)
-        : BlessingOnPartyTrigger(botAI)
-    {
-        spell = "blessing of might,blessing of wisdom";
-    }
-};
-
-class BlessingOfSanctuaryOnPartyTrigger : public BlessingOnPartyTrigger
-{
-public:
-    BlessingOfSanctuaryOnPartyTrigger(PlayerbotAI* botAI)
-        : BlessingOnPartyTrigger(botAI)
-    {
-        spell = "blessing of sanctuary";
-    }
-};
-
 class HandOfFreedomOnPartyTrigger : public Trigger
 {
 public:
@@ -258,13 +203,14 @@ public:
     AvengingWrathTrigger(PlayerbotAI* botAI) : BoostTrigger(botAI, "avenging wrath") {}
 };
 
-class GreaterBlessingNeededTrigger : public Trigger
+class BlessingNeededTrigger : public Trigger
 {
 public:
-    GreaterBlessingNeededTrigger(PlayerbotAI* botAI)
-        : Trigger(botAI, "greater blessing needed", 4) {}
+    BlessingNeededTrigger(PlayerbotAI* botAI)
+        : Trigger(botAI, "blessing needed", 4) {}
 
-    bool IsActive() override;
+    bool IsBuffTrigger() override { return true; }
+    bool IsActive() override { return true; }
 };
 
 #endif
