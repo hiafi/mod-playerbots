@@ -4644,6 +4644,47 @@ void PlayerbotFactory::InitFood()
     }
 }
 
+// Rework: the group buffs are single-rank on this server and several carry no reagent; stock exactly what each known
+// one costs (a level-60 priest's Prayer of Fortitude 21562 takes Holy Candles, which the level table stops at 60)
+static void AddGroupBuffReagents(Player* bot, std::vector<std::pair<uint32, uint32>>& items)
+{
+    static constexpr uint32 GROUP_BUFF_FIRST_RANKS[] = {
+        21849,  // Gift of the Wild
+        23028,  // Arcane Brilliance
+        21562,  // Prayer of Fortitude
+        27681,  // Prayer of Spirit
+        27683,  // Prayer of Shadow Protection
+        25782,  // Greater Blessing of Might
+        25894,  // Greater Blessing of Wisdom
+        25898,  // Greater Blessing of Kings
+        25899   // Greater Blessing of Sanctuary
+    };
+    constexpr uint32 REAGENT_STOCK = 20;
+
+    for (uint32 const firstRank : GROUP_BUFF_FIRST_RANKS)
+    {
+        for (SpellInfo const* rank = sSpellMgr->GetSpellInfo(firstRank); rank; rank = rank->GetNextRankSpell())
+        {
+            if (!bot->HasSpell(rank->Id))
+                continue;
+
+            for (uint8 i = 0; i < MAX_SPELL_REAGENTS; ++i)
+            {
+                if (rank->Reagent[i] <= 0 || !rank->ReagentCount[i])
+                    continue;
+
+                uint32 const itemId = uint32(rank->Reagent[i]);
+                auto const stocked = std::find_if(items.begin(), items.end(),
+                    [itemId](std::pair<uint32, uint32> const& item) { return item.first == itemId; });
+                if (stocked == items.end())
+                    items.push_back({itemId, REAGENT_STOCK});
+                else
+                    stocked->second = std::max(stocked->second, REAGENT_STOCK);
+            }
+        }
+    }
+}
+
 void PlayerbotFactory::InitReagents()
 {
     std::vector<std::pair<uint32, uint32>> items;
@@ -4758,6 +4799,7 @@ void PlayerbotFactory::InitReagents()
         default:
             break;
     }
+    AddGroupBuffReagents(bot, items);
     for (std::pair item : items)
     {
         int count = (int)item.second - (int)bot->GetItemCount(item.first);
