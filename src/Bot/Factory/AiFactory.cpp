@@ -563,20 +563,14 @@ void AiFactory::AddDefaultNonCombatStrategies(Player* player, PlayerbotAI* const
             break;
         case CLASS_PALADIN:
             if (tab == PALADIN_TAB_PROTECTION)
-            {
                 nonCombatEngine->addStrategiesNoInit("bthreat", "tank assist", "pull", "barmor", nullptr);
-                if (player->GetLevel() >= 20)
-                    nonCombatEngine->addStrategy("bsanc", false);
-                else
-                    nonCombatEngine->addStrategy("bmight", false);
-            }
-            // Rework: the Shockadin build buffs like Ret, but with Wisdom for its mana
+            // Rework: the Shockadin build buffs like Ret (blessings come from the shared "cast blessing" planner)
             else if (tab == PALADIN_TAB_HOLY && ai::paladin_rework::IsShockadinBuild(player))
-                nonCombatEngine->addStrategiesNoInit("dps assist", "bwisdom", "baoe", nullptr);
+                nonCombatEngine->addStrategiesNoInit("dps assist", "baoe", nullptr);
             else if (tab == PALADIN_TAB_HOLY)
-                nonCombatEngine->addStrategiesNoInit("dps assist", "bwisdom", "bcast", nullptr);
+                nonCombatEngine->addStrategiesNoInit("dps assist", "bcast", nullptr);
             else
-                nonCombatEngine->addStrategiesNoInit("dps assist", "bmight", "baoe", nullptr);
+                nonCombatEngine->addStrategiesNoInit("dps assist", "baoe", nullptr);
 
             nonCombatEngine->addStrategiesNoInit("cure", nullptr);
             break;
