@@ -113,14 +113,17 @@ rows:
     when: >-
       known(47540) and aura(self, 200159, own) and cooldown(47540) == 0 and value("heal cluster count::10,90") >= 2
       and in_range("heal cluster unit::10,90", 30) and not moving(self)
-    relevance: normal + 7.5
+    relevance: normal + 8.65
 
-  # 10: Penance on the tank-first target under 75%, within 30 yd
-  - do: disc penance::75,75
+  # 10: Penance on cooldown: the tank-first target under 90%, within 30 yd. Both Penance rows sit above the two
+  # Power Word: Shield rows (8.5 / 8.0) so Penance goes out whenever it is ready (balance round 2 on the Normal-tier
+  # kits, 2026-11-15: it was cast 6 times in 120 s against a 12 s cooldown); the Empowered Penance cluster row stays
+  # just above this one.
+  - do: disc penance::90,90
     when: >-
-      known(47540) and cooldown(47540) == 0 and health_pct("tank first heal target::75,75") < 75
-      and in_range("tank first heal target::75,75", 30) and not moving(self)
-    relevance: normal + 7.0
+      known(47540) and cooldown(47540) == 0 and health_pct("tank first heal target::90,90") < 90
+      and in_range("tank first heal target::90,90", 30) and not moving(self)
+    relevance: normal + 8.6
 
   # 11: Greater Heal under 85% while Borrowed Time or Copious Power is up
   - do: priest greater heal::85,85
