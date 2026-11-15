@@ -105,9 +105,12 @@ rows:
   - do: frost fingers cap ice lance
     when: single and stacks(self, 74396) >= 2
     relevance: normal + 6.0
-  # The gap filler while Icicles are capped and Flurry is not ready: Ice Lance stalls the bar without waste
+  # Any Fingers of Frost charge is spent on Ice Lance instead of Frostbolt (balance on the Normal-tier kits,
+  # 2026-11-15), in either mode: the row sits above Frostbolt (1.0) and below every Flurry / Spike / Brain Freeze /
+  # cap row, so those keep their priority. It used to be the gap filler only (Icicles capped, Flurry on a 2 s+
+  # cooldown), where the lance also stalls the bar without waste.
   - do: frost fingers ice lance
-    when: single and icicles_full and cooldown(200004) > 2000 and stacks(self, 74396) >= 1
+    when: target_alive and stacks(self, 74396) >= 1
     relevance: normal + 5.5
   # No Fingers of Frost to spend: release the Spike un-shattered rather than idle
   - do: frost glacial spike
