@@ -52,6 +52,7 @@ constexpr char PACK_REND[] = "arms pack rend";
 constexpr char PACK_WHIRLWIND[] = "arms pack whirlwind";
 constexpr char PACK_BLADESTORM[] = "arms pack bladestorm";
 constexpr char PACK_EXECUTE[] = "arms pack execute";
+constexpr char PACK_CLEAVE[] = "arms pack cleave";
 constexpr char AVATAR[] = "arms avatar";
 constexpr char SWEEPING_STRIKES[] = "arms sweeping strikes";
 constexpr char SKULL_BANNER[] = "arms skull banner";
@@ -94,6 +95,8 @@ WarriorArmsActionFactory::WarriorArmsActionFactory()
     creators[PACK_SLAM] = &MakeOnTarget<SPELL_WARRIOR_SLAM, PACK_SLAM>;
     creators[PACK_REND] = &MakeOnTarget<SPELL_WARRIOR_REND, PACK_REND>;
     creators[PACK_WHIRLWIND] = &MakeOnTarget<SPELL_WARRIOR_WHIRLWIND, PACK_WHIRLWIND>;
+    // Cleave (baseline, learned at 14) outside a Sweeping Strikes window: an instant strike on the target and 1 more
+    creators[PACK_CLEAVE] = &MakeOnTarget<SPELL_WARRIOR_CLEAVE, PACK_CLEAVE>;
     creators[PACK_BLADESTORM] = &MakeSelf<SPELL_WARRIOR_BLADESTORM, PACK_BLADESTORM>;
     // Execute on any enemy in melee that is in the execute phase, not only the current target: the row's qualifier is
     // "percent,yards,melee" of the value ("arms pack execute::20,5,1": the 1 also tests the bot's melee range)
