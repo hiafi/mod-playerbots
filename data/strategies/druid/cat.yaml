@@ -72,15 +72,23 @@ conditions:
   berserking: aura(self, 50334)
   # the target's own bleed (Rip or Primal Wrath, one bleed per druid) is missing or under 2 s
   rip_due: remaining(target, "1079,200472", own) < 2000
-  # Primal Wrath in a pack (AoE round 3): the aoe toggle on, 5 combo points, 3 or more enemies around the target (the
-  # target counts itself; the bleed reaches 8 yd from the bot, and the bot stands in melee of the target), no unpulled
-  # enemy in that blast, the target's own bleed not due (Rip takes it then), and an engaged enemy other than the target
-  # within 8 yd that lacks the bot's bleed or has under 2 s of it and should live 4 s more (two ticks), so a pack that
-  # is already bleeding gets Ferocious Bite instead
+  # Primal Wrath in a pack (AoE round 3; follow-up 2 refresh window): the pack gate below, 5 combo points, the
+  # target's own bleed not due (Rip takes it then), and a bleed to refresh: the target's bleed under 4 s, or an engaged
+  # enemy other than the target within 8 yd that lacks the bot's bleed or has under 4 s of it and should live 4 s more
+  # (two ticks). 4 s, not 2 (follow-up 2): combo points, not the bleed, limit Primal Wrath (3 casts a minute against
+  # the 5 a 12 s bleed needs), so refreshing two ticks early costs little and keeps the pack bleeding between casts;
+  # a later refresh lets ticks lapse while the points wait for energy
   pack_wrath: >-
-    value("cat aoe enabled") and known(200472) and alive(target) and cp >= 5 and enemies_near_target(8) >= 3
-    and value("unsafe aoe units::8") == 0 and not rip_due
-    and alive("attacker without aura id::200472,1079;1;2000;4;8;notarget")
+    pack_finish and alive(target) and cp >= 5 and not rip_due
+    and (remaining(target, "1079,200472", own) < 4000
+         or alive("attacker without aura id::200472,1079;1;4000;4;8;notarget"))
+  # The Primal Wrath pack gate (AoE round 3 follow-up 2, 2026-11-16): the aoe toggle on, Primal Wrath known, 3 or more
+  # enemies around the target, no unpulled enemy in the blast. Ferocious Bite stands down only while Primal Wrath has a
+  # bleed to refresh (`not pack_wrath`), not for the whole pack: with Bite off in packs (Bite standing down on
+  # `pack_finish`) the bot either refreshed live bleeds early or sat at 5 points with energy capping, 5 targets 2,220
+  # and 3 targets 1,560 against 2,471 / 1,669 for this rule (FeralCatSim, 60 s x 5, 2026-11-16)
+  pack_finish: >-
+    value("cat aoe enabled") and known(200472) and enemies_near_target(8) >= 3 and value("unsafe aoe units::8") == 0
   # Skull Bash 200605 is ready and the bot is in Cat Form
   skull_bash_ok: known(200605) and cooldown(200605) == 0 and in_cat
 rows:
@@ -162,7 +170,8 @@ rows:
   - do: cat primal wrath
     when: pack_wrath
     relevance: normal + 8.6
-  # 2, 3: five combo points go into Rip, or into Ferocious Bite while the target's bleed has 2 s or more left
+  # 2, 3: five combo points go into Rip, or into Ferocious Bite while the target's bleed has 2 s or more left and
+  # (follow-up 2) no bleed in the pack is inside Primal Wrath's 4 s refresh window
   - do: cat rip
     when: known(1079) and alive(target) and cp >= 5 and rip_due
     relevance: normal + 8.5
