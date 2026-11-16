@@ -3,8 +3,9 @@
 # `warrior/arms-pack`). The single target list, the off-the-GCD buttons (Death Wish, Recklessness, ...) and the setup
 # rows are the `warrior/fury` document. A pack is 3 or more enemies in combat within 8 yd while the bot has the "aoe"
 # strategy (`co -aoe` turns it off and the single list plays at any count) and Cleave is learned (14). With exactly 2
-# enemies the single list plays with Cleave swapped in. No Blood Rush assumption: slot 1.4 does not take it, so the
-# Rampage rows read the auras (`free_rampage`) and nothing else.
+# enemies the single list plays with Cleave swapped in. The Rampage rows read the auras (`free_rampage`) and assume
+# nothing about Blood Rush: slot 1.4 took none until AoE round 3 (2026-11-16, user ruling), whose build takes Blood
+# Rush 2/2 (the raid build's), and the same rows serve both.
 #
 # Bands: normal + 9.9 .. 9.5, one 0.05 step per guide line (above the single list, which a pack never plays). Actions
 # are the pack twins "fury pack ..." (RowCheckedAction casts by spell id). Rows that queue the same name merge into one

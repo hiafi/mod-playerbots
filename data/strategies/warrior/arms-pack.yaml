@@ -8,11 +8,15 @@
 # Bands: normal + 9.9 .. 9.4, one 0.05 step per guide line (above the single list, which a pack never plays).
 # Actions are the pack twins "arms pack ..." (RowCheckedAction casts by spell id). Rows that queue the same name merge
 # into one basket that re-checks only the first row, so the guide lines that repeat get a `::tag`: Colossus Smash 2/8
-# (`sweep`, `plain`), Overpower 5/9, Slam 6/10. Pooling: every spender but Mortal Strike carries the soft gate
-# `pool_N` = (rage >= 25 + cost) or Mortal Strike is not coming within 1.5 s, and (rage >= 20 + cost) or Colossus
-# Smash is not coming within 1.5 s (arms.yaml header); Slam with Momentum's free charge skips it. Every row is
-# `known()`-gated (the strategy is picked by the Arms tab, which includes level < 10 and warriors with no points).
-# See arms.yaml for the spell ids.
+# (`sweep`, `plain`), Overpower 5/9, Slam 6/10, Whirlwind 7 and the 4+ enemy row 2b (`plain`, `open`). Pooling: every
+# spender but Mortal Strike carries the soft gate `pool_N` = (rage >= 25 + cost) or Mortal Strike is not coming within
+# 1.5 s, and (rage >= 20 + cost) or Colossus Smash is not coming within 1.5 s (arms.yaml header); Slam with Momentum's
+# free charge skips it. Every row is `known()`-gated (the strategy is picked by the Arms tab, which includes level <
+# 10 and warriors with no points). AoE round 3 (2026-11-16, user ruling: every DPS spec about 2,500-2,800 at 5
+# targets): the `open` Whirlwind row sits above Mortal Strike at 4 or more enemies while Sweeping Strikes is down (it
+# is down about 30% of the time), on the loose gate `pool_5`: at 4+ enemies Whirlwind is 110-170 damage per rage
+# against Mortal Strike's 48, so the rage goes there while the cleave window is closed, and Sweeping Strikes (20 s
+# cooldown) opens the next window. See arms.yaml for the spell ids.
 strategy: warrior/arms-pack
 class: warrior
 conditions:
@@ -53,6 +57,13 @@ rows:
   - do: arms pack colossus smash::sweep
     when: pack and sweeping_up and smash_ready and smash_open
     relevance: normal + 9.85
+  # 2b. Whirlwind at 4 or more enemies while Sweeping Strikes is down, above Mortal Strike on the loose gate pool_5
+  # (AoE round 3). The 3-enemy pack and a Sweeping window keep line 7's tighter gate (pool_25).
+  - do: arms pack whirlwind::open
+    when: >-
+      pack and not sweeping_up and enemies_within(8) >= 4 and known(1680) and cooldown(1680) == 0 and alive(target)
+      and pool_5
+    relevance: normal + 9.82
   # 3. Mortal Strike (no soft gate: it is what the gate protects)
   - do: arms pack mortal strike
     when: pack and known(12294) and cooldown(12294) == 0 and alive(target)
@@ -75,7 +86,7 @@ rows:
       and (pool_15 or momentum_up)
     relevance: normal + 9.65
   # 7. Whirlwind
-  - do: arms pack whirlwind
+  - do: arms pack whirlwind::plain
     when: pack and known(1680) and cooldown(1680) == 0 and alive(target) and pool_25
     relevance: normal + 9.6
   # 8. Colossus Smash

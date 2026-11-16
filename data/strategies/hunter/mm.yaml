@@ -153,9 +153,11 @@ rows:
     when: >-
       pack and aimed_ready and can_aim and trick_buff and value("hunter mm marked near target::8") >= 1
     relevance: normal + 8.6
+  # Volley at 3+ enemies within 8 yd of the target, was 4+ (2026-11-16, AoE round 3 on the Normal-tier kits, user ruling:
+  # Marksmanship option A; the 4+ gate left a 3-enemy pack with no Volley, 3T 974 against 1T 965)
   - do: hunter mm volley
     when: >-
-      pack and known(1510) and not channeling(1510) and enemies_near_target(8) >= 4 and not moving(self)
+      pack and known(1510) and not channeling(1510) and enemies_near_target(8) >= 3 and not moving(self)
       and (not known(19434) or cooldown(19434) > 3000) and mana(self) > 30 and safe_aoe
     relevance: normal + 8.4
   - do: hunter mm chimera shot::pack

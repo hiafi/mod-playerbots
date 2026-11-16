@@ -19,8 +19,15 @@
 # "attacker without aura id" picks; PlayerbotAI::CastSpell selects that unit for the cast and restores the selection
 # afterwards, and the druid's combo points follow the selection (ComboPointMechanics.cpp), so the point a secondary
 # Rake awards ends on the current target. Swipe (Cat) awards its point on the target only.
+# AoE round 3 (2026-11-16, user ruling: Primal Wrath baseline, "We need an AoE finisher for them to feel complete"): the
+# pack finisher. `cat primal wrath` at 5 combo points with 3 or more enemies around the target puts a Rip-shaped bleed
+# (1.3x Rip's tick) on every enemy within 8 yd of the bot, above Rip and Ferocious Bite while it holds. Rip stays the
+# single-target finisher: below 3 enemies Primal Wrath never fires, and while the target's own bleed is due Rip goes on
+# the target first. Rip and Primal Wrath are one bleed per druid (spell_group 1306, the newest replaces the other), so
+# every "the target's Rip" check reads both ids ("1079,200472"); at one target only 1079 is ever there.
 # Spell ids: Cat Form 768, Swipe (Cat) 62078, Predator's Swiftness 69369, Barkskin 22812, Feral Charge - Cat 49376,
-# Ravage 6785 (its free cast is the Stampede buff 200434), Berserk 50334, Tiger's Fury 5217, Rip 1079, Rake 1822,
+# Ravage 6785 (its free cast is the Stampede buff 200434), Berserk 50334, Tiger's Fury 5217, Rip 1079, Primal Wrath
+# 200472, Rake 1822,
 # Ferocious Bite 22568, Mangle (Cat) 33876 (the debuff on the target is the spell itself, 33878 is the Bear's; 46856
 # and 46857 are Trauma), Skull Bash 200605.
 strategy: druid/cat
@@ -50,6 +57,17 @@ conditions:
     value("cat aoe enabled") and known(62078) and alive(target) and cp < 5 and enemies_near_target(10) >= 2
     and value("unsafe aoe units::10") == 0 and not mangle_due and not rake_due
   berserking: aura(self, 50334)
+  # the target's own bleed (Rip or Primal Wrath, one bleed per druid) is missing or under 2 s
+  rip_due: remaining(target, "1079,200472", own) < 2000
+  # Primal Wrath in a pack (AoE round 3): the aoe toggle on, 5 combo points, 3 or more enemies around the target (the
+  # target counts itself; the bleed reaches 8 yd from the bot, and the bot stands in melee of the target), no unpulled
+  # enemy in that blast, the target's own bleed not due (Rip takes it then), and an engaged enemy other than the target
+  # within 8 yd that lacks the bot's bleed or has under 2 s of it and should live 4 s more (two ticks), so a pack that
+  # is already bleeding gets Ferocious Bite instead
+  pack_wrath: >-
+    value("cat aoe enabled") and known(200472) and alive(target) and cp >= 5 and enemies_near_target(8) >= 3
+    and value("unsafe aoe units::8") == 0 and not rip_due
+    and alive("attacker without aura id::200472,1079;1;2000;4;8;notarget")
   # Skull Bash 200605 is ready and the bot is in Cat Form
   skull_bash_ok: known(200605) and cooldown(200605) == 0 and in_cat
 rows:
@@ -107,10 +125,10 @@ rows:
     when: known(6785) and alive(target) and aura(self, 200434, own)
     relevance: normal + 9.9
 
-  # G1: Berserk once Rip and Rake are both up
+  # G1: Berserk once Rip (or Primal Wrath's bleed) and Rake are both up
   - do: cat berserk
     when: >-
-      known(50334) and cooldown(50334) == 0 and alive(target) and aura(target, 1079, own)
+      known(50334) and cooldown(50334) == 0 and alive(target) and aura(target, "1079,200472", own)
       and aura(target, 1822, own)
     relevance: normal + 9.8
 
@@ -124,12 +142,19 @@ rows:
     when: alive(target) and mangle_due and cp < 5
     relevance: normal + 9.0
 
-  # 2, 3: five combo points go into Rip, or into Ferocious Bite while Rip has 2 s or more left
+  # 2a (AoE round 3): Primal Wrath, the pack finisher, above Rip and Ferocious Bite. It never fires while the target's
+  # own bleed is due (`not rip_due`), so Rip keeps the target and Primal Wrath spreads the bleed to the rest of the
+  # pack; it replaces the target's Rip with its own (stronger) bleed. 50 energy (41 with Predatory Strikes): an
+  # energy-starved Primal Wrath waits, and `cp < 5` keeps every builder from spending the energy meanwhile
+  - do: cat primal wrath
+    when: pack_wrath
+    relevance: normal + 8.6
+  # 2, 3: five combo points go into Rip, or into Ferocious Bite while the target's bleed has 2 s or more left
   - do: cat rip
-    when: known(1079) and alive(target) and cp >= 5 and remaining(target, 1079, own) < 2000
+    when: known(1079) and alive(target) and cp >= 5 and rip_due
     relevance: normal + 8.5
   - do: cat ferocious bite
-    when: known(22568) and alive(target) and cp >= 5 and remaining(target, 1079, own) >= 2000
+    when: known(22568) and alive(target) and cp >= 5 and not rip_due and not pack_wrath
     relevance: normal + 8.0
 
   # 4, 5, 6: the builders. `cp < 5` stops a builder from wasting a point while a finisher waits for energy: an

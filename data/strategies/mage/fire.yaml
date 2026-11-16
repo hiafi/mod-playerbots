@@ -78,6 +78,22 @@ rows:
   - do: mage dragon's breath
     when: pack and known(31661) and cooldown(31661) == 0 and safe_self_10
     relevance: normal + 8.5
+  # Firestarter (the 54741 buff, from the AoE build's (8,0) talent) after a Blast Wave, Dragon's Breath or Meteor: the
+  # next Flamestrike is instant, free and +30% direct. Cast it at once on a pack of 4+ (no dynobj gate: the point is
+  # a Flamestrike per proc). Needs the aura, so a build without the talent never reaches this row; the stock C++
+  # "firestarter" trigger (flamestrike at 40, no enemy count, no X11 gate) is not registered on the rework "aoe"
+  # strategy, so this row is the only Firestarter consumer. Added 2026-11-16 (AoE round 3 on the Normal-tier kits,
+  # user ruling: Fire AoE build, Blast Wave 1/1 + Firestarter 2/2).
+  - do: mage flamestrike
+    when: >-
+      pack and aura(self, 54741) and known(2120) and value("most clustered enemy count::5") >= 4
+      and safe_cluster_5
+    relevance: normal + 8.8
+  # Blast Wave (11113, self-centred 10 yd, 30 s cooldown, talent (4,2)): just under Dragon's Breath, both feed
+  # Firestarter. Known only with the talent, so the raid build never casts it.
+  - do: blast wave
+    when: pack and known(11113) and cooldown(11113) == 0 and safe_self_10
+    relevance: normal + 8.4
   - do: mage meteor
     when: pack and meteor_ready and safe_cluster_8
     relevance: normal + 8.0
