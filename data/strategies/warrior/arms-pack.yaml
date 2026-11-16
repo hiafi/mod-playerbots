@@ -16,16 +16,7 @@
 # targets): the `open` Whirlwind row sits above Mortal Strike at 4 or more enemies while Sweeping Strikes is down (it
 # is down about 30% of the time), on the loose gate `pool_5`: at 4+ enemies Whirlwind is 110-170 damage per rage
 # against Mortal Strike's 48, so the rage goes there while the cleave window is closed, and Sweeping Strikes (20 s
-# cooldown) opens the next window.
-#
-# Follow-up (2026-11-16, AoE round 3 follow-up on the Normal-tier kits, user ruling: a Cleave row for when Sweeping
-# Strikes is down): line 12 `arms pack cleave` (Cleave 845, baseline at 14, an instant GCD strike on the target and 1
-# more) plays at 2 or more enemies within 8 yd while Sweeping Strikes is down and on cooldown (`cleave_ok`: not the
-# `pack` condition, so it also plays at exactly 2 enemies, where the single list plays too, and it needs Sweeping
-# Strikes learned for the cooldown read). It sits last, under Execute, on `pool_20` (its cost): the rage Mortal Strike
-# and Colossus Smash need is never spent on it and every other spender goes first. Sweeping Strikes never cast (2
-# normal enemies: the single list casts it only on two long-lived ones) leaves the cooldown at 0 and the row silent.
-# See arms.yaml for the spell ids.
+# cooldown) opens the next window. See arms.yaml for the spell ids.
 strategy: warrior/arms-pack
 class: warrior
 conditions:
@@ -56,11 +47,6 @@ conditions:
   big_pack: known(204493) and value("warrior aoe enabled") and enemies_within(8) >= 5
   avatar_gate: not known(204492) or cooldown(204492) > 30000 or not (boss_like or big_pack)
   smash_open: not window or remaining(target, 204491, own) < 1500
-  # Cleave outside a Sweeping Strikes window: 2 or more enemies in combat within 8 yd, Sweeping Strikes learned (so the
-  # cooldown() read is meaningful), down and on cooldown (845 = Cleave)
-  cleave_ok: >-
-    known(845) and known(204493) and value("warrior aoe enabled") and enemies_within(8) >= 2
-    and not sweeping_up and cooldown(204493) > 0
 rows:
   # 1. Rend while Sweeping Strikes is active and Rend is low or missing. The guide's "or Rend low" clause is dropped
   # as ambiguous: "not bleeding from this Rend" is already part of rend_low.
@@ -123,8 +109,3 @@ rows:
     when: >-
       pack and known(5308) and rage >= 30 and pool_30 and alive("lowest health attacker below::20,5,1")
     relevance: normal + 9.4
-  # 12. Cleave while Sweeping Strikes is down and on cooldown, 2 or more enemies (AoE round 3 follow-up): about 95
-  # damage per rage on 2 targets against Mortal Strike's 48; pool_20 keeps the rage of Mortal Strike and Colossus Smash
-  - do: arms pack cleave
-    when: cleave_ok and alive(target) and pool_20
-    relevance: normal + 9.35
