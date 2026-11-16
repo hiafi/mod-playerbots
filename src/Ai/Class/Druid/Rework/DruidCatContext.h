@@ -8,6 +8,7 @@
 #define PLAYERBOTS_DRUIDCATCONTEXT_H
 
 #include "NamedObjectContext.h"
+#include "Value.h"
 // The strategy classes too, so DruidAiObjectContext.cpp needs one include for the whole Cat rework
 #include "DruidReworkCatStrategy.h"
 
@@ -23,6 +24,22 @@ class DruidCatActionFactory : public NamedObjectContext<Action>
 {
 public:
     DruidCatActionFactory();
+};
+
+// Whether the bot has the "aoe" strategy on in combat. The YAML pack rows (Rake on every enemy) need it, and strategy
+// state is only readable from C++.
+class CatAoeEnabledValue : public BoolCalculatedValue
+{
+public:
+    CatAoeEnabledValue(PlayerbotAI* botAI) : BoolCalculatedValue(botAI, "cat aoe enabled") {}
+
+    bool Calculate() override;
+};
+
+class DruidCatValueFactory : public NamedObjectContext<UntypedValue>
+{
+public:
+    DruidCatValueFactory();
 };
 
 #endif

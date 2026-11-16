@@ -48,6 +48,7 @@ constexpr char COWER[] = "cower";
 constexpr char SKULL_BASH[] = "skull bash";
 
 constexpr char TANK_FIRST_HEAL_TARGET[] = "tank first heal target";
+constexpr char ATTACKER_WITHOUT_AURA_ID[] = "attacker without aura id";
 
 Action* MakeFeralCharge(PlayerbotAI* botAI) { return new RowCheckedAction<CastSpellAction>(botAI, FERAL_CHARGE_CAT); }
 
@@ -80,6 +81,10 @@ DruidCatActionFactory::DruidCatActionFactory()
     creators["cat ferocious bite"] = &MakeMelee<FEROCIOUS_BITE>;
     creators["cat rake"] = &MakeMelee<RAKE>;
     creators["cat shred"] = &MakeMelee<SHRED>;
+    // AoE round 1 (2026-11-15): Rake on every other enemy within reach. The unit comes from "attacker without aura id"
+    // with the row's `do:` qualifier ("cat pack rake::1822;1;3000;6;5;notarget,free"); it is not the current target, so
+    // the melee action's reach check on the current target does not apply and the cast checks the reach itself
+    creators["cat pack rake"] = &MakeOnValue<RAKE, ATTACKER_WITHOUT_AURA_ID>;
     creators["cat mangle"] = &MakeMelee<MANGLE_CAT>;
 
     // The interrupt (dungeon-prereqs S5): Skull Bash on the casting target or on a casting enemy healer
@@ -88,4 +93,11 @@ DruidCatActionFactory::DruidCatActionFactory()
 
     // Offheal: Regrowth on the tank-first heal target; the qualifier is "tankPct,otherPct"
     creators["cat offheal regrowth"] = &MakeOnValue<REGROWTH, TANK_FIRST_HEAL_TARGET>;
+}
+
+bool CatAoeEnabledValue::Calculate() { return botAI->HasStrategy("aoe", BOT_STATE_COMBAT); }
+
+DruidCatValueFactory::DruidCatValueFactory()
+{
+    creators["cat aoe enabled"] = [](PlayerbotAI* botAI) -> UntypedValue* { return new CatAoeEnabledValue(botAI); };
 }

@@ -11,6 +11,12 @@
 # Every spell a bot may not know yet carries `known()`: `cooldown()` of an unknown spell reads 0.
 # Combo points, energy and position are plain values: `value("combo::current target")` (0 unless the combo target is the
 # current target), `value("energy::self target")` (absolute energy) and `value("behind::current target")`.
+# AoE round 1 (2026-11-15, user ruling: "put dots on everything"): the Cat has no AoE button at level 60 (Swipe (Cat)
+# 62078 is learned at 71, Thrash is Bear only), so the pack list is one row, Rake on every other engaged enemy within
+# melee reach (`cat pack rake`). Rip and the other finishers stay on the current target: combo points are spent per
+# target. The bot casts Rake on the unit "attacker without aura id" picks; PlayerbotAI::CastSpell selects that unit
+# for the cast and restores the selection afterwards, and the druid's combo points follow the selection
+# (ComboPointMechanics.cpp), so the point a secondary Rake awards ends on the current target.
 # Spell ids: Cat Form 768, Predator's Swiftness 69369, Barkskin 22812, Feral Charge - Cat 49376, Ravage 6785 (its free
 # cast is the Stampede buff 200434), Berserk 50334, Tiger's Fury 5217, Rip 1079, Rake 1822, Ferocious Bite 22568, Mangle
 # (Cat) 33876 (the debuff on the target is the spell itself, 33878 is the Bear's; 46856 and 46857 are Trauma), Skull
@@ -27,6 +33,12 @@ conditions:
   # the Mangle debuff is wanted / Rake is wanted; known() keeps a low-level bot from waiting on a spell it lacks
   mangle_due: known(33876) and not mangled
   rake_due: known(1822) and remaining(target, 1822, own) < 3000
+  # Rake on every other enemy (AoE round 1): the aoe toggle on, the primary target's Mangle debuff and Rake settled
+  # (a secondary Rake never takes the energy of those rows), and a builder only while the combo points have room
+  # (cp < 5, like the other builders: the Rake's point would be wasted at five). The Rake is the cheapest builder, so
+  # an energy-starved Rake never lets Shred or Mangle starve it.
+  pack_rake: >-
+    value("cat aoe enabled") and known(1822) and alive(target) and cp < 5 and not mangle_due and not rake_due
   berserking: aura(self, 50334)
   # Skull Bash 200605 is ready and the bot is in Cat Form
   skull_bash_ok: known(200605) and cooldown(200605) == 0 and in_cat
@@ -118,6 +130,13 @@ rows:
   - do: cat rake
     when: alive(target) and cp < 5 and rake_due and not mangle_due
     relevance: normal + 7.5
+  # 4b (AoE round 1): Rake on an engaged enemy other than the target that lacks the bot's Rake or has under 3 s of it
+  # left, within 5 yd, expected to live 6 s (two ticks of the 9 s bleed), not stunned or otherwise controlled.
+  # Between the primary target's Rake (7.5) and Shred (7.0). The `do:` qualifier and the unit qualifier in `when:` are
+  # the same literal
+  - do: cat pack rake::1822;1;3000;6;5;notarget,free
+    when: pack_rake and alive("attacker without aura id::1822;1;3000;6;5;notarget,free")
+    relevance: normal + 7.25
   - do: cat shred
     when: alive(target) and cp < 5 and behind and not mangle_due and not rake_due
     relevance: normal + 7.0
