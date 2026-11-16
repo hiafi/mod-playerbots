@@ -13,11 +13,12 @@
 # current target), `value("energy::self target")` (absolute energy) and `value("behind::current target")`.
 # AoE round 1 (2026-11-15, user ruling: "put dots on everything", then Swipe (Cat) moved from level 71 to 38): the pack
 # list is two rows. `cat pack rake`: Rake on every other engaged enemy within melee reach. `cat swipe`: Swipe (Cat) on
-# the target while 2 or more enemies are around it, in place of Shred and Mangle. Rip, Ferocious Bite and the Mangle
+# the target while 2 or more enemies are around it, in place of Shred and Mangle (AoE round 2, 2026-11-15, user ruling:
+# Swipe awards 1 combo point on the target, so it is the pack builder). Rip, Ferocious Bite and the Mangle
 # debuff stay on the current target: combo points are spent per target. The bot casts the pack Rake on the unit
 # "attacker without aura id" picks; PlayerbotAI::CastSpell selects that unit for the cast and restores the selection
 # afterwards, and the druid's combo points follow the selection (ComboPointMechanics.cpp), so the point a secondary
-# Rake awards ends on the current target. Swipe (Cat) awards no combo point.
+# Rake awards ends on the current target. Swipe (Cat) awards its point on the target only.
 # Spell ids: Cat Form 768, Swipe (Cat) 62078, Predator's Swiftness 69369, Barkskin 22812, Feral Charge - Cat 49376,
 # Ravage 6785 (its free cast is the Stampede buff 200434), Berserk 50334, Tiger's Fury 5217, Rip 1079, Rake 1822,
 # Ferocious Bite 22568, Mangle (Cat) 33876 (the debuff on the target is the spell itself, 33878 is the Bear's; 46856
@@ -40,11 +41,13 @@ conditions:
   # an energy-starved Rake never lets Shred or Mangle starve it.
   pack_rake: >-
     value("cat aoe enabled") and known(1822) and alive(target) and cp < 5 and not mangle_due and not rake_due
-  # Swipe (Cat) in a pack (AoE round 1): the aoe toggle on, the target's Mangle debuff and Rake settled (Swipe is a
-  # filler: the upkeep rows and the secondary Rakes go first), 2 or more enemies around the target (the target counts
-  # itself; Swipe chains to the enemies within 10 yd) and no unpulled enemy in that blast
+  # Swipe (Cat) in a pack (AoE round 1, builder since round 2): the aoe toggle on, the target's Mangle debuff and Rake
+  # settled (the upkeep rows and the secondary Rakes go first), 2 or more enemies around the target (the target counts
+  # itself; Swipe chains to the enemies within 10 yd), no unpulled enemy in that blast, and a builder only while the
+  # combo points have room (`cp < 5`, like Shred). The Shred and Mangle builder rows carry `not pack_swipe`, so in a
+  # pack the energy pools for Swipe (40 energy against Shred's 25)
   pack_swipe: >-
-    value("cat aoe enabled") and known(62078) and alive(target) and enemies_near_target(10) >= 2
+    value("cat aoe enabled") and known(62078) and alive(target) and cp < 5 and enemies_near_target(10) >= 2
     and value("unsafe aoe units::10") == 0 and not mangle_due and not rake_due
   berserking: aura(self, 50334)
   # Skull Bash 200605 is ready and the bot is in Cat Form
@@ -146,17 +149,17 @@ rows:
   - do: cat pack rake::1822;1;3000;6;3;nearest,notarget,free
     when: pack_rake and alive("attacker without aura id::1822;1;3000;6;3;nearest,notarget,free")
     relevance: normal + 7.25
-  # 4c (AoE round 1): Swipe (Cat) in a pack, above Shred and Mangle so the filler energy goes into the AoE hit. It
-  # needs no `cp < 5`: it awards no point, and the finisher rows above it (Rip 30, Ferocious Bite 35 energy) cost
-  # less than its 40 (50 less Ferocity), so an energy-starved finisher is never starved by it
+  # 4c (AoE round 2): Swipe (Cat), the pack builder (1 combo point on the target), above Shred and Mangle, which stand
+  # down while it holds. The finisher rows above it (Rip 30, Ferocious Bite 35 energy) cost less than its 40 (50 less
+  # Ferocity), so an energy-starved finisher is never starved by it
   - do: cat swipe
     when: pack_swipe
     relevance: normal + 7.1
   - do: cat shred
-    when: alive(target) and cp < 5 and behind and not mangle_due and not rake_due
+    when: alive(target) and cp < 5 and behind and not mangle_due and not rake_due and not pack_swipe
     relevance: normal + 7.0
   - do: cat mangle
-    when: alive(target) and cp < 5 and not behind and not rake_due
+    when: alive(target) and cp < 5 and not behind and not rake_due and not pack_swipe
     relevance: normal + 6.5
 ---
 # `co +offheal`: heals from Cat Form (DR13, DQ2)
