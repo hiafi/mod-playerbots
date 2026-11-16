@@ -138,8 +138,8 @@ rows:
     when: pack and blast_4 and safe_target_10
     relevance: normal + 6.8
   # Explosion as filler with 3+ enemies inside its reach (2026-11-15, AoE round 1 on the Normal-tier kits, user ruling:
-  # was 4+ inside 10 yd). With the Arcane Resonance capstone each cast adds an Arcane Blast stack and pays +200% mana
-  # per stack, so the pack loop is Explosion x4, then the Barrage row above at the full stack.
+  # was 4+ inside 10 yd). Each cast adds an Arcane Blast stack (baseline, same ruling) and costs 10% base mana +50% per
+  # stack, so the pack loop is Explosion x4, then the Barrage row above at the full stack.
   - do: arcane explosion cast
     when: pack and enemies_within(8) >= 3 and known("arcane explosion") and safe_self_10
     relevance: normal + 5.0

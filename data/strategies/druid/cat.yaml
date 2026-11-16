@@ -138,11 +138,13 @@ rows:
     when: alive(target) and cp < 5 and rake_due and not mangle_due
     relevance: normal + 7.5
   # 4b (AoE round 1): Rake on an engaged enemy other than the target that lacks the bot's Rake or has under 3 s of it
-  # left, within 5 yd, expected to live 6 s (two ticks of the 9 s bleed), not stunned or otherwise controlled.
+  # left, within 3 yd of the bot (edge to edge; at 5 the pick was often an enemy the cast could not reach, the cast
+  # failed and the same enemy was picked again, so nearest first and 3 yd), expected to live 6 s (two ticks of the 9 s
+  # bleed), not stunned or otherwise controlled.
   # Between the primary target's Rake (7.5) and Shred (7.0). The `do:` qualifier and the unit qualifier in `when:` are
   # the same literal
-  - do: cat pack rake::1822;1;3000;6;5;notarget,free
-    when: pack_rake and alive("attacker without aura id::1822;1;3000;6;5;notarget,free")
+  - do: cat pack rake::1822;1;3000;6;3;nearest,notarget,free
+    when: pack_rake and alive("attacker without aura id::1822;1;3000;6;3;nearest,notarget,free")
     relevance: normal + 7.25
   # 4c (AoE round 1): Swipe (Cat) in a pack, above Shred and Mangle so the filler energy goes into the AoE hit. It
   # needs no `cp < 5`: it awards no point, and the finisher rows above it (Rip 30, Ferocious Bite 35 energy) cost
