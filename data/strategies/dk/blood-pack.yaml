@@ -13,6 +13,9 @@
 # 9.6 Grasp, 9.5 Blood Nova, 9.3 Bonestorm, 9.1 Pestilence, 9.0 Blood Boil, 8.9 Heart Strike, 8.8 Marrowrend,
 # 8.7 Death's Caress.
 #
+# AoE round 3 tank wave (2026-11-16, user ruling: the Blood pack bot fix): Death's Caress 8.7 -> 9.15 (between
+# Bonestorm 9.3 and Pestilence 9.1) and Pestilence no longer needs Frost Fever, so packs get Blood Plague.
+#
 # Deviations from the guide, each for a reason the row says:
 # - Gorefiend's Grasp (line 2) is gated on three enemies within 15 yd, not on a pack within 8 yd: the loose enemies it
 #   gathers stand outside the 8 yd of a pack by definition.
@@ -71,11 +74,13 @@ rows:
   - do: dk pack marrowrend
     when: known(203123) and pack and pair and charges(self, 49222) < 4
     relevance: normal + 9.65
-  # 7: Pestilence when the target has both of this bot's diseases and two or more enemies within 10 yd of it lack
-  # Blood Plague
+  # 7: Pestilence when the target has this bot's Blood Plague and two or more enemies within 10 yd of it lack Blood
+  # Plague. The Frost Fever clause is gone (2026-11-16, AoE round 3 tank wave on the Normal-tier kits, user ruling:
+  # the Blood pack bot fix): a Blood bot never casts Icy Touch in a pack, so the row never fired; Pestilence spreads
+  # whatever disease is there
   - do: dk pestilence
     when: >-
-      known(50842) and pack and blood_rune and aura(target, 55078, own) and aura(target, 55095, own)
+      known(50842) and pack and blood_rune and aura(target, 55078, own)
       and value("dk pack without plague::10") >= 2
     relevance: normal + 9.1
   # 8: Blood Boil on a Blood Rune with three or more enemies within 10 yd
@@ -91,10 +96,14 @@ rows:
   - do: dk pack marrowrend pair
     when: known(203123) and pack and pair
     relevance: normal + 8.8
-  # 11: Death's Caress on a target without this bot's Blood Plague, when an Unholy Rune is ready
+  # 11: Death's Caress on a target without this bot's Blood Plague, when an Unholy Rune is ready. Relevance 8.7 ->
+  # 9.15 (2026-11-16, AoE round 3 tank wave on the Normal-tier kits, user ruling: the Blood pack bot fix): below Bone
+  # Shield's upkeep (9.65) and above Pestilence (9.1) and Blood Boil (9.0), so the pack gets Blood Plague (Blood Boil's
+  # diseased bonus, the plague ticks, Crimson Scourge); under 8.8 "Marrowrend on any pair" took every Unholy Rune first.
+  # With the Crimson Scourge capstone Blood Boil plagues the pack itself and this row only opens a fresh pull
   - do: dk pack deaths caress
     when: known(203001) and pack and unholy_rune and not aura(target, 55078, own)
-    relevance: normal + 8.7
+    relevance: normal + 9.15
   # 12: Crimson Communion when three party members are below 70% health
   - do: dk pack crimson communion
     when: known(203141) and cooldown(203141) == 0 and pack and value("party members below::70") >= 3
