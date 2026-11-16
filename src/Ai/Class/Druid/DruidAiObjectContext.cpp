@@ -475,5 +475,6 @@ void DruidAiObjectContext::BuildSharedValueContexts(SharedNamedObjectContextList
     valueContexts.Add(new DruidBalanceValueFactory());
     valueContexts.Add(new DruidBearValueFactory());
     valueContexts.Add(new DruidBearDpsValueFactory());
+    valueContexts.Add(new DruidCatValueFactory());
     valueContexts.Add(new DruidRestoValueFactory());
 }

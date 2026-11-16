@@ -28,6 +28,7 @@ MageArcaneActionFactory::MageArcaneActionFactory()
     creators["arcane brilliance aura"] = &Make<Action, MageArcaneBrillianceAuraAction>;
     creators["arcane amplify magic"] = &Make<Action, MageArcaneAmplifyMagicAction>;
     creators["arcane explosion cast"] = &Make<Action, MageArcaneExplosionAction>;
+    creators["arcane explosion walk"] = &Make<Action, MageArcaneExplosionWalkAction>;
 }
 
 MageArcaneValueFactory::MageArcaneValueFactory()

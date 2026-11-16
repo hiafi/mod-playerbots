@@ -7,7 +7,7 @@
 # an action name and qualifier (they would merge into one basket and only the first row would be re-checked): Void
 # Eruption S4/P1, Shadow Word: Death S8/P3 and the two channel cancels are distinct names; Shadow Word: Pain on the
 # current target (S1) and on an attacker (P2) differ by name. The `do:` qualifier and the unit qualifier in `when:`
-# are the same literal ("shadow pack pain::589;1;0;0;30"): otherwise the action targets another unit than the one
+# are the same literal ("shadow pack pain::589;1;3000;0;30"): otherwise the action targets another unit than the one
 # checked.
 # Named conditions are per document, so `is_shadow`, `focus` and `pack` are repeated word for word in the two combat
 # documents (keep them identical).
@@ -30,10 +30,12 @@ conditions:
   tentacles: value("controlled units by entry::300102")
   # Void Eruption has been cast this fight (it is on cooldown)
   ve_used: cooldown(200139) > 0
-  # PR57/PR58: pack mode. The "shadow aoe" strategy is on, the target is alive, 4+ enemies are engaged and the target
-  # is not a boss. `is_shadow` keeps the ungrouped Disc and Holy bots (AiFactory gives them "shadow aoe") out of it.
+  # PR57/PR58: pack mode. The "shadow aoe" strategy is on, the target is alive, 3+ enemies are engaged and the target
+  # is not a boss (was 4+ until 2026-11-15, AoE round 1 on the Normal-tier kits, user ruling: Mind Sear and the
+  # Shadow Word: Pain spread from 3 enemies). `is_shadow` keeps the ungrouped Disc and Holy bots (AiFactory gives
+  # them "shadow aoe") out of it.
   pack: >-
-    is_shadow and value("shadow aoe enabled") and alive(target) and value("attacker count") >= 4 and not boss(target)
+    is_shadow and value("shadow aoe enabled") and alive(target) and value("attacker count") >= 3 and not boss(target)
   # D3: no healer in the group, under 35% and Dispersion is on cooldown: Flash Heal itself (leaving Shadowform first)
   solo_heal: >-
     not value("party has healer") and health_pct(self) < 35 and known(47585) and cooldown(47585) > 0
@@ -140,10 +142,12 @@ rows:
       known(34914) and alive(target) and not focus and remaining(target, 34914, own) < 3000 and not moving(self)
     relevance: normal + 9.2
 
-  # S3: Devouring Plague within 3 s of expiring (single target)
+  # S3: Devouring Plague within 3 s of expiring, on the current target. Also in pack mode (2026-11-15, AoE round 1 on
+  # the Normal-tier kits, user ruling: Devouring Plague on the primary target, then Mind Sear spreads it): with Pain
+  # and Suffering 3/3 every Mind Sear tick copies it to one enemy near the target that lacks it
   - do: shadow devouring plague
     when: >-
-      known(2944) and alive(target) and not pack and not focus and remaining(target, 2944, own) < 3000
+      known(2944) and alive(target) and not focus and remaining(target, 2944, own) < 3000
     relevance: normal + 9.1
 
   # S4: Void Eruption once all three DoTs are up, holding it while Mind Blast is ready with no tentacle out (the
@@ -177,7 +181,7 @@ rows:
       known(32379) and alive(target) and not pack and not focus and cooldown(32379) == 0 and health_pct(self) > 70
     relevance: normal + 8.7
 ---
-# The Shadow pack rows, appended to the "shadow aoe" / "aoe" strategy. Every row needs `pack and not focus`: 4+
+# The Shadow pack rows, appended to the "shadow aoe" / "aoe" strategy. Every row needs `pack and not focus`: 3+
 # attackers, the target not a boss, and Surrender to Madness not up. The named conditions repeat priest/shadow's.
 strategy: priest/shadow-aoe
 class: priest
@@ -185,7 +189,7 @@ conditions:
   is_shadow: known(15473)
   focus: aura(self, 200269, own)
   pack: >-
-    is_shadow and value("shadow aoe enabled") and alive(target) and value("attacker count") >= 4 and not boss(target)
+    is_shadow and value("shadow aoe enabled") and alive(target) and value("attacker count") >= 3 and not boss(target)
 rows:
   # P1: Void Eruption on a pack of 3+ around the target, with nothing unsafe in the blast
   - do: shadow pack void eruption
@@ -194,11 +198,13 @@ rows:
       and value("unsafe aoe units::10") == 0
     relevance: normal + 9.5
 
-  # P2: Shadow Word: Pain on the attacker without it (highest health first) within 30 yd, up to 5 at once
-  - do: shadow pack pain::589;1;0;0;30
+  # P2: Shadow Word: Pain on every attacker within 30 yd (highest health first) that lacks it or holds it with under
+  # 3 s left: Pain and Suffering only refreshes it on the Mind Sear / Mind Flay / Mind Blast target, so the rest of
+  # the pack needs a recast (2026-11-15, AoE round 1 on the Normal-tier kits, user ruling: Shadow Word: Pain on
+  # every enemy in the pack; was a cap of 5 and no refresh)
+  - do: shadow pack pain::589;1;3000;0;30
     when: >-
-      pack and not focus and value("attackers with aura id::589;1;30") < 5
-      and exists("attacker without aura id::589;1;0;0;30")
+      pack and not focus and exists("attacker without aura id::589;1;3000;0;30")
     relevance: normal + 9.4
 
   # P3: Shadow Word: Death on the lowest attacker under 15% (or the 30% line the value takes), bot above 70% health
@@ -209,10 +215,11 @@ rows:
       and exists("lowest health attacker below::15,30")
     relevance: normal + 8.7
 
-  # P4: Mind Sear on 4+ enemies around the target (a channel: never while moving)
+  # P4: Mind Sear on 3+ enemies around the target (a channel: never while moving; was 4+ until 2026-11-15, AoE round
+  # 1 on the Normal-tier kits, user ruling: Mind Sear at 3+ enemies). S6 stops it below 3
   - do: shadow mind sear
     when: >-
-      pack and not focus and known(48045) and enemies_near_target(10) >= 4 and value("unsafe aoe units::10") == 0
+      pack and not focus and known(48045) and enemies_near_target(10) >= 3 and value("unsafe aoe units::10") == 0
       and not moving(self)
     relevance: normal + 8.0
 ---

@@ -57,8 +57,16 @@ bool MageArcaneBarrageAction::isUseful()
 
 bool MageArcaneExplosionAction::isUseful()
 {
-    return AI_VALUE2(uint8, "enemies within", "10") >= ai::mage_arcane::EXPLOSION_MIN_ENEMIES &&
+    return AI_VALUE2(uint8, "enemies within", ai::mage_arcane::EXPLOSION_REACH) >=
+               ai::mage_arcane::EXPLOSION_MIN_ENEMIES &&
            CastSpellAction::isUseful();
+}
+
+bool MageArcaneExplosionWalkAction::isUseful()
+{
+    return AI_VALUE2(uint8, "enemies within", ai::mage_arcane::EXPLOSION_REACH) <
+               ai::mage_arcane::EXPLOSION_MIN_ENEMIES &&
+           ReachTargetAction::isUseful();
 }
 
 bool MageArcaneOverloadAction::isUseful()

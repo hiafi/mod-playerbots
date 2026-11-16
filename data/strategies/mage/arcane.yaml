@@ -6,7 +6,8 @@
 # 200078 Temporal Convergence, 200079 Arcane Overload. Overload and Temporal Convergence are late talents (the level-60
 # sim bot casts Overload about 4 times a fight) that a bot may not have, so their rows are gated on known().
 # AoE rows are gated on `unsafe aoe units` (X11): Barrage (chain, 10 yd) and Overload (10 yd) around the target,
-# Explosion (10 yd) around the bot.
+# Explosion (10 yd) around the bot. Explosion's reach is counted at 8 yd: "enemies within" is edge to edge, the spell
+# reaches 8.5 yd edge to edge from a player (MageArcaneActions.h, EXPLOSION_REACH).
 # The mana thresholds are starting points (MG54); retune them after a sim run. The ones the actions re-check
 # (gem 70, Evocation 30, Overload 30) are repeated in MageArcaneActions.h.
 strategy: mage/arcane
@@ -136,9 +137,17 @@ rows:
   - do: arcane barrage stacks
     when: pack and blast_4 and safe_target_10
     relevance: normal + 6.8
-  # Explosion as filler with 4+ enemies already inside 10 yd; never walks to them
+  # Explosion as filler with 3+ enemies inside its reach (2026-11-15, AoE round 1 on the Normal-tier kits, user ruling:
+  # was 4+ inside 10 yd). Each cast adds an Arcane Blast stack (baseline, same ruling) and costs 10% base mana +50% per
+  # stack, so the pack loop is Explosion x4, then the Barrage row above at the full stack.
   - do: arcane explosion cast
-    when: pack and enemies_within(10) >= 4 and known("arcane explosion") and safe_self_10
+    when: pack and enemies_within(8) >= 3 and known("arcane explosion") and safe_self_10
+    relevance: normal + 5.0
+  # Fewer than 3 inside its reach: walk to 3 yd of the target (inside the pack it is a part of, clear of the 2 yd flee
+  # rule). The conditions of the two rows exclude each other. The target side of the pack must be safe to hit, since
+  # the bot ends up beside it.
+  - do: arcane explosion walk
+    when: pack and enemies_within(8) < 3 and known("arcane explosion") and safe_target_10
     relevance: normal + 5.0
 
   # The last row, both modes: Blast builds the stacks the Barrage rows spend

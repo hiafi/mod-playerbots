@@ -51,6 +51,22 @@ rows:
       and value("party members below::50") == 0 and exists("attacked party member below::101")
     relevance: normal + 9.5
 
+  # BAL3 (user ruling 2026-11-15): inside the window, Penance whenever it is ready. The server turns each of its three
+  # heal bolts (47750, every tick of the channel) into a Spirit Shell absorb, so the 12 s cooldown is worth a shell's
+  # worth of shield on the tank-first target (the tank under 90%, else the lowest member under 90%, within 30 yd). It
+  # sat at 8.6 below every window row and waited out each shell. Above Prayer of Healing (9.48) so a ready Penance goes
+  # out first; the 2 s channel is never clipped: after a cast PlayerbotAI::WaitForSpellCast delays the next engine tick by
+  # the cast time plus the channel duration, CanCastSpell refuses every cast while the bot channels, and the only spell
+  # interrupt (RequestSpellInterrupt) is raised by the raid boss scripts, not by a row here. Outside the window row 10
+  # below keeps its 8.6.
+  # The same action name and qualifier as row 10: the two rows never hold together (`shell` / `not shell`), so they
+  # never merge into one basket
+  - do: disc penance::90,90
+    when: >-
+      shell and known(47540) and cooldown(47540) == 0 and health_pct("tank first heal target::90,90") < 90
+      and in_range("tank first heal target::90,90", 30) and not moving(self)
+    relevance: normal + 9.49
+
   # H2 (user ruling 2026-11-01): inside the window, Prayer of Healing when several members need healing, so the cast
   # lays a shell on the whole party. 3+ under 90%, the same bar that casts Spirit Shell (row 4), so it fires from the
   # start of the window (user ruling 2026-11-01: 75% -> 90%). Row 12 is gated on `not shell`
@@ -113,14 +129,18 @@ rows:
     when: >-
       known(47540) and aura(self, 200159, own) and cooldown(47540) == 0 and value("heal cluster count::10,90") >= 2
       and in_range("heal cluster unit::10,90", 30) and not moving(self)
-    relevance: normal + 7.5
+    relevance: normal + 8.65
 
-  # 10: Penance on the tank-first target under 75%, within 30 yd
-  - do: disc penance::75,75
+  # 10: Penance on cooldown: the tank-first target under 90%, within 30 yd. Both Penance rows sit above the two
+  # Power Word: Shield rows (8.5 / 8.0) so Penance goes out whenever it is ready (balance round 2 on the Normal-tier
+  # kits, 2026-11-15: it was cast 6 times in 120 s against a 12 s cooldown); the Empowered Penance cluster row stays
+  # just above this one. Inside a Spirit Shell window the BAL3 row near the top casts it instead (`not shell` here
+  # keeps the two rows from ever holding together)
+  - do: disc penance::90,90
     when: >-
-      known(47540) and cooldown(47540) == 0 and health_pct("tank first heal target::75,75") < 75
-      and in_range("tank first heal target::75,75", 30) and not moving(self)
-    relevance: normal + 7.0
+      not shell and known(47540) and cooldown(47540) == 0 and health_pct("tank first heal target::90,90") < 90
+      and in_range("tank first heal target::90,90", 30) and not moving(self)
+    relevance: normal + 8.6
 
   # 11: Greater Heal under 85% while Borrowed Time or Copious Power is up
   - do: priest greater heal::85,85
