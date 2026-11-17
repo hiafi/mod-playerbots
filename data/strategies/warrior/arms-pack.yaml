@@ -68,11 +68,15 @@ rows:
   - do: arms pack mortal strike
     when: pack and known(12294) and cooldown(12294) == 0 and alive(target)
     relevance: normal + 9.8
-  # 4. Bladestorm: Sweeping Strikes not active, and Avatar active or Avatar more than 30 s away (the clause drops
-  # while Avatar is not learned, before level 60, and where Avatar is never cast: a pack of fewer than 5 normal enemies)
+  # 4. Bladestorm: Sweeping Strikes not active or in its last 5 s, and Avatar active or Avatar more than 30 s away
+  # (the clause drops while Avatar is not learned, before level 60, and where Avatar is never cast: a pack of fewer
+  # than 5 normal enemies). The last-5-s clause (2026-11-16, AoE round 3 follow-up 3): Sweeping Strikes is up 14 s of
+  # every 15 s with Improved Sweeping Strikes, so "not active" alone almost never fires; whirling out the tail of a
+  # window ends about when Sweeping Strikes is ready again.
   - do: arms pack bladestorm
     when: >-
-      pack and known(46924) and cooldown(46924) == 0 and alive(target) and not sweeping_up and pool_25
+      pack and known(46924) and cooldown(46924) == 0 and alive(target)
+      and (not sweeping_up or remaining(self, 204493) < 5000) and pool_25
       and (avatar_up or avatar_gate)
     relevance: normal + 9.75
   # 5. Overpower with charges while Sweeping Strikes is active
