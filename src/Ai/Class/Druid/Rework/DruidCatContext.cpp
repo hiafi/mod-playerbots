@@ -45,6 +45,8 @@ constexpr char FEROCIOUS_BITE[] = "ferocious bite";
 constexpr char RAKE[] = "rake";
 constexpr char SHRED[] = "shred";
 constexpr char SWIPE_CAT[] = "swipe (cat)";
+constexpr char PRIMAL_WRATH[] = "primal wrath";
+constexpr char THRASH_CAT[] = "thrash (cat)";
 constexpr char COWER[] = "cower";
 constexpr char SKULL_BASH[] = "skull bash";
 
@@ -85,6 +87,13 @@ DruidCatActionFactory::DruidCatActionFactory()
     // AoE round 1 (2026-11-15): Swipe (Cat), the pack filler. It hits the target and chains to the enemies around it,
     // so it is a plain melee cast on the current target
     creators["cat swipe"] = &MakeMelee<SWIPE_CAT>;
+    // AoE round 3 (2026-11-16): Primal Wrath, the pack finisher (a Rip-shaped bleed on every enemy within 8 yd of the
+    // bot). Like Swipe it is a plain melee cast on the current target: the spell needs no explicit target, and the
+    // melee action keeps the bot in reach of the target the pack is around
+    creators["cat primal wrath"] = &MakeMelee<PRIMAL_WRATH>;
+    // AoE round 3 follow-up (2026-11-16): Thrash (Cat), the pack builder (hit and bleed on every enemy within 8 yd of
+    // the bot, 1 combo point on the target). Named "Thrash (Cat)" so the name never resolves to the bear's Thrash
+    creators["cat thrash"] = &MakeMelee<THRASH_CAT>;
     // AoE round 1 (2026-11-15): Rake on every other enemy within reach. The unit comes from "attacker without aura id"
     // with the row's `do:` qualifier ("cat pack rake::1822;1;3000;6;5;notarget,free"); it is not the current target, so
     // the melee action's reach check on the current target does not apply and the cast checks the reach itself

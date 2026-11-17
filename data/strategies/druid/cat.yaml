@@ -19,8 +19,19 @@
 # "attacker without aura id" picks; PlayerbotAI::CastSpell selects that unit for the cast and restores the selection
 # afterwards, and the druid's combo points follow the selection (ComboPointMechanics.cpp), so the point a secondary
 # Rake awards ends on the current target. Swipe (Cat) awards its point on the target only.
+# AoE round 3 (2026-11-16, user ruling: Primal Wrath baseline, "We need an AoE finisher for them to feel complete"): the
+# pack finisher. `cat primal wrath` at 5 combo points with 3 or more enemies around the target puts a Rip-shaped bleed
+# (1.3x Rip's tick) on every enemy within 8 yd of the bot, above Rip and Ferocious Bite while it holds. Rip stays the
+# single-target finisher: below 3 enemies Primal Wrath never fires, and while the target's own bleed is due Rip goes on
+# the target first. Rip and Primal Wrath are one bleed per druid (spell_group 1306, the newest replaces the other), so
+# every "the target's Rip" check reads both ids ("1079,200472"); at one target only 1079 is ever there.
+# AoE round 3 follow-up (2026-11-16, user ruling: "For feral, we should also let it use Thrash"): `cat thrash`, Thrash
+# (Cat) 200474 (hit + bleed on every enemy within 8 yd, 50 energy, 6 s cooldown, 1 combo point on the target) at 3 or
+# more enemies around the target, above the secondary Rakes and Swipe; while it is ready the pack builders below it
+# stand down so the energy pools for it. Below 3 enemies it never fires, so single target is unchanged.
 # Spell ids: Cat Form 768, Swipe (Cat) 62078, Predator's Swiftness 69369, Barkskin 22812, Feral Charge - Cat 49376,
-# Ravage 6785 (its free cast is the Stampede buff 200434), Berserk 50334, Tiger's Fury 5217, Rip 1079, Rake 1822,
+# Ravage 6785 (its free cast is the Stampede buff 200434), Berserk 50334, Tiger's Fury 5217, Rip 1079, Primal Wrath
+# 200472, Thrash (Cat) 200474, Rake 1822,
 # Ferocious Bite 22568, Mangle (Cat) 33876 (the debuff on the target is the spell itself, 33878 is the Bear's; 46856
 # and 46857 are Trauma), Skull Bash 200605.
 strategy: druid/cat
@@ -49,7 +60,35 @@ conditions:
   pack_swipe: >-
     value("cat aoe enabled") and known(62078) and alive(target) and cp < 5 and enemies_near_target(10) >= 2
     and value("unsafe aoe units::10") == 0 and not mangle_due and not rake_due
+  # Thrash (Cat) in a pack (AoE round 3 follow-up): the aoe toggle on, ready (6 s cooldown), a builder only while the
+  # combo points have room, 3 or more enemies around the target (the target counts itself; the hit reaches 8 yd from
+  # the bot), no unpulled enemy in that blast, the target's Mangle debuff and Rake settled. 3, not 2: per energy a
+  # Thrash (~1,370 per enemy for 50) beats a secondary Rake (~2,145 for 30) only from 3 enemies (82 against 71 per
+  # energy; 55 at 2). While it holds, the secondary Rake, Swipe, Shred and Mangle rows stand down, so the energy pools
+  # for it (at most 5 s at 10 energy a second, inside its 6 s cooldown); the upkeep rows and finishers stay above it
+  pack_thrash: >-
+    value("cat aoe enabled") and known(200474) and cooldown(200474) == 0 and alive(target) and cp < 5
+    and enemies_near_target(8) >= 3 and value("unsafe aoe units::8") == 0 and not mangle_due and not rake_due
   berserking: aura(self, 50334)
+  # the target's own bleed (Rip or Primal Wrath, one bleed per druid) is missing or under 2 s
+  rip_due: remaining(target, "1079,200472", own) < 2000
+  # Primal Wrath in a pack (AoE round 3; follow-up 2 refresh window): the pack gate below, 5 combo points, the
+  # target's own bleed not due (Rip takes it then), and a bleed to refresh: the target's bleed under 4 s, or an engaged
+  # enemy other than the target within 8 yd that lacks the bot's bleed or has under 4 s of it and should live 4 s more
+  # (two ticks). 4 s, not 2 (follow-up 2): combo points, not the bleed, limit Primal Wrath (3 casts a minute against
+  # the 5 a 12 s bleed needs), so refreshing two ticks early costs little and keeps the pack bleeding between casts;
+  # a later refresh lets ticks lapse while the points wait for energy
+  pack_wrath: >-
+    pack_finish and alive(target) and cp >= 5 and not rip_due
+    and (remaining(target, "1079,200472", own) < 4000
+         or alive("attacker without aura id::200472,1079;1;4000;4;8;notarget"))
+  # The Primal Wrath pack gate (AoE round 3 follow-up 2, 2026-11-16): the aoe toggle on, Primal Wrath known, 3 or more
+  # enemies around the target, no unpulled enemy in the blast. Ferocious Bite stands down only while Primal Wrath has a
+  # bleed to refresh (`not pack_wrath`), not for the whole pack: with Bite off in packs (Bite standing down on
+  # `pack_finish`) the bot either refreshed live bleeds early or sat at 5 points with energy capping, 5 targets 2,220
+  # and 3 targets 1,560 against 2,471 / 1,669 for this rule (FeralCatSim, 60 s x 5, 2026-11-16)
+  pack_finish: >-
+    value("cat aoe enabled") and known(200472) and enemies_near_target(8) >= 3 and value("unsafe aoe units::8") == 0
   # Skull Bash 200605 is ready and the bot is in Cat Form
   skull_bash_ok: known(200605) and cooldown(200605) == 0 and in_cat
 rows:
@@ -107,10 +146,10 @@ rows:
     when: known(6785) and alive(target) and aura(self, 200434, own)
     relevance: normal + 9.9
 
-  # G1: Berserk once Rip and Rake are both up
+  # G1: Berserk once Rip (or Primal Wrath's bleed) and Rake are both up
   - do: cat berserk
     when: >-
-      known(50334) and cooldown(50334) == 0 and alive(target) and aura(target, 1079, own)
+      known(50334) and cooldown(50334) == 0 and alive(target) and aura(target, "1079,200472", own)
       and aura(target, 1822, own)
     relevance: normal + 9.8
 
@@ -124,12 +163,20 @@ rows:
     when: alive(target) and mangle_due and cp < 5
     relevance: normal + 9.0
 
-  # 2, 3: five combo points go into Rip, or into Ferocious Bite while Rip has 2 s or more left
+  # 2a (AoE round 3): Primal Wrath, the pack finisher, above Rip and Ferocious Bite. It never fires while the target's
+  # own bleed is due (`not rip_due`), so Rip keeps the target and Primal Wrath spreads the bleed to the rest of the
+  # pack; it replaces the target's Rip with its own (stronger) bleed. 50 energy (41 with Predatory Strikes): an
+  # energy-starved Primal Wrath waits, and `cp < 5` keeps every builder from spending the energy meanwhile
+  - do: cat primal wrath
+    when: pack_wrath
+    relevance: normal + 8.6
+  # 2, 3: five combo points go into Rip, or into Ferocious Bite while the target's bleed has 2 s or more left and
+  # (follow-up 2) no bleed in the pack is inside Primal Wrath's 4 s refresh window
   - do: cat rip
-    when: known(1079) and alive(target) and cp >= 5 and remaining(target, 1079, own) < 2000
+    when: known(1079) and alive(target) and cp >= 5 and rip_due
     relevance: normal + 8.5
   - do: cat ferocious bite
-    when: known(22568) and alive(target) and cp >= 5 and remaining(target, 1079, own) >= 2000
+    when: known(22568) and alive(target) and cp >= 5 and not rip_due and not pack_wrath
     relevance: normal + 8.0
 
   # 4, 5, 6: the builders. `cp < 5` stops a builder from wasting a point while a finisher waits for energy: an
@@ -146,20 +193,27 @@ rows:
   # bleed), not stunned or otherwise controlled.
   # Between the primary target's Rake (7.5) and Shred (7.0). The `do:` qualifier and the unit qualifier in `when:` are
   # the same literal
+  # 4a (AoE round 3 follow-up): Thrash (Cat), between the target's Rake (7.5) and the secondary Rakes (7.25); the
+  # rows below it carry `not pack_thrash`
+  - do: cat thrash
+    when: pack_thrash
+    relevance: normal + 7.4
   - do: cat pack rake::1822;1;3000;6;3;nearest,notarget,free
-    when: pack_rake and alive("attacker without aura id::1822;1;3000;6;3;nearest,notarget,free")
+    when: >-
+      pack_rake and not pack_thrash and alive("attacker without aura id::1822;1;3000;6;3;nearest,notarget,free")
     relevance: normal + 7.25
   # 4c (AoE round 2): Swipe (Cat), the pack builder (1 combo point on the target), above Shred and Mangle, which stand
   # down while it holds. The finisher rows above it (Rip 30, Ferocious Bite 35 energy) cost less than its 40 (50 less
   # Ferocity), so an energy-starved finisher is never starved by it
   - do: cat swipe
-    when: pack_swipe
+    when: pack_swipe and not pack_thrash
     relevance: normal + 7.1
   - do: cat shred
-    when: alive(target) and cp < 5 and behind and not mangle_due and not rake_due and not pack_swipe
+    when: >-
+      alive(target) and cp < 5 and behind and not mangle_due and not rake_due and not pack_swipe and not pack_thrash
     relevance: normal + 7.0
   - do: cat mangle
-    when: alive(target) and cp < 5 and not behind and not rake_due and not pack_swipe
+    when: alive(target) and cp < 5 and not behind and not rake_due and not pack_swipe and not pack_thrash
     relevance: normal + 6.5
 ---
 # `co +offheal`: heals from Cat Form (DR13, DQ2)

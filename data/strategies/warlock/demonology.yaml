@@ -193,10 +193,10 @@ rows:
     when: pack and known(200825) and alive(target) and durable and not aura(target, 200825, own)
     relevance: normal + 9.25
 
-  # P8b: Bane of Doom on another attacker, up to three at once
+  # P8b: Bane of Doom on another attacker, up to five at once (cap 3 -> 5: 2026-11-16, AoE round 3, user ruling)
   - do: demo pack bane of doom::200825;1;0;12;30
     when: >-
-      pack and known(200825) and value("attackers with aura id::200825;1;30") < 3
+      pack and known(200825) and value("attackers with aura id::200825;1;30") < 5
       and alive("attacker without aura id::200825;1;0;12;30")
     relevance: normal + 9.2
 

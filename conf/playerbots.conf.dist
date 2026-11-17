@@ -1896,8 +1896,8 @@ Playerbots.PremadeSpecLink.1.1.30 = 02302311230031
 Playerbots.PremadeSpecLink.1.1.40 = 023023312303312200001
 Playerbots.PremadeSpecLink.1.1.45 = 02302331230331230000122
 Playerbots.PremadeSpecLink.1.1.50 = 02302331230331230000122021101
-Playerbots.PremadeSpecLink.1.1.60 = 023023312303312300001220212310231
-Playerbots.PremadeSpecLink.1.1.80 = 023023312303312300001220212310231
+Playerbots.PremadeSpecLink.1.1.60 = 033023312303312300001220202312031
+Playerbots.PremadeSpecLink.1.1.80 = 033023312303312300001220202312031
 Playerbots.PremadeSpecName.1.2 = prot tank
 Playerbots.PremadeSpecGlyph.1.2 = 43429,43397,43425,43399,49084,45797
 Playerbots.PremadeSpecLink.1.2.30 = --2331302122002
@@ -1920,8 +1920,8 @@ Playerbots.PremadeSpecLink.1.4.30 = -033032013000501
 Playerbots.PremadeSpecLink.1.4.40 = -033032013050501220001
 Playerbots.PremadeSpecLink.1.4.45 = -0330320130505012210032
 Playerbots.PremadeSpecLink.1.4.50 = -033032013050501221003220201
-Playerbots.PremadeSpecLink.1.4.60 = -0330320130505012210032205013031
-Playerbots.PremadeSpecLink.1.4.80 = -0330320130505012210032205013031
+Playerbots.PremadeSpecLink.1.4.60 = -1033322100505010203032005013231
+Playerbots.PremadeSpecLink.1.4.80 = -1033322100505010203032005013231
 
 #
 #
@@ -2000,16 +2000,16 @@ Playerbots.PremadeSpecName.3.0 = bm pve
 Playerbots.PremadeSpecGlyph.3.0 = 42912,43350,42902,43351,43338,42914
 Playerbots.PremadeSpecLink.3.0.30 = 0330233013020001--
 Playerbots.PremadeSpecLink.3.0.45 = 03302330130303112000231101--
-Playerbots.PremadeSpecLink.3.0.60 = 033023301303031120002311033003331--
-Playerbots.PremadeSpecLink.3.0.80 = 033023301303031120002311033003331--
+Playerbots.PremadeSpecLink.3.0.60 = 023023301301031120222211033003331--
+Playerbots.PremadeSpecLink.3.0.80 = 023023301301031120222211033003331--
 # Marksmanship (spec 3.1): Sniper's Mark comes with .30, Viper's Mark and Readiness with .45, Falcon's Mark, Trick Shots,
 # Triangulation and Chimera Shot with .60.
 Playerbots.PremadeSpecName.3.1 = mm pve
 Playerbots.PremadeSpecGlyph.3.1 = 42912,43350,45625,43351,43338,42914
 Playerbots.PremadeSpecLink.3.1.30 = -03303003313001001-
 Playerbots.PremadeSpecLink.3.1.45 = -2330300331303300130013001-
-Playerbots.PremadeSpecLink.3.1.60 = -233030033130330013001310130031331-
-Playerbots.PremadeSpecLink.3.1.80 = -233030033130330013001310130031331-
+Playerbots.PremadeSpecLink.3.1.60 = -033030033130330013001310132031331-
+Playerbots.PremadeSpecLink.3.1.80 = -033030033130330013001310132031331-
 # Survival (spec 3.2): .30 gives Deadly Focus 2, Wildfire Bomb and Explosive Shot; .45 adds Lock and Load 3, Mantis
 # Strike, Killer Instinct 3 and Shrapnel; .60 adds Volatile Payload 3, Tar Bomb, T.N.T. 3, Dark Hunting 2 and Cluster
 # Bombs. The stock 3.2.60 and 3.2.80 keys are replaced.
@@ -2387,6 +2387,10 @@ Playerbots.PremadeSpecName.8.6 = frost pvp
 Playerbots.PremadeSpecGlyph.8.6 = 42738,43364,45740,43357,43360,42752
 Playerbots.PremadeSpecLink.8.6.60 = --3203013301202330310030131231331
 Playerbots.PremadeSpecLink.8.6.80 = --3203013301202330310030131231331
+Playerbots.PremadeSpecName.8.7 = fire aoe
+Playerbots.PremadeSpecGlyph.8.7 = 42739,43339,45737,43364,44920,42751
+Playerbots.PremadeSpecLink.8.7.60 = -303330300103303101331103321331
+Playerbots.PremadeSpecLink.8.7.80 = -303330300103303101331103321331
 
 #
 #
@@ -2486,6 +2490,12 @@ Playerbots.PremadeSpecGlyph.11.7 = 40897,43331,46372,43335,43332,40899
 Playerbots.PremadeSpecLink.11.7.10 = -0001
 Playerbots.PremadeSpecLink.11.7.60 = -150120300030322320003330100033232001
 Playerbots.PremadeSpecLink.11.7.80 = -150120300030322320003330100033232001
+Playerbots.PremadeSpecName.11.8 = bear dps pack pve
+Playerbots.PremadeSpecGlyph.11.8 = 40897,43331,46372,43335,43332,40899
+# Bestial Fury first: without it a sub-20 Feral bot runs the bear tank strategy and respecs to the tank link on level-up
+Playerbots.PremadeSpecLink.11.8.10 = -0001
+Playerbots.PremadeSpecLink.11.8.60 = -250120300030322320203330100033202001
+Playerbots.PremadeSpecLink.11.8.80 = -250120300030322320203330100033202001
 
 #
 #
@@ -2760,6 +2770,8 @@ Playerbots.RandomClassSpecIndex.8.5 = 5
 # frost pvp
 Playerbots.RandomClassSpecProb.8.6 = 0
 Playerbots.RandomClassSpecIndex.8.6 = 6
+Playerbots.RandomClassSpecProb.8.7 = 0
+Playerbots.RandomClassSpecIndex.8.7 = 7
 
 #
 #
@@ -2820,6 +2832,8 @@ Playerbots.RandomClassSpecIndex.11.6 = 6
 # bear dps pve
 Playerbots.RandomClassSpecProb.11.7 = 4
 Playerbots.RandomClassSpecIndex.11.7 = 7
+Playerbots.RandomClassSpecProb.11.8 = 0
+Playerbots.RandomClassSpecIndex.11.8 = 8
 
 #
 #
