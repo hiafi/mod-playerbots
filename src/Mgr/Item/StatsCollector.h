@@ -77,7 +77,8 @@ public:
     StatsCollector(CollectorType type, int32 cls = -1, int32 lvl = -1);
     StatsCollector(StatsCollector& stats) = default;
     void Reset();
-    void CollectItemStats(ItemTemplate const* proto);
+    // slot is the equipment slot the item is scored for (-1 when unknown); only weapon form attack power reads it
+    void CollectItemStats(ItemTemplate const* proto, int32 slot = -1);
     void CollectSpellStats(uint32 spellId, float multiplier = 1.0f, Milliseconds spellCooldown = -1ms);
     void CollectEnchantStats(SpellItemEnchantmentEntry const* enchant, uint32 default_enchant_amount = 0, uint32 weaponDelay = 0, bool isRanged = false);
     bool CanBeTriggeredByType(SpellInfo const* spellInfo, uint32 procFlags, bool strict = true);
@@ -87,7 +88,8 @@ public:
     float stats[STATS_TYPE_MAX];
 
 private:
-    void CollectWeaponDamageStats(ItemTemplate const* proto, ScalingStatValuesEntry const* ssv);
+    void CollectWeaponDamageStats(ItemTemplate const* proto, ScalingStatValuesEntry const* ssv, int32 slot);
+    float GetFeralWeaponAttackPower(ItemTemplate const* proto, int32 extraDps, int32 slot) const;
     void CollectItemStatValues(ItemTemplate const* proto, ScalingStatDistributionEntry const* ssd,
                                ScalingStatValuesEntry const* ssv);
     void CollectByItemStatType(uint32 itemStatType, int32 val);

@@ -6,6 +6,8 @@
 
 #include "StatsCollector.h"
 #include "DBCStores.h"
+#include "DruidMechanics.h"
+#include "HunterMechanics.h"
 #include "ItemTemplate.h"
 #include "PlayerbotAI.h"
 #include "PlayerbotAIAware.h"
@@ -34,7 +36,7 @@ void StatsCollector::Reset()
     }
 }
 
-void StatsCollector::CollectItemStats(ItemTemplate const* proto)
+void StatsCollector::CollectItemStats(ItemTemplate const* proto, int32 slot)
 {
     // Heirlooms and other scaling items hold their real stats in DBC, keyed by wearer level (Player::_ApplyItemBonuses)
     ScalingStatDistributionEntry const* ssd =
@@ -49,7 +51,7 @@ void StatsCollector::CollectItemStats(ItemTemplate const* proto)
     ScalingStatValuesEntry const* ssv =
         proto->ScalingStatValue && ssdLevel ? sScalingStatValuesStore.LookupEntry(ssdLevel) : nullptr;
 
-    CollectWeaponDamageStats(proto, ssv);
+    CollectWeaponDamageStats(proto, ssv, slot);
     CollectItemStatValues(proto, ssd, ssv);
 
     if (ssv)
@@ -108,7 +110,8 @@ void StatsCollector::CollectItemStats(ItemTemplate const* proto)
     }
 }
 
-void StatsCollector::CollectWeaponDamageStats(ItemTemplate const* proto, ScalingStatValuesEntry const* ssv)
+void StatsCollector::CollectWeaponDamageStats(ItemTemplate const* proto, ScalingStatValuesEntry const* ssv,
+                                              int32 slot)
 {
     if (!proto->IsWeapon() || proto->Delay == 0)
         return;
@@ -137,13 +140,51 @@ void StatsCollector::CollectWeaponDamageStats(ItemTemplate const* proto, Scaling
     if (proto->IsRangedWeapon())
     {
         stats[STATS_TYPE_RANGED_DPS] += dps;
+
+        // Weapon scaling (stage WSH): a hunter's ranged-slot weapon gives k_h x DPS ranged attack power, the heirloom
+        // DPS bonus included, as in the core's OnPlayerGetWeaponRangedApBonus hook. Pets inherit it through the
+        // owner's ranged attack power; the scorer does not model pets, so only the hunter's share is counted.
+        if (cls_ == CLASS_HUNTER)
+        {
+            float const rangedApPerDps = Hunter::GetWeaponRangedApPerDps();
+            if (rangedApPerDps > 0.0f)
+                stats[STATS_TYPE_ATTACK_POWER] += rangedApPerDps * (proto->getDPS() + float(extraDps));
+        }
         return;
     }
 
     stats[STATS_TYPE_MELEE_DPS] += dps;
     // Feral forms convert weapon DPS into attack power, so treat it as attack power for Feral Druids.
     if (cls_ == CLASS_DRUID && (type_ & CollectorType::MELEE))
-        stats[STATS_TYPE_ATTACK_POWER] += proto->getFeralBonus(extraDps);
+        stats[STATS_TYPE_ATTACK_POWER] += GetFeralWeaponAttackPower(proto, extraDps, slot);
+}
+
+float StatsCollector::GetFeralWeaponAttackPower(ItemTemplate const* proto, int32 extraDps, int32 slot) const
+{
+    float const feralApPerDps = Druid::GetWeaponFeralApPerDps();
+    if (feralApPerDps <= 0.0f)
+        return float(proto->getFeralBonus(extraDps));  // WeaponScaling.FeralApPerDps = 0: the stock formula
+
+    // The weapon types the core's OnPlayerGetFeralApBonus hook covers (those of ItemTemplate::getFeralBonus).
+    constexpr uint32 feralApInventoryTypeMask = 1u << INVTYPE_WEAPON | 1u << INVTYPE_2HWEAPON |
+                                                1u << INVTYPE_WEAPONMAINHAND | 1u << INVTYPE_WEAPONOFFHAND;
+    if (proto->Class != ITEM_CLASS_WEAPON || !((1u << proto->InventoryType) & feralApInventoryTypeMask))
+        return 0.0f;
+
+    // Only the main-hand (or two-hand) weapon gives form attack power. With a known equipment slot that decides;
+    // without one (-1, or a slot that is not an equipment slot) an off-hand-only item cannot be the main hand.
+    if (slot >= 0 && slot < EQUIPMENT_SLOT_END)
+    {
+        if (slot != EQUIPMENT_SLOT_MAINHAND)
+            return 0.0f;
+    }
+    else if (proto->InventoryType == INVTYPE_WEAPONOFFHAND)
+    {
+        return 0.0f;
+    }
+
+    // Cat and Bear/Dire Bear only (the collector counts for melee roles only), no threshold: k_f x DPS.
+    return feralApPerDps * (proto->getDPS() + float(extraDps));
 }
 
 void StatsCollector::CollectItemStatValues(ItemTemplate const* proto, ScalingStatDistributionEntry const* ssd,
