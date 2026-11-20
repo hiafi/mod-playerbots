@@ -34,6 +34,7 @@
 // Known gaps:
 // - Level 60 only: a rating converts to more percent per point at low level, a primary stat does not.
 // - Cooldown Haste: measured in 120 s fights only, provisional (an average over 60/120/180/300 s is planned).
+//   Halved (2026-11-20): the rating now converts 1:1 with Crit, half the percent per point it was measured at.
 // - Arcane and Fire Mastery at +140 is noise-bound (a 1.5-3% step against a 10-12% run-to-run spread); the rows use
 //   the slope pooled with the +1400 check (+30% / +33% on the 2026-11-11 image). Re-sim with more batches.
 // - Pending core change (shield caps: Blood Shield 30% -> 100%, Radiant Bulwark 50% -> 200% of max health; Echo of
@@ -73,30 +74,30 @@ inline std::vector<SimSpecWeights> const& GetSimSpecWeights()
           { { STATS_TYPE_ARMOR_PENETRATION, 3.807f }, { STATS_TYPE_STRENGTH, 2.5f }, { STATS_TYPE_HASTE, 1.83f },
             { STATS_TYPE_CRIT, 1.737f }, { STATS_TYPE_ATTACK_POWER, 1.713f }, { STATS_TYPE_AGILITY, 1.619f },
             { STATS_TYPE_MASTERY, 1.218f }, { STATS_TYPE_VERSATILITY, 0.73f }, { STATS_TYPE_PROC_CHANCE, 0.661f },
-            { STATS_TYPE_COOLDOWN_HASTE, 0.56f } } },
+            { STATS_TYPE_COOLDOWN_HASTE, 0.28f } } },
         // Fury Warrior: FuryWarriorSimSW
         { CLASS_WARRIOR, WARRIOR_TAB_FURY, SimBuild::Default,
           { { STATS_TYPE_STRENGTH, 2.5f }, { STATS_TYPE_ARMOR_PENETRATION, 1.744f }, { STATS_TYPE_CRIT, 1.737f },
             { STATS_TYPE_MASTERY, 1.169f }, { STATS_TYPE_ATTACK_POWER, 1.159f }, { STATS_TYPE_AGILITY, 1.131f },
             { STATS_TYPE_VERSATILITY, 0.672f }, { STATS_TYPE_HASTE, 0.609f }, { STATS_TYPE_PROC_CHANCE, 0.309f },
-            { STATS_TYPE_COOLDOWN_HASTE, 0.247f } } },
+            { STATS_TYPE_COOLDOWN_HASTE, 0.1235f } } },
         // Protection Warrior: ProtWarriorTankSimSW
         { CLASS_WARRIOR, WARRIOR_TAB_PROTECTION, SimBuild::Default,
           { { STATS_TYPE_STAMINA, 3.0f }, { STATS_TYPE_STRENGTH, 1.286f }, { STATS_TYPE_ARMOR_PENETRATION, 1.025f },
             { STATS_TYPE_ATTACK_POWER, 0.706f }, { STATS_TYPE_DEFENSE, 0.66f }, { STATS_TYPE_PROC_CHANCE, 0.602f },
             { STATS_TYPE_MASTERY, 0.589f }, { STATS_TYPE_BLOCK_RATING, 0.551f }, { STATS_TYPE_VERSATILITY, 0.55f },
             { STATS_TYPE_DODGE, 0.531f }, { STATS_TYPE_PARRY, 0.531f }, { STATS_TYPE_CRIT, 0.49f },
-            { STATS_TYPE_COOLDOWN_HASTE, 0.442f }, { STATS_TYPE_BLOCK_VALUE, 0.412f }, { STATS_TYPE_AGILITY, 0.329f },
+            { STATS_TYPE_COOLDOWN_HASTE, 0.221f }, { STATS_TYPE_BLOCK_VALUE, 0.412f }, { STATS_TYPE_AGILITY, 0.329f },
             { STATS_TYPE_ARMOR, 0.069f }, { STATS_TYPE_HASTE, 0.0f } } },
         // Holy Paladin: HolyPaladinHealSimSW
         { CLASS_PALADIN, PALADIN_TAB_HOLY, SimBuild::Default,
           { { STATS_TYPE_HASTE, 1.432f }, { STATS_TYPE_INTELLECT, 1.256f }, { STATS_TYPE_HEAL_POWER, 1.0f },
             { STATS_TYPE_VERSATILITY, 0.743f }, { STATS_TYPE_CRIT, 0.599f }, { STATS_TYPE_MASTERY, 0.592f },
-            { STATS_TYPE_COOLDOWN_HASTE, 0.503f }, { STATS_TYPE_SPIRIT, 0.15f }, { STATS_TYPE_PROC_CHANCE, 0.0f } } },
+            { STATS_TYPE_COOLDOWN_HASTE, 0.2515f }, { STATS_TYPE_SPIRIT, 0.15f }, { STATS_TYPE_PROC_CHANCE, 0.0f } } },
         // Shockadin: ShockadinSimSW
         { CLASS_PALADIN, PALADIN_TAB_HOLY, SimBuild::Shockadin,
           { { STATS_TYPE_INTELLECT, 2.0f }, { STATS_TYPE_SPELL_POWER, 1.609f }, { STATS_TYPE_STRENGTH, 1.103f },
-            { STATS_TYPE_HASTE, 1.072f }, { STATS_TYPE_CRIT, 0.947f }, { STATS_TYPE_COOLDOWN_HASTE, 0.902f },
+            { STATS_TYPE_HASTE, 1.072f }, { STATS_TYPE_CRIT, 0.947f }, { STATS_TYPE_COOLDOWN_HASTE, 0.451f },
             { STATS_TYPE_MASTERY, 0.786f }, { STATS_TYPE_VERSATILITY, 0.674f }, { STATS_TYPE_ARMOR_PENETRATION, 0.0f },
             { STATS_TYPE_ATTACK_POWER, 0.474f }, { STATS_TYPE_AGILITY, 0.0f }, { STATS_TYPE_PROC_CHANCE, 0.127f } } },
         // Protection Paladin: ProtPaladinTankSimSW
@@ -111,7 +112,7 @@ inline std::vector<SimSpecWeights> const& GetSimSpecWeights()
         // Retribution Paladin: RetPaladinSimSW
         { CLASS_PALADIN, PALADIN_TAB_RETRIBUTION, SimBuild::Default,
           { { STATS_TYPE_HASTE, 2.579f }, { STATS_TYPE_STRENGTH, 2.5f }, { STATS_TYPE_ATTACK_POWER, 1.236f },
-            { STATS_TYPE_CRIT, 1.234f }, { STATS_TYPE_VERSATILITY, 0.951f }, { STATS_TYPE_COOLDOWN_HASTE, 0.877f },
+            { STATS_TYPE_CRIT, 1.234f }, { STATS_TYPE_VERSATILITY, 0.951f }, { STATS_TYPE_COOLDOWN_HASTE, 0.4385f },
             { STATS_TYPE_INTELLECT, 0.834f }, { STATS_TYPE_SPELL_POWER, 0.627f }, { STATS_TYPE_MASTERY, 0.475f },
             { STATS_TYPE_AGILITY, 0.5f }, { STATS_TYPE_ARMOR_PENETRATION, 1.192f },
             { STATS_TYPE_PROC_CHANCE, 0.128f } } },
@@ -125,7 +126,7 @@ inline std::vector<SimSpecWeights> const& GetSimSpecWeights()
         { CLASS_HUNTER, HUNTER_TAB_MARKSMANSHIP, SimBuild::Default,
           { { STATS_TYPE_AGILITY, 2.3f }, { STATS_TYPE_CRIT, 1.019f }, { STATS_TYPE_VERSATILITY, 0.842f },
             { STATS_TYPE_ATTACK_POWER, 0.592f }, { STATS_TYPE_MASTERY, 0.569f }, { STATS_TYPE_INTELLECT, 0.0f },
-            { STATS_TYPE_COOLDOWN_HASTE, 0.213f }, { STATS_TYPE_HASTE, 1.156f }, { STATS_TYPE_PROC_CHANCE, 0.0f },
+            { STATS_TYPE_COOLDOWN_HASTE, 0.1065f }, { STATS_TYPE_HASTE, 1.156f }, { STATS_TYPE_PROC_CHANCE, 0.0f },
             { STATS_TYPE_ARMOR_PENETRATION, 0.908f }, { STATS_TYPE_STRENGTH, 0.0f } } },
         // Survival Hunter: SvHunterSimSW
         { CLASS_HUNTER, HUNTER_TAB_SURVIVAL, SimBuild::Default,
@@ -147,7 +148,7 @@ inline std::vector<SimSpecWeights> const& GetSimSpecWeights()
             { STATS_TYPE_MASTERY, 0.519f }, { STATS_TYPE_COOLDOWN_HASTE, 0.0f } } },
         // Combat Rogue tank: CombatRogueTankSimSW
         { CLASS_ROGUE, ROGUE_TAB_COMBAT, SimBuild::Tank,
-          { { STATS_TYPE_STAMINA, 2.685f }, { STATS_TYPE_AGILITY, 1.9f }, { STATS_TYPE_COOLDOWN_HASTE, 0.845f },
+          { { STATS_TYPE_STAMINA, 2.685f }, { STATS_TYPE_AGILITY, 1.9f }, { STATS_TYPE_COOLDOWN_HASTE, 0.4225f },
             { STATS_TYPE_ATTACK_POWER, 0.683f }, { STATS_TYPE_VERSATILITY, 0.664f }, { STATS_TYPE_STRENGTH, 0.552f },
             { STATS_TYPE_DEFENSE, 0.448f }, { STATS_TYPE_DODGE, 0.406f }, { STATS_TYPE_PARRY, 0.406f },
             { STATS_TYPE_PROC_CHANCE, 0.324f }, { STATS_TYPE_MASTERY, 0.276f }, { STATS_TYPE_ARMOR, 0.036f },
@@ -162,12 +163,12 @@ inline std::vector<SimSpecWeights> const& GetSimSpecWeights()
         { CLASS_PRIEST, PRIEST_TAB_DISCIPLINE, SimBuild::Default,
           { { STATS_TYPE_INTELLECT, 2.494f }, { STATS_TYPE_SPIRIT, 1.857f }, { STATS_TYPE_HASTE, 1.583f },
             { STATS_TYPE_HEAL_POWER, 1.0f }, { STATS_TYPE_MASTERY, 0.899f }, { STATS_TYPE_CRIT, 0.412f },
-            { STATS_TYPE_VERSATILITY, 0.385f }, { STATS_TYPE_COOLDOWN_HASTE, 0.36f },
+            { STATS_TYPE_VERSATILITY, 0.385f }, { STATS_TYPE_COOLDOWN_HASTE, 0.18f },
             { STATS_TYPE_PROC_CHANCE, 0.064f } } },
         // Holy Priest: HolyPriestHealSimSW
         { CLASS_PRIEST, PRIEST_TAB_HOLY, SimBuild::Default,
           { { STATS_TYPE_INTELLECT, 2.899f }, { STATS_TYPE_HASTE, 1.571f }, { STATS_TYPE_SPIRIT, 1.162f },
-            { STATS_TYPE_HEAL_POWER, 1.0f }, { STATS_TYPE_COOLDOWN_HASTE, 0.927f }, { STATS_TYPE_CRIT, 0.787f },
+            { STATS_TYPE_HEAL_POWER, 1.0f }, { STATS_TYPE_COOLDOWN_HASTE, 0.4635f }, { STATS_TYPE_CRIT, 0.787f },
             { STATS_TYPE_VERSATILITY, 0.782f }, { STATS_TYPE_MASTERY, 0.13f }, { STATS_TYPE_PROC_CHANCE, 0.0f } } },
         // Shadow Priest: ShadowPriestSimSW
         { CLASS_PRIEST, PRIEST_TAB_SHADOW, SimBuild::Default,
@@ -179,7 +180,7 @@ inline std::vector<SimSpecWeights> const& GetSimSpecWeights()
           { { STATS_TYPE_STAMINA, 3.0f }, { STATS_TYPE_STRENGTH, 1.286f }, { STATS_TYPE_AGILITY, 1.079f },
             { STATS_TYPE_DEFENSE, 0.964f }, { STATS_TYPE_DODGE, 0.873f }, { STATS_TYPE_PARRY, 0.873f },
             { STATS_TYPE_VERSATILITY, 0.715f }, { STATS_TYPE_CRIT, 0.673f }, { STATS_TYPE_MASTERY, 0.635f },
-            { STATS_TYPE_ATTACK_POWER, 0.603f }, { STATS_TYPE_HASTE, 0.472f }, { STATS_TYPE_COOLDOWN_HASTE, 0.128f },
+            { STATS_TYPE_ATTACK_POWER, 0.603f }, { STATS_TYPE_HASTE, 0.472f }, { STATS_TYPE_COOLDOWN_HASTE, 0.064f },
             { STATS_TYPE_PROC_CHANCE, 0.125f }, { STATS_TYPE_ARMOR, 0.099f },
             { STATS_TYPE_ARMOR_PENETRATION, 0.0f } } },
         // Frost Death Knight: FrostDkObliterationSimSW
@@ -187,10 +188,10 @@ inline std::vector<SimSpecWeights> const& GetSimSpecWeights()
           { { STATS_TYPE_STRENGTH, 2.5f }, { STATS_TYPE_HASTE, 1.384f }, { STATS_TYPE_ATTACK_POWER, 1.221f },
             { STATS_TYPE_CRIT, 0.782f }, { STATS_TYPE_VERSATILITY, 0.732f }, { STATS_TYPE_PROC_CHANCE, 0.547f },
             { STATS_TYPE_ARMOR_PENETRATION, 1.865f }, { STATS_TYPE_MASTERY, 0.441f }, { STATS_TYPE_AGILITY, 0.5f },
-            { STATS_TYPE_COOLDOWN_HASTE, 0.066f } } },
+            { STATS_TYPE_COOLDOWN_HASTE, 0.033f } } },
         // Unholy Death Knight: UnholyDkPlagueSimSW
         { CLASS_DEATH_KNIGHT, DEATH_KNIGHT_TAB_UNHOLY, SimBuild::Default,
-          { { STATS_TYPE_STRENGTH, 2.5f }, { STATS_TYPE_CRIT, 1.859f }, { STATS_TYPE_COOLDOWN_HASTE, 1.584f },
+          { { STATS_TYPE_STRENGTH, 2.5f }, { STATS_TYPE_CRIT, 1.859f }, { STATS_TYPE_COOLDOWN_HASTE, 0.792f },
             { STATS_TYPE_ATTACK_POWER, 1.498f }, { STATS_TYPE_AGILITY, 0.819f }, { STATS_TYPE_HASTE, 0.754f },
             { STATS_TYPE_MASTERY, 0.748f }, { STATS_TYPE_VERSATILITY, 0.679f },
             { STATS_TYPE_ARMOR_PENETRATION, 1.248f }, { STATS_TYPE_PROC_CHANCE, 0.168f } } },
@@ -199,18 +200,18 @@ inline std::vector<SimSpecWeights> const& GetSimSpecWeights()
           { { STATS_TYPE_HASTE, 1.758f }, { STATS_TYPE_SPELL_POWER, 1.2f }, { STATS_TYPE_INTELLECT, 0.978f },
             { STATS_TYPE_MASTERY, 0.826f }, { STATS_TYPE_CRIT, 0.756f }, { STATS_TYPE_SPIRIT, 0.701f },
             { STATS_TYPE_VERSATILITY, 0.456f }, { STATS_TYPE_PROC_CHANCE, 0.295f },
-            { STATS_TYPE_COOLDOWN_HASTE, 0.153f } } },
+            { STATS_TYPE_COOLDOWN_HASTE, 0.0765f } } },
         // Enhancement Shaman: EnhShamanSimSW
         { CLASS_SHAMAN, SHAMAN_TAB_ENHANCEMENT, SimBuild::Default,
           { { STATS_TYPE_INTELLECT, 1.615f }, { STATS_TYPE_AGILITY, 1.4f }, { STATS_TYPE_STRENGTH, 1.12f },
-            { STATS_TYPE_COOLDOWN_HASTE, 0.905f }, { STATS_TYPE_ATTACK_POWER, 0.84f },
+            { STATS_TYPE_COOLDOWN_HASTE, 0.4525f }, { STATS_TYPE_ATTACK_POWER, 0.84f },
             { STATS_TYPE_SPELL_POWER, 0.772f }, { STATS_TYPE_CRIT, 0.731f }, { STATS_TYPE_HASTE, 0.661f },
             { STATS_TYPE_VERSATILITY, 0.601f }, { STATS_TYPE_PROC_CHANCE, 0.462f },
             { STATS_TYPE_ARMOR_PENETRATION, 0.875f }, { STATS_TYPE_MASTERY, 0.258f } } },
         // Enhancement Shaman tank: EnhShamanTankSimSW
         { CLASS_SHAMAN, SHAMAN_TAB_ENHANCEMENT, SimBuild::Tank,
           { { STATS_TYPE_STAMINA, 7.307f }, { STATS_TYPE_DEFENSE, 4.014f }, { STATS_TYPE_DODGE, 3.636f },
-            { STATS_TYPE_PARRY, 3.636f }, { STATS_TYPE_MASTERY, 3.542f }, { STATS_TYPE_COOLDOWN_HASTE, 3.364f },
+            { STATS_TYPE_PARRY, 3.636f }, { STATS_TYPE_MASTERY, 3.542f }, { STATS_TYPE_COOLDOWN_HASTE, 1.682f },
             { STATS_TYPE_INTELLECT, 3.132f }, { STATS_TYPE_SPELL_POWER, 3.034f }, { STATS_TYPE_VERSATILITY, 2.712f },
             { STATS_TYPE_HASTE, 1.741f }, { STATS_TYPE_AGILITY, 1.4f }, { STATS_TYPE_PROC_CHANCE, 0.832f },
             { STATS_TYPE_ARMOR, 0.401f }, { STATS_TYPE_ARMOR_PENETRATION, 0.9f }, { STATS_TYPE_STRENGTH, 1.1f },
@@ -219,7 +220,7 @@ inline std::vector<SimSpecWeights> const& GetSimSpecWeights()
         { CLASS_SHAMAN, SHAMAN_TAB_RESTORATION, SimBuild::Default,
           { { STATS_TYPE_INTELLECT, 1.218f }, { STATS_TYPE_HEAL_POWER, 1.0f }, { STATS_TYPE_SPIRIT, 0.0f },
             { STATS_TYPE_VERSATILITY, 0.745f }, { STATS_TYPE_MASTERY, 0.567f }, { STATS_TYPE_HASTE, 0.492f },
-            { STATS_TYPE_CRIT, 0.6f }, { STATS_TYPE_COOLDOWN_HASTE, 0.203f }, { STATS_TYPE_PROC_CHANCE, 0.0f } } },
+            { STATS_TYPE_CRIT, 0.6f }, { STATS_TYPE_COOLDOWN_HASTE, 0.1015f }, { STATS_TYPE_PROC_CHANCE, 0.0f } } },
         // Arcane Mage: ArcaneMageSimSW
         { CLASS_MAGE, MAGE_TAB_ARCANE, SimBuild::Default,
           { { STATS_TYPE_HASTE, 1.0f }, { STATS_TYPE_CRIT, 0.728f }, { STATS_TYPE_PROC_CHANCE, 0.245f },
@@ -233,18 +234,18 @@ inline std::vector<SimSpecWeights> const& GetSimSpecWeights()
         { CLASS_MAGE, MAGE_TAB_FROST, SimBuild::Default,
           { { STATS_TYPE_HASTE, 1.217f }, { STATS_TYPE_SPELL_POWER, 1.0f }, { STATS_TYPE_SPIRIT, 0.859f },
             { STATS_TYPE_INTELLECT, 0.808f }, { STATS_TYPE_CRIT, 0.752f }, { STATS_TYPE_MASTERY, 0.624f },
-            { STATS_TYPE_VERSATILITY, 0.358f }, { STATS_TYPE_COOLDOWN_HASTE, 0.264f },
+            { STATS_TYPE_VERSATILITY, 0.358f }, { STATS_TYPE_COOLDOWN_HASTE, 0.132f },
             { STATS_TYPE_PROC_CHANCE, 0.0f } } },
         // Affliction Warlock: AfflictionWarlockSimSW
         { CLASS_WARLOCK, WARLOCK_TAB_AFFLICTION, SimBuild::Default,
           { { STATS_TYPE_SPELL_POWER, 1.0f }, { STATS_TYPE_HASTE, 1.0f }, { STATS_TYPE_SPIRIT, 0.6f },
             { STATS_TYPE_INTELLECT, 0.715f }, { STATS_TYPE_CRIT, 0.8f }, { STATS_TYPE_MASTERY, 0.611f },
             { STATS_TYPE_PROC_CHANCE, 0.456f }, { STATS_TYPE_VERSATILITY, 0.283f },
-            { STATS_TYPE_COOLDOWN_HASTE, 0.018f } } },
+            { STATS_TYPE_COOLDOWN_HASTE, 0.009f } } },
         // Demonology Warlock: DemonologyWarlockSimSW
         { CLASS_WARLOCK, WARLOCK_TAB_DEMONOLOGY, SimBuild::Default,
           { { STATS_TYPE_SPIRIT, 1.035f }, { STATS_TYPE_SPELL_POWER, 1.0f }, { STATS_TYPE_MASTERY, 0.944f },
-            { STATS_TYPE_COOLDOWN_HASTE, 0.93f }, { STATS_TYPE_INTELLECT, 0.927f }, { STATS_TYPE_HASTE, 0.713f },
+            { STATS_TYPE_COOLDOWN_HASTE, 0.465f }, { STATS_TYPE_INTELLECT, 0.927f }, { STATS_TYPE_HASTE, 0.713f },
             { STATS_TYPE_VERSATILITY, 0.498f }, { STATS_TYPE_CRIT, 0.8f }, { STATS_TYPE_PROC_CHANCE, 0.163f } } },
         // Destruction Warlock: DestructionWarlockSimSW
         { CLASS_WARLOCK, WARLOCK_TAB_DESTRUCTION, SimBuild::Default,
@@ -254,14 +255,14 @@ inline std::vector<SimSpecWeights> const& GetSimSpecWeights()
         // Balance Druid: BalanceDruidSimSW
         { CLASS_DRUID, DRUID_TAB_BALANCE, SimBuild::Default,
           { { STATS_TYPE_SPIRIT, 1.226f }, { STATS_TYPE_SPELL_POWER, 1.0f }, { STATS_TYPE_HASTE, 0.848f },
-            { STATS_TYPE_INTELLECT, 0.72f }, { STATS_TYPE_CRIT, 0.637f }, { STATS_TYPE_COOLDOWN_HASTE, 0.426f },
+            { STATS_TYPE_INTELLECT, 0.72f }, { STATS_TYPE_CRIT, 0.637f }, { STATS_TYPE_COOLDOWN_HASTE, 0.213f },
             { STATS_TYPE_VERSATILITY, 0.255f }, { STATS_TYPE_MASTERY, 0.079f }, { STATS_TYPE_PROC_CHANCE, 0.0f } } },
         // Feral (Cat) Druid: FeralCatSimSW
         { CLASS_DRUID, DRUID_TAB_FERAL, SimBuild::Default,
           { { STATS_TYPE_STRENGTH, 2.333f }, { STATS_TYPE_AGILITY, 2.2f }, { STATS_TYPE_HASTE, 1.927f },
             { STATS_TYPE_ATTACK_POWER, 1.507f }, { STATS_TYPE_CRIT, 1.309f }, { STATS_TYPE_MASTERY, 0.567f },
             { STATS_TYPE_VERSATILITY, 0.456f }, { STATS_TYPE_ARMOR_PENETRATION, 1.268f },
-            { STATS_TYPE_PROC_CHANCE, 0.174f }, { STATS_TYPE_COOLDOWN_HASTE, 0.013f } } },
+            { STATS_TYPE_PROC_CHANCE, 0.174f }, { STATS_TYPE_COOLDOWN_HASTE, 0.0065f } } },
         // Feral Bear DPS (Bestial Fury): BearDpsSimSW
         { CLASS_DRUID, DRUID_TAB_FERAL, SimBuild::BearDps,
           { { STATS_TYPE_STRENGTH, 2.255f }, { STATS_TYPE_HASTE, 2.225f }, { STATS_TYPE_AGILITY, 2.2f },
@@ -272,14 +273,14 @@ inline std::vector<SimSpecWeights> const& GetSimSpecWeights()
         { CLASS_DRUID, DRUID_TAB_FERAL, SimBuild::Tank,
           { { STATS_TYPE_AGILITY, 9.211f }, { STATS_TYPE_CRIT, 4.64f }, { STATS_TYPE_STAMINA, 4.0f },
             { STATS_TYPE_HASTE, 3.197f }, { STATS_TYPE_STRENGTH, 2.052f }, { STATS_TYPE_DODGE, 1.892f },
-            { STATS_TYPE_PROC_CHANCE, 1.805f }, { STATS_TYPE_COOLDOWN_HASTE, 1.553f }, { STATS_TYPE_DEFENSE, 1.393f },
+            { STATS_TYPE_PROC_CHANCE, 1.805f }, { STATS_TYPE_COOLDOWN_HASTE, 0.7765f }, { STATS_TYPE_DEFENSE, 1.393f },
             { STATS_TYPE_VERSATILITY, 1.276f }, { STATS_TYPE_ARMOR_PENETRATION, 1.037f },
             { STATS_TYPE_ATTACK_POWER, 0.976f }, { STATS_TYPE_MASTERY, 0.603f } } },
         // Restoration Druid: RestoDruidHealSimSW
         { CLASS_DRUID, DRUID_TAB_RESTORATION, SimBuild::Default,
           { { STATS_TYPE_INTELLECT, 1.037f }, { STATS_TYPE_HEAL_POWER, 1.0f }, { STATS_TYPE_SPIRIT, 0.61f },
             { STATS_TYPE_CRIT, 0.605f }, { STATS_TYPE_HASTE, 0.556f }, { STATS_TYPE_VERSATILITY, 0.489f },
-            { STATS_TYPE_MASTERY, 0.239f }, { STATS_TYPE_COOLDOWN_HASTE, 0.221f },
+            { STATS_TYPE_MASTERY, 0.239f }, { STATS_TYPE_COOLDOWN_HASTE, 0.1105f },
             { STATS_TYPE_PROC_CHANCE, 0.135f } } },
     };
     return table;
