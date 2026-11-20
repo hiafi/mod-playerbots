@@ -35,6 +35,7 @@
 // - Level 60 only: a rating converts to more percent per point at low level, a primary stat does not.
 // - Cooldown Haste: measured in 120 s fights only, provisional (an average over 60/120/180/300 s is planned).
 //   Halved (2026-11-20): the rating now converts 1:1 with Crit, half the percent per point it was measured at.
+// - Block rating x5/7 (2026-11-20): 7 rating per 1% block at level 60 instead of the 5 it was measured at.
 // - Arcane and Fire Mastery at +140 is noise-bound (a 1.5-3% step against a 10-12% run-to-run spread); the rows use
 //   the slope pooled with the +1400 check (+30% / +33% on the 2026-11-11 image). Re-sim with more batches.
 // - Pending core change (shield caps: Blood Shield 30% -> 100%, Radiant Bulwark 50% -> 200% of max health; Echo of
@@ -85,7 +86,7 @@ inline std::vector<SimSpecWeights> const& GetSimSpecWeights()
         { CLASS_WARRIOR, WARRIOR_TAB_PROTECTION, SimBuild::Default,
           { { STATS_TYPE_STAMINA, 3.0f }, { STATS_TYPE_STRENGTH, 1.286f }, { STATS_TYPE_ARMOR_PENETRATION, 1.025f },
             { STATS_TYPE_ATTACK_POWER, 0.706f }, { STATS_TYPE_DEFENSE, 0.66f }, { STATS_TYPE_PROC_CHANCE, 0.602f },
-            { STATS_TYPE_MASTERY, 0.589f }, { STATS_TYPE_BLOCK_RATING, 0.551f }, { STATS_TYPE_VERSATILITY, 0.55f },
+            { STATS_TYPE_MASTERY, 0.589f }, { STATS_TYPE_BLOCK_RATING, 0.394f }, { STATS_TYPE_VERSATILITY, 0.55f },
             { STATS_TYPE_DODGE, 0.531f }, { STATS_TYPE_PARRY, 0.531f }, { STATS_TYPE_CRIT, 0.49f },
             { STATS_TYPE_COOLDOWN_HASTE, 0.221f }, { STATS_TYPE_BLOCK_VALUE, 0.412f }, { STATS_TYPE_AGILITY, 0.329f },
             { STATS_TYPE_ARMOR, 0.069f }, { STATS_TYPE_HASTE, 0.0f } } },
@@ -104,7 +105,7 @@ inline std::vector<SimSpecWeights> const& GetSimSpecWeights()
         { CLASS_PALADIN, PALADIN_TAB_PROTECTION, SimBuild::Default,
           { { STATS_TYPE_STAMINA, 3.0f }, { STATS_TYPE_DEFENSE, 1.615f }, { STATS_TYPE_DODGE, 1.37f },
             { STATS_TYPE_PARRY, 1.37f }, { STATS_TYPE_STRENGTH, 1.286f }, { STATS_TYPE_ATTACK_POWER, 0.857f },
-            { STATS_TYPE_BLOCK_VALUE, 0.857f }, { STATS_TYPE_BLOCK_RATING, 0.765f },
+            { STATS_TYPE_BLOCK_VALUE, 0.857f }, { STATS_TYPE_BLOCK_RATING, 0.546f },
             { STATS_TYPE_VERSATILITY, 0.687f }, { STATS_TYPE_PROC_CHANCE, 0.171f }, { STATS_TYPE_ARMOR, 0.123f },
             { STATS_TYPE_MASTERY, 0.063f }, { STATS_TYPE_AGILITY, 0.2f }, { STATS_TYPE_SPELL_POWER, -2.0f },
             { STATS_TYPE_COOLDOWN_HASTE, 0.0f }, { STATS_TYPE_INTELLECT, 0.0f }, { STATS_TYPE_CRIT, 0.0f },
