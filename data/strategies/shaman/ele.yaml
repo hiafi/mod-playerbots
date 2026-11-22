@@ -79,7 +79,8 @@ rows:
   # Single target 1 / Packs 1: summon the next elemental (Water, Storm, Fire, Earth after the last one) when its own
   # cooldown, the shared lockout included, is over. The value skips unknown elementals, and the Earth Elemental in a
   # group with a tank (it taunts) unless Power of the Elements removes the taunt; it is not ready while its element
-  # is out
+  # is out. The cycle starts over every fight, and a pack (`pack` above) opens with the Storm Elemental when it is
+  # ready (single target still opens with Water; level60-stat-curve S17, 2026-11-22, C++ value)
   - do: shaman summon elemental
     when: value("shaman elemental ready")
     relevance: normal + 9.8
