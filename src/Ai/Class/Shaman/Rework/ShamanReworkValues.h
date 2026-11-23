@@ -47,7 +47,7 @@ public:
 };
 
 // The element of the last elemental this bot summoned (an Element), ELEMENT_COUNT for none. Set by the summon action on
-// a successful cast; a dead bot starts the cycle over.
+// a successful cast; a dead bot and every new fight start the cycle over ("shaman next elemental").
 class ShamanLastElementalValue : public ManualSetValue<uint8>
 {
 public:
@@ -58,13 +58,19 @@ public:
 };
 
 // The summon spell id of the next elemental in the order Water, Storm, Fire, Earth after the last one, skipping the
-// ones the bot does not know, 0 when it knows none.
+// ones the bot does not know, 0 when it knows none. Every fight starts the cycle over (the bot object outlives the
+// fight, so the cycle used to carry over and each pull opened with a different elemental), and a pack (the ele.yaml
+// `pack` condition) opens with the Storm Elemental when it is ready; a single target still opens with Water.
 class ShamanNextElementalValue : public Uint32CalculatedValue
 {
 public:
     ShamanNextElementalValue(PlayerbotAI* botAI) : Uint32CalculatedValue(botAI, "shaman next elemental") {}
 
     uint32 Calculate() override;
+
+private:
+    // The combat clock (PlayerbotAI::GetCombatTimeMs()) at the last evaluation: a smaller one is a new fight
+    uint32 _lastCombatMs = 0;
 };
 
 // The next elemental can be summoned now: its own cooldown (the shared lockout included) is over and its element is

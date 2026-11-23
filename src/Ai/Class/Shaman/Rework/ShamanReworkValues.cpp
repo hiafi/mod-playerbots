@@ -93,8 +93,22 @@ uint32 ShamanNextElementalValue::Calculate()
     if (!bot->IsAlive())
     {
         last->Set(ELEMENT_COUNT);
+        _lastCombatMs = 0;
         return 0;
     }
+
+    // Out of combat, or the combat clock went back since the last evaluation (the engine restarted it at a new pull):
+    // the cycle starts over, so every fight opens the same way
+    uint32 const combatMs = botAI->GetState() == BOT_STATE_COMBAT ? botAI->GetCombatTimeMs() : 0;
+    if (botAI->GetState() != BOT_STATE_COMBAT || combatMs < _lastCombatMs)
+        last->Set(ELEMENT_COUNT);
+    _lastCombatMs = combatMs;
+
+    // Nothing summoned yet this fight and a pack: the Storm Elemental first, when it is ready (Water opens otherwise)
+    if (last->Get() == ELEMENT_COUNT && bot->HasSpell(SPELL_STORM_ELEMENTAL_TOTEM) &&
+        ElementalAllowed(bot, ELEMENT_STORM) && ai::spell::CooldownRemainingMs(bot, SPELL_STORM_ELEMENTAL_TOTEM) == 0 &&
+        AI_VALUE(bool, "shaman aoe enabled") && AI_VALUE2(uint8, "enemies near target", "8") >= 3)
+        return SPELL_STORM_ELEMENTAL_TOTEM;
 
     Element const next = NextElemental(bot, Element(last->Get()));
     return next == ELEMENT_COUNT ? 0 : GetElemental(next).summonSpell;
