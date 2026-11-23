@@ -30,7 +30,6 @@
 namespace
 {
 constexpr uint32 SPELL_MOLTEN_ARMOR_RANKS[] = { 30482, 43045, 43046 };
-constexpr uint32 SPELL_FEL_ARMOR_RANKS[] = { 28176, 28189, 47892, 47893 };
 constexpr uint32 SPELL_CAREFUL_AIM = 34484;
 constexpr uint32 SPELL_HUNTER_VS_WILD = 56341;
 constexpr uint32 SPELL_ARMORED_TO_THE_TEETH = 61222;
@@ -667,8 +666,8 @@ void StatsWeightCalculator::GenerateAdditionalWeights(Player* player)
     }
     else if (cls == CLASS_WARLOCK)
     {
-        if (!HasAnySpell(player, SPELL_FEL_ARMOR_RANKS))
-            stats_weights_[STATS_TYPE_SPIRIT] -= 0.4f;
+        // Fel Armor no longer converts Spirit into spell power (S23), so no Warlock spec has a use for it
+        stats_weights_[STATS_TYPE_SPIRIT] -= 0.4f;
     }
 
     // Healers would rather survive the hits (Greater Resistance), casters shed threat (Enchant Cloak - Subtlety),
