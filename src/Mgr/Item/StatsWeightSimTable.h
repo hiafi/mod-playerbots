@@ -30,7 +30,8 @@
 // Power 1.0 or 1.2 (casters, healing power for healers), Intellect 2.0 (Shockadin), Stamina 3.0 / 4.0 (Prot, Blood,
 // bear tank); the next stat in the spec's list when that one is inside its noise. The unmeasured stats keep their old
 // ratio to it. A caster whose Intellect check (1 Intellect = 0.5 Spell Power + its crit share, ratio 0.75-1.75) fails
-// keeps the class block's Intellect, Spell Power and Spirit and is anchored on its old Haste or Crit. A tank row is
+// keeps the class block's Intellect, Spell Power and Spirit and is anchored on its old Haste or Crit (Arcane, whose
+// check fails on Intellect's mana value, uses its measured values: user ruling 2026-11-22). A tank row is
 // 0.7 x its defensive weight (seconds of effective health per point; Dodge, Parry, Block, Defense and Armor computed
 // from the sim's own swings) + 0.3 x its damage weight (Enhancement tank: Intellect = 1). A healer row is half
 // whole-fight HPS (mana limited) and half HPS before going out of mana. Hit and Expertise are 0 for every non-PvP spec.
@@ -229,8 +230,9 @@ inline std::vector<SimSpecWeights> const& GetSimSpecWeights()
             { STATS_TYPE_CRIT, 0.142f }, { STATS_TYPE_VERSATILITY, 0.142f }, { STATS_TYPE_PROC_CHANCE, 0.045f } } },
         // Arcane Mage: ArcaneMageSimSW
         { CLASS_MAGE, MAGE_TAB_ARCANE, SimBuild::Default,
-          { { STATS_TYPE_HASTE, 1.0f }, { STATS_TYPE_PROC_CHANCE, 0.638f }, { STATS_TYPE_CRIT, 0.338f },
-            { STATS_TYPE_VERSATILITY, 0.206f }, { STATS_TYPE_MASTERY, 0.158f }, { STATS_TYPE_COOLDOWN_HASTE, 0.0f } } },
+          { { STATS_TYPE_INTELLECT, 1.438f }, { STATS_TYPE_SPELL_POWER, 1.0f }, { STATS_TYPE_HASTE, 0.927f },
+            { STATS_TYPE_SPIRIT, 0.642f }, { STATS_TYPE_PROC_CHANCE, 0.592f }, { STATS_TYPE_CRIT, 0.314f },
+            { STATS_TYPE_VERSATILITY, 0.191f }, { STATS_TYPE_MASTERY, 0.146f }, { STATS_TYPE_COOLDOWN_HASTE, 0.0f } } },
         // Fire Mage: FireMageSimSW
         { CLASS_MAGE, MAGE_TAB_FIRE, SimBuild::Default,
           { { STATS_TYPE_SPELL_POWER, 1.0f }, { STATS_TYPE_INTELLECT, 0.648f }, { STATS_TYPE_SPIRIT, 0.454f },
