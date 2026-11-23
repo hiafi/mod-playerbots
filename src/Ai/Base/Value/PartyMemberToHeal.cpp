@@ -6,6 +6,7 @@
 
 #include "PartyMemberToHeal.h"
 #include "BattlegroundWS.h"
+#include "HealthUtils.h"
 #include "Playerbots.h"
 #include "ServerFacade.h"
 
@@ -56,7 +57,7 @@ Unit* PartyMemberToHeal::Calculate()
             if (!player || !player->IsInWorld() || !player->IsAlive() || !player->IsInSameGroupWith(bot))
                 continue;
 
-            float health = player->GetHealthPct();
+            float health = ai::health::EffectiveHealthPct(player);
             if (isRaid || health < sPlayerbotAIConfig.MediumHealth ||
                 !IsTargetOfSpellCast(player, predicate))
             {
@@ -81,7 +82,7 @@ Unit* PartyMemberToHeal::Calculate()
             continue;
         if (player && player->IsAlive())
         {
-            float health = player->GetHealthPct();
+            float health = ai::health::EffectiveHealthPct(player);
             if (isRaid || health < sPlayerbotAIConfig.MediumHealth || !IsTargetOfSpellCast(player, predicate))
             {
                 float probeValue = 100.0f;
@@ -95,7 +96,7 @@ Unit* PartyMemberToHeal::Calculate()
                 }
                 constexpr float carrierPriority = 15.0f;
                 if (!carrierGuid.IsEmpty() && player->GetGUID() == carrierGuid &&
-                    player->GetHealthPct() < sPlayerbotAIConfig.MediumHealth &&
+                    ai::health::EffectiveHealthPct(player) < sPlayerbotAIConfig.MediumHealth &&
                     player->GetDistance2d(bot) <= sPlayerbotAIConfig.HealDistance && player->IsInWorld() &&
                     player->GetMap() == bot->GetMap())
                     probeValue -= carrierPriority;
@@ -108,7 +109,7 @@ Unit* PartyMemberToHeal::Calculate()
         Pet* pet = player->GetPet();
         if (pet && pet->IsAlive())
         {
-            float health = ((Unit*)pet)->GetHealthPct();
+            float health = ai::health::EffectiveHealthPct(pet);
             float probeValue = 100.0f;
             if (isRaid || health < sPlayerbotAIConfig.MediumHealth)
                 probeValue = health + 30.0f;
@@ -122,7 +123,7 @@ Unit* PartyMemberToHeal::Calculate()
         Unit* charm = player->GetCharm();
         if (charm && charm->IsAlive())
         {
-            float health = charm->GetHealthPct();
+            float health = ai::health::EffectiveHealthPct(charm);
             float probeValue = 100.0f;
             if (isRaid || health < sPlayerbotAIConfig.MediumHealth)
                 probeValue = health + 30.0f;

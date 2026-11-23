@@ -7,6 +7,7 @@
 #include "StrategyBinding.h"
 #include "AiObjectContext.h"
 #include "AuraIdUtils.h"
+#include "HealthUtils.h"
 #include "ObjectGuid.h"
 #include "Player.h"
 #include "PlayerbotAI.h"
@@ -412,7 +413,7 @@ double BoundCondition::EvalCall(Node const& node) const
         case ExprFn::HealthPct:
         {
             Unit* unit = Live(unitValue);
-            return unit ? unit->GetHealthPct() : 0.0;
+            return unit ? ai::health::HealthPctSeenBy(_bot, unit) : 0.0;
         }
         case ExprFn::EnemiesWithin:
         case ExprFn::EnemiesNearTarget:

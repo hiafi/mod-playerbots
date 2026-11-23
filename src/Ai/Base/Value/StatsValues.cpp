@@ -7,6 +7,7 @@
 #include "StatsValues.h"
 #include "AiObjectContext.h"
 #include "Group.h"
+#include "HealthUtils.h"
 #include "Pet.h"
 #include "Player.h"
 #include "PlayerbotAIConfig.h"
@@ -24,7 +25,9 @@ uint8 HealthValue::Calculate()
     if (!target)
         return 100;
 
-    return (static_cast<float>(target->GetHealth()) / target->GetMaxHealth()) * 100;
+    // Raw on an enemy (execute checks) and on the bot itself (self-preservation), absorb-adjusted on friends (heal
+    // targets).
+    return static_cast<uint8>(ai::health::HealthPctSeenBy(bot, target));
 }
 
 Unit* IsDeadValue::GetTarget()

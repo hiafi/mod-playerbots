@@ -6,6 +6,7 @@
 
 #include "AoeHealValues.h"
 #include "AttackersValue.h"
+#include "HealthUtils.h"
 #include "PlayerbotAIConfig.h"
 #include "Playerbots.h"
 
@@ -40,7 +41,7 @@ uint8 AoeHealValue::Calculate()
         if (player->GetDistance(bot) >= sPlayerbotAIConfig.SightDistance)
             continue;
 
-        float percent = (static_cast<float>(player->GetHealth()) / player->GetMaxHealth()) * 100;
+        float percent = ai::health::EffectiveHealthPct(player);
         if (percent <= range)
             ++count;
     }

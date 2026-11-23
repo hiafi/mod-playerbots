@@ -51,7 +51,8 @@ struct FunctionSpec
 //
 // value(name)                 any registered uint8/uint32/float/bool value, read as is. No unit gate.
 // health(u)                   value "health::<u>" (uint8, truncated percent). Missing: 0.
-// health_pct(u)               Unit::GetHealthPct() (float percent). Missing: 0.
+// health_pct(u)               ai::health::HealthPctSeenBy (float percent: heal absorb as missing on a friend, raw on
+//                             an enemy and on the bot itself). Missing: 0.
 // mana(u)                     value "mana::<u>" (uint8, truncated percent). Missing: 0.
 // enemies_within(yd)          value "enemies within::<yd>".
 // enemies_near_target(yd)     value "enemies near target::<yd>".
