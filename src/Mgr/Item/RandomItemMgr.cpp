@@ -3057,7 +3057,8 @@ std::vector<EquipmentSlots> const* RandomItemMgr::GetViableSlots(InventoryType i
 
 uint32 RandomItemMgr::NormalizeLevel(uint32 level) const
 {
-    uint32 const levelCap = std::min(sPlayerbotAIConfig.RandomBotMaxLevel,
-                                     static_cast<uint32>(DEFAULT_MAX_LEVEL));
-    return std::min(level, levelCap);
+    // Every cache is built for levels 1..DEFAULT_MAX_LEVEL, so that is the only cap. RandomBotMaxLevel bounds the
+    // level a random bot is rolled at, not the gear of a bot that is already above it (a player's alt, a test bot,
+    // a random bot levelled by play): capping at it handed level-1 items to every bot when it was set to 1.
+    return std::min(level, static_cast<uint32>(DEFAULT_MAX_LEVEL));
 }
