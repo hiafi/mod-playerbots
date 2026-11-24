@@ -6,6 +6,7 @@
 
 #include "PaladinHolyTriggers.h"
 #include "AuraIdUtils.h"
+#include "HealthUtils.h"
 #include "PaladinHolyValues.h"
 #include "PaladinReworkIds.h"
 #include "Playerbots.h"
@@ -13,6 +14,7 @@
 #include "TargetTypeUtils.h"
 
 using namespace ai::paladin_rework;
+using ai::health::EffectiveHealthPct;
 
 namespace
 {
@@ -88,7 +90,7 @@ bool PaladinHolyTrigger::MayHardCast(Unit* /*healTarget*/) { return !AI_VALUE2(b
 bool PaladinHolyTrigger::FlashManaAllows(Unit* healTarget)
 {
     uint8 const mana = ManaPct();
-    return mana >= MIN_MANA_PCT && (mana >= LOW_MANA_PCT || healTarget->GetHealthPct() < LOW_MANA_FLASH_HEALTH_PCT);
+    return mana >= MIN_MANA_PCT && (mana >= LOW_MANA_PCT || EffectiveHealthPct(healTarget) < LOW_MANA_FLASH_HEALTH_PCT);
 }
 
 bool PaladinHolyDivineShieldTrigger::IsActive()
@@ -100,7 +102,7 @@ bool PaladinHolyDivineShieldTrigger::IsActive()
 bool PaladinHolyLayOnHandsTrigger::IsActive()
 {
     Unit* target = AI_VALUE2(Unit*, "tank first heal target", ai::paladin_holy::LAY_ON_HANDS_TARGET);
-    return target && target->GetHealthPct() < LAY_ON_HANDS_HEALTH_PCT;
+    return target && EffectiveHealthPct(target) < LAY_ON_HANDS_HEALTH_PCT;
 }
 
 bool PaladinHolyHandOfProtectionTrigger::IsActive() { return AI_VALUE(Unit*, "holy protect target") != nullptr; }
@@ -108,7 +110,7 @@ bool PaladinHolyHandOfProtectionTrigger::IsActive() { return AI_VALUE(Unit*, "ho
 bool PaladinHolyHandOfSacrificeTrigger::IsActive()
 {
     Unit* tank = Tank();
-    return tank && tank != bot && tank->GetHealthPct() < SACRIFICE_TANK_HEALTH_PCT &&
+    return tank && tank != bot && EffectiveHealthPct(tank) < SACRIFICE_TANK_HEALTH_PCT &&
            AI_VALUE2(uint8, "health", "self target") > SACRIFICE_SELF_HEALTH_PCT;
 }
 
@@ -125,7 +127,7 @@ bool PaladinHolyAvengingWrathTrigger::IsActive()
         return true;
 
     Unit* tank = Tank();
-    return tank && (ai::target::IsBoss(tank->GetVictim()) || tank->GetHealthPct() < AVENGING_WRATH_TANK_HEALTH_PCT);
+    return tank && (ai::target::IsBoss(tank->GetVictim()) || EffectiveHealthPct(tank) < AVENGING_WRATH_TANK_HEALTH_PCT);
 }
 
 bool PaladinHolyDivineTollTrigger::IsActive()
@@ -134,7 +136,7 @@ bool PaladinHolyDivineTollTrigger::IsActive()
         return false;
 
     Unit* tank = Tank();
-    return (tank && tank->GetHealthPct() < DIVINE_TOLL_TANK_HEALTH_PCT) ||
+    return (tank && EffectiveHealthPct(tank) < DIVINE_TOLL_TANK_HEALTH_PCT) ||
            PartyMembersBelow(GROUP_DAMAGE_HEALTH_PCT) >= GROUP_DAMAGE_MEMBERS;
 }
 
@@ -176,7 +178,7 @@ bool PaladinHolyInfusionHolyLightTrigger::IsActive()
         return false;
 
     Unit* target = HealTarget();
-    return target && target->GetHealthPct() < URGENT_HEALTH_PCT && !AI_VALUE2(bool, "moving", "self target") &&
+    return target && EffectiveHealthPct(target) < URGENT_HEALTH_PCT && !AI_VALUE2(bool, "moving", "self target") &&
            ManaPct() > LOW_MANA_PCT;
 }
 
@@ -187,7 +189,7 @@ bool PaladinHolyInfusionFlashTrigger::IsActive()
         return false;
 
     Unit* target = HealTarget();
-    return target && target->GetHealthPct() < FLASH_HEALTH_PCT && FlashManaAllows(target) &&
+    return target && EffectiveHealthPct(target) < FLASH_HEALTH_PCT && FlashManaAllows(target) &&
            (OwnsAura(SPELL_INFUSION_OF_LIGHT_2) || MayHardCast(target));
 }
 
@@ -197,7 +199,8 @@ bool PaladinHolyDawnBeforeDuskTrigger::IsActive()
         return false;
 
     Unit* target = HealTarget();
-    return target && target->GetHealthPct() < HOLY_LIGHT_HEALTH_PCT && ManaPct() > LOW_MANA_PCT && MayHardCast(target);
+    return target && EffectiveHealthPct(target) < HOLY_LIGHT_HEALTH_PCT && ManaPct() > LOW_MANA_PCT &&
+           MayHardCast(target);
 }
 
 // Divine Illumination and Avenging Wrath favor Holy Light, so the Flash buff stops promoting Flash of Light
@@ -208,7 +211,7 @@ bool PaladinHolyLightsGraceFlashTrigger::IsActive()
         return false;
 
     Unit* target = HealTarget();
-    return target && target->GetHealthPct() < FLASH_HEALTH_PCT && FlashManaAllows(target) && MayHardCast(target);
+    return target && EffectiveHealthPct(target) < FLASH_HEALTH_PCT && FlashManaAllows(target) && MayHardCast(target);
 }
 
 bool PaladinHolyHolyLightTrigger::IsActive()
@@ -218,13 +221,13 @@ bool PaladinHolyHolyLightTrigger::IsActive()
         return false;
 
     float const threshold = target == Tank() ? HOLY_LIGHT_TANK_HEALTH_PCT : HOLY_LIGHT_HEALTH_PCT;
-    return target->GetHealthPct() < threshold && ManaPct() > LOW_MANA_PCT && MayHardCast(target);
+    return EffectiveHealthPct(target) < threshold && ManaPct() > LOW_MANA_PCT && MayHardCast(target);
 }
 
 bool PaladinHolyFlashOfLightTrigger::IsActive()
 {
     Unit* target = HealTarget();
-    return target && target->GetHealthPct() < FLASH_HEALTH_PCT && FlashManaAllows(target) && MayHardCast(target);
+    return target && EffectiveHealthPct(target) < FLASH_HEALTH_PCT && FlashManaAllows(target) && MayHardCast(target);
 }
 
 // "paladin no seal" plus the 5% mana floor; the seal value already returns 0 out of combat and while Primed

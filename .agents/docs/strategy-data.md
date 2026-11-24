@@ -85,7 +85,7 @@ arguments, not here.
 |---|---|---|---|
 | `value(name)` | bool or number | no unit gate | any registered uint8/uint32/float/bool value |
 | `health(u)` | number, % truncated | 0 | value `health::<u>` |
-| `health_pct(u)` | number, % | 0 | `Unit::GetHealthPct` |
+| `health_pct(u)` | number, % | 0 | `ai::health::HealthPctSeenBy` (friend: heal absorb as missing; enemy, self: raw) |
 | `mana(u)` | number, % truncated | 0 | value `mana::<u>` |
 | `enemies_within(yd)` | number | | value `enemies within::<yd>` |
 | `enemies_near_target(yd)` | number | | value `enemies near target::<yd>` |

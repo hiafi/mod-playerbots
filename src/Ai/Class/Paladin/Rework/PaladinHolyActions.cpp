@@ -5,11 +5,13 @@
  */
 
 #include "PaladinHolyActions.h"
+#include "HealthUtils.h"
 #include "PaladinHolyValues.h"
 #include "PaladinReworkIds.h"
 #include "Playerbots.h"
 
 using namespace ai::paladin_rework;
+using ai::health::EffectiveHealthPct;
 
 namespace
 {
@@ -69,7 +71,7 @@ PaladinHolyLightOnHealTargetAction::PaladinHolyLightOnHealTargetAction(Playerbot
 bool PaladinHolyLightOnHealTargetAction::isUseful()
 {
     Unit* target = GetTarget();
-    return target && target->GetHealthPct() < HOLY_LIGHT_MAX_HEALTH_PCT &&
+    return target && EffectiveHealthPct(target) < HOLY_LIGHT_MAX_HEALTH_PCT &&
            AI_VALUE2(uint8, "mana", "self target") > LOW_MANA_PCT && CastOnValueAction::isUseful();
 }
 
@@ -82,10 +84,11 @@ PaladinHolyFlashOfLightOnHealTargetAction::PaladinHolyFlashOfLightOnHealTargetAc
 bool PaladinHolyFlashOfLightOnHealTargetAction::isUseful()
 {
     Unit* target = GetTarget();
-    if (!target || target->GetHealthPct() >= FLASH_MAX_HEALTH_PCT)
+    if (!target || EffectiveHealthPct(target) >= FLASH_MAX_HEALTH_PCT)
         return false;
 
-    if (AI_VALUE2(uint8, "mana", "self target") < LOW_MANA_PCT && target->GetHealthPct() >= LOW_MANA_FLASH_HEALTH_PCT)
+    if (AI_VALUE2(uint8, "mana", "self target") < LOW_MANA_PCT &&
+        EffectiveHealthPct(target) >= LOW_MANA_FLASH_HEALTH_PCT)
         return false;
 
     return CastOnValueAction::isUseful();

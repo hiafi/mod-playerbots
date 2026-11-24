@@ -6,6 +6,7 @@
 
 #include "ConserveManaStrategy.h"
 #include "GenericSpellActions.h"
+#include "HealthUtils.h"
 #include "LastSpellCastValue.h"
 #include "PlayerbotAIConfig.h"
 #include "Playerbots.h"
@@ -103,7 +104,8 @@ float HealerAutoSaveManaMultiplier::GetValue(Action* action)
     if (!target)
         return 1.0f;
     bool isTank = target->ToPlayer() ? PlayerbotAI::IsTank(target->ToPlayer()) : false;
-    uint8 health = target->GetHealthPct();
+    // A heal absorb counts as missing health (a full-health Execution Sentence carrier still needs heals).
+    uint8 health = static_cast<uint8>(ai::health::EffectiveHealthPct(target));
     HealingManaEfficiency manaEfficiency = healingAction->manaEfficiency;
     uint8 estAmount = healingAction->estAmount;
     uint8 lossAmount = 100 - health;

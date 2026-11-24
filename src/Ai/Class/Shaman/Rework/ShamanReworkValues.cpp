@@ -11,6 +11,7 @@
 #include "DynamicObject.h"
 #include "Group.h"
 #include "GroupUtils.h"
+#include "HealthUtils.h"
 #include "Playerbots.h"
 #include "QualifierUtils.h"
 #include "ShamanReworkIds.h"
@@ -21,6 +22,7 @@
 #include "Timer.h"
 
 using namespace ai::shaman_rework;
+using ai::health::EffectiveHealthPct;
 
 namespace
 {
@@ -246,7 +248,7 @@ uint8 ShamanGroupHealthValue::Calculate()
         if (!ai::group::IsInHealRange(bot, member))
             continue;
 
-        sum += member->GetHealthPct();
+        sum += EffectiveHealthPct(member);
         ++count;
     }
 
@@ -269,9 +271,9 @@ bool ShamanRestoSpikeValue::Calculate()
         roster ^= (uint64(member->GetGUID().GetCounter()) + 1) * ROSTER_MIX;
         health += member->GetHealth();
         maxHealth += member->GetMaxHealth();
-        percentSum += member->GetHealthPct();
+        percentSum += EffectiveHealthPct(member);
         ++members;
-        if (member->GetHealthPct() < SPIKE_PLAYER_HEALTH_PCT)
+        if (EffectiveHealthPct(member) < SPIKE_PLAYER_HEALTH_PCT)
             ++below;
     }
 
@@ -319,7 +321,7 @@ Player* ShamanTankHistoryValue::SampleTank()
 bool ShamanTankSpikeValue::Calculate()
 {
     Player* tank = SampleTank();
-    if (!tank || tank->GetHealthPct() >= TANK_SPIKE_HEALTH_PCT || !tank->GetMaxHealth())
+    if (!tank || EffectiveHealthPct(tank) >= TANK_SPIKE_HEALTH_PCT || !tank->GetMaxHealth())
         return false;
 
     uint64 const peak = _history.PeakWithin(getMSTime(), SPIKE_WINDOW_MS);
@@ -348,11 +350,11 @@ ObjectGuid ShamanRainTargetValue::CalculateGuid()
     Player* lowest = nullptr;
     for (Player* member : ai::group::GetGroupPlayers(bot))
     {
-        if (member->GetHealthPct() >= args[0] || !ai::group::IsInHealRangeAndSight(bot, member) ||
+        if (EffectiveHealthPct(member) >= args[0] || !ai::group::IsInHealRangeAndSight(bot, member) ||
             rain->GetExactDist(member) > rain->GetRadius())
             continue;
 
-        if (!lowest || member->GetHealthPct() < lowest->GetHealthPct())
+        if (!lowest || EffectiveHealthPct(member) < EffectiveHealthPct(lowest))
             lowest = member;
     }
 
@@ -379,7 +381,7 @@ uint8 ShamanPartyAboveValue::Calculate()
 
     uint32 count = 0;
     for (Player* member : ai::group::GetGroupPlayers(bot))
-        if (member->GetHealthPct() > args[0] && ai::group::IsInHealRangeAndSight(bot, member))
+        if (EffectiveHealthPct(member) > args[0] && ai::group::IsInHealRangeAndSight(bot, member))
             ++count;
 
     return ai::qualifier::ClampCount(count);
@@ -430,7 +432,7 @@ ObjectGuid ShamanChainHealTargetValue::CalculateGuid()
 
     std::vector<Player*> injured;
     for (Player* member : ai::group::GetGroupPlayers(bot))
-        if (member->GetHealthPct() < args[1] && ai::group::IsInHealRangeAndSight(bot, member))
+        if (EffectiveHealthPct(member) < args[1] && ai::group::IsInHealRangeAndSight(bot, member))
             injured.push_back(member);
 
     // Each injured Player is a candidate start; the chain reaches the others within the radius of it
@@ -447,7 +449,7 @@ ObjectGuid ShamanChainHealTargetValue::CalculateGuid()
         bool const carries = start->HasAura(SPELL_RIPTIDE, bot->GetGUID());
         bool const better = !best || count > bestCount || (count == bestCount && carries && !bestCarries) ||
                             (count == bestCount && carries == bestCarries &&
-                             start->GetHealthPct() < best->GetHealthPct());
+                             EffectiveHealthPct(start) < EffectiveHealthPct(best));
         if (better)
         {
             best = start;

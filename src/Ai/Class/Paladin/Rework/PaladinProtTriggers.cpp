@@ -6,11 +6,13 @@
 
 #include "PaladinProtTriggers.h"
 #include "AuraIdUtils.h"
+#include "HealthUtils.h"
 #include "PaladinProtUtils.h"
 #include "PaladinReworkIds.h"
 #include "Playerbots.h"
 
 using namespace ai::paladin_rework;
+using ai::health::EffectiveHealthPct;
 
 namespace
 {
@@ -104,7 +106,8 @@ bool PaladinProtAllyHolyLightTrigger::Evaluate(Unit* /*target*/)
     // Guide: the ally cast is the free instant Radiant Holy Light, so only with the buff up; the strategy ranks
     // this row above the self Radiant row so the free cast goes to the dying ally. Players only, not pets.
     Unit* ally = AI_VALUE(Unit*, "party member to heal");
-    return HasRadiantBulwark(bot) && ally && ally != bot && ally->ToPlayer() && ally->GetHealthPct() < ALLY_HEALTH_PCT;
+    return HasRadiantBulwark(bot) && ally && ally != bot && ally->ToPlayer() &&
+           EffectiveHealthPct(ally) < ALLY_HEALTH_PCT;
 }
 
 bool PaladinProtDivinePleaTrigger::Evaluate(Unit* /*target*/)

@@ -8,6 +8,7 @@
 #include "AuraIdUtils.h"
 #include "Group.h"
 #include "GroupUtils.h"
+#include "HealthUtils.h"
 #include "Playerbots.h"
 #include "QualifierUtils.h"
 #include "Timer.h"
@@ -20,6 +21,7 @@ using ai::group::GetGroupPlayers;
 using ai::group::HEAL_RANGE;
 using ai::group::IsInHealRange;
 using ai::group::IsInHealRangeAndSight;
+using ai::health::EffectiveHealthPct;
 
 namespace
 {
@@ -42,7 +44,7 @@ HealCluster FindHealCluster(Player* bot, std::string const& qualifier)
 
     std::vector<Player*> injured;
     for (Player* member : GetGroupPlayers(bot))
-        if (member->GetHealthPct() < args[1] && IsInHealRange(bot, member))
+        if (EffectiveHealthPct(member) < args[1] && IsInHealRange(bot, member))
             injured.push_back(member);
 
     for (Player* centre : injured)
@@ -91,7 +93,7 @@ Player* FindAttackedMemberBelow(PlayerbotAI* botAI, float pct, std::function<boo
     AiObjectContext* context = botAI->GetAiObjectContext();
     std::vector<Player*> candidates;
     for (Player* member : GetGroupPlayers(bot))
-        if (member->GetHealthPct() < pct && IsInHealRangeAndSight(bot, member) && !(exclude && exclude(member)))
+        if (EffectiveHealthPct(member) < pct && IsInHealRangeAndSight(bot, member) && !(exclude && exclude(member)))
             candidates.push_back(member);
 
     if (candidates.empty())
@@ -114,7 +116,7 @@ Player* FindAttackedMemberBelow(PlayerbotAI* botAI, float pct, std::function<boo
         if (!victimCounts.contains(member->GetGUID()))
             continue;
 
-        if (!best || member->GetHealthPct() < best->GetHealthPct())
+        if (!best || EffectiveHealthPct(member) < EffectiveHealthPct(best))
             best = member;
     }
 
@@ -140,7 +142,7 @@ uint8 PartyMembersBelowValue::Calculate()
 
     uint32 count = 0;
     for (Player* member : GetGroupPlayers(bot))
-        if (member->GetHealthPct() < args[0] && IsInHealRangeAndSight(bot, member))
+        if (EffectiveHealthPct(member) < args[0] && IsInHealRangeAndSight(bot, member))
             ++count;
 
     return ai::qualifier::ClampCount(count);
@@ -235,7 +237,7 @@ ObjectGuid TankFirstHealTargetValue::CalculateGuid()
     if (tank && !IsInHealRangeAndSight(bot, tank))
         tank = nullptr;
 
-    if (tank && tank->GetHealthPct() < args[0])
+    if (tank && EffectiveHealthPct(tank) < args[0])
         return tank->GetGUID();
 
     Player* lowest = nullptr;
@@ -244,11 +246,11 @@ ObjectGuid TankFirstHealTargetValue::CalculateGuid()
         if (member == tank || !IsInHealRangeAndSight(bot, member))
             continue;
 
-        if (!lowest || member->GetHealthPct() < lowest->GetHealthPct())
+        if (!lowest || EffectiveHealthPct(member) < EffectiveHealthPct(lowest))
             lowest = member;
     }
 
-    if (lowest && lowest->GetHealthPct() < args[1])
+    if (lowest && EffectiveHealthPct(lowest) < args[1])
         return lowest->GetGUID();
 
     return tank ? tank->GetGUID() : ObjectGuid::Empty;
@@ -307,11 +309,11 @@ ObjectGuid PartyMemberWithoutOwnAuraValue::CalculateGuid()
     Player* lowest = nullptr;
     for (Player* member : GetGroupPlayers(bot))
     {
-        if (member->GetHealthPct() >= pct || !IsInHealRangeAndSight(bot, member) ||
+        if (EffectiveHealthPct(member) >= pct || !IsInHealRangeAndSight(bot, member) ||
             ai::aura::HasAnyAura(member, ids, caster))
             continue;
 
-        if (!lowest || member->GetHealthPct() < lowest->GetHealthPct())
+        if (!lowest || EffectiveHealthPct(member) < EffectiveHealthPct(lowest))
             lowest = member;
     }
 
@@ -332,11 +334,11 @@ ObjectGuid PartyMemberWithOwnAuraValue::CalculateGuid()
     Player* lowest = nullptr;
     for (Player* member : GetGroupPlayers(bot))
     {
-        if (member->GetHealthPct() >= pct || !IsInHealRangeAndSight(bot, member) ||
+        if (EffectiveHealthPct(member) >= pct || !IsInHealRangeAndSight(bot, member) ||
             !ai::aura::HasAnyAura(member, ids, bot->GetGUID()))
             continue;
 
-        if (!lowest || member->GetHealthPct() < lowest->GetHealthPct())
+        if (!lowest || EffectiveHealthPct(member) < EffectiveHealthPct(lowest))
             lowest = member;
     }
 
@@ -394,7 +396,7 @@ ObjectGuid PartyMemberAbsorbBelowValue::CalculateGuid()
     Player* lowest = nullptr;
     for (Player* member : GetGroupPlayers(bot))
     {
-        if (member->GetHealthPct() >= healthPct || !IsInHealRangeAndSight(bot, member))
+        if (EffectiveHealthPct(member) >= healthPct || !IsInHealRangeAndSight(bot, member))
             continue;
 
         float const absorbed = static_cast<float>(
@@ -402,7 +404,7 @@ ObjectGuid PartyMemberAbsorbBelowValue::CalculateGuid()
         if (absorbed * 100.0f >= absorbPct * static_cast<float>(member->GetMaxHealth()))
             continue;
 
-        if (!lowest || member->GetHealthPct() < lowest->GetHealthPct())
+        if (!lowest || EffectiveHealthPct(member) < EffectiveHealthPct(lowest))
             lowest = member;
     }
 
@@ -431,7 +433,7 @@ uint8 InjuredAlliesInConeValue::Calculate()
     uint32 count = 0;
     for (Player* member : GetGroupPlayers(bot))
     {
-        if (member == bot || member->GetHealthPct() >= numbers[2] || !IsInHealRange(bot, member) ||
+        if (member == bot || EffectiveHealthPct(member) >= numbers[2] || !IsInHealRange(bot, member) ||
             bot->GetExactDist(member) > numbers[0])
             continue;
 
@@ -468,7 +470,7 @@ uint8 PartyMembersWithAuraValue::Calculate()
     uint32 count = 0;
     for (Player* member : GetGroupPlayers(bot))
     {
-        if (member->GetHealthPct() >= pct || !IsInHealRangeAndSight(bot, member))
+        if (EffectiveHealthPct(member) >= pct || !IsInHealRangeAndSight(bot, member))
             continue;
 
         uint32 distinct = 0;

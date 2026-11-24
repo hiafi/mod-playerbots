@@ -25,6 +25,7 @@
 #include "GameObjectData.h"
 #include "GameTime.h"
 #include "GuildMgr.h"
+#include "HealthUtils.h"
 #include "LFGMgr.h"
 #include "LastMovementValue.h"
 #include "LastSpellCastValue.h"
@@ -408,7 +409,7 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
                 }
 
                 // Interrupt if target ally has full health (heal by other member)
-                if (isHeal && isSingleTarget && spellTarget && spellTarget->IsFullHealth())
+                if (isHeal && isSingleTarget && spellTarget && ai::health::IsEffectivelyFullHealth(spellTarget))
                 {
                     bot->InterruptSpell(currentSpell->GetCurrentContainer());
                     YieldThread(bot, GetReactDelay());

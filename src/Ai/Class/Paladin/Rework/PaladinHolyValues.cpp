@@ -7,6 +7,7 @@
 #include "PaladinHolyValues.h"
 #include "AuraIdUtils.h"
 #include "GroupUtils.h"
+#include "HealthUtils.h"
 #include "PaladinReworkIds.h"
 #include "PaladinReworkUtils.h"
 #include "PartyRoleValues.h"
@@ -16,6 +17,7 @@
 #include <unordered_map>
 
 using namespace ai::paladin_rework;
+using ai::health::EffectiveHealthPct;
 
 namespace
 {
@@ -42,7 +44,7 @@ Player* MostInjured(std::vector<Player*> const& members)
 {
     Player* lowest = nullptr;
     for (Player* member : members)
-        if (!lowest || member->GetHealthPct() < lowest->GetHealthPct())
+        if (!lowest || EffectiveHealthPct(member) < EffectiveHealthPct(lowest))
             lowest = member;
 
     return lowest;
@@ -73,7 +75,7 @@ ObjectGuid PaladinHolyShockTargetValue::CalculateGuid()
 {
     std::vector<Player*> const members = GetHealableMembers(bot);
     Player* lowest = MostInjured(members);
-    if (lowest && lowest->GetHealthPct() < SHOCK_URGENT_HEALTH_PCT)
+    if (lowest && EffectiveHealthPct(lowest) < SHOCK_URGENT_HEALTH_PCT)
         return lowest->GetGUID();
 
     // Glimmer upkeep only runs here, after nobody below 50% was found
@@ -91,14 +93,14 @@ ObjectGuid PaladinHolyShockTargetValue::CalculateGuid()
         if (member == tank || GlimmerRemainingMs(bot, member) != 0)
             continue;
 
-        if (!bare || member->GetHealthPct() < bare->GetHealthPct())
+        if (!bare || EffectiveHealthPct(member) < EffectiveHealthPct(bare))
             bare = member;
     }
 
     if (bare)
         return bare->GetGUID();
 
-    if (lowest && lowest->GetHealthPct() < SHOCK_TOP_UP_HEALTH_PCT)
+    if (lowest && EffectiveHealthPct(lowest) < SHOCK_TOP_UP_HEALTH_PCT)
         return lowest->GetGUID();
 
     Player* expiring = nullptr;
