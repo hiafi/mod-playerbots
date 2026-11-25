@@ -9,6 +9,7 @@
 
 #include "AuraIdTriggers.h"
 #include "MageReworkValues.h"
+#include "MageTriggers.h"
 #include "SpellCooldownTriggers.h"
 #include "Trigger.h"
 
@@ -32,6 +33,15 @@ class MageReworkNoFrostArmorTrigger : public Trigger
 {
 public:
     MageReworkNoFrostArmorTrigger(PlayerbotAI* botAI) : Trigger(botAI, "mage no frost armor") {}
+
+    bool IsActive() override;
+};
+
+// A magic buff to steal on the target, with mana to spare: Spellsteal costs 20% of base mana and has no cooldown.
+class MageReworkSpellstealTrigger : public SpellstealTrigger
+{
+public:
+    MageReworkSpellstealTrigger(PlayerbotAI* botAI) : SpellstealTrigger(botAI) {}
 
     bool IsActive() override;
 };

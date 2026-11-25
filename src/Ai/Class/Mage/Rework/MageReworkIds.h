@@ -73,7 +73,6 @@ constexpr uint32 SPELL_NETHERWIND_PRESENCE_3 = 200090;
 constexpr uint32 SPELL_NETHERWIND_PRESENCE_ICD = 200091;
 constexpr uint32 SPELL_NETHERWIND_PRESENCE_SPEED = 200094;
 constexpr uint32 SPELL_ARCANE_MASTERY_MARKER = 200085;  // internal, ignore
-constexpr uint32 SPELL_TORMENT_THE_WEAK = 29447;        // passive talent at Arcane (3,3)
 
 // Fire
 constexpr uint32 SPELL_FIREBALL = 133;

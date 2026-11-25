@@ -57,6 +57,6 @@ void MageReworkGenericStrategy::InitTriggers(std::vector<TriggerNode*>& triggers
     add("enemy too close for spell and no firestarter strategy", "blink back", ACTION_MOVE + 5.0f);
 
     // Steal and interrupt
-    add("spellsteal", "spellsteal", ACTION_INTERRUPT);
+    add("mage spellsteal", "spellsteal", ACTION_INTERRUPT);
     add("counterspell on enemy healer", "counterspell on enemy healer", ACTION_INTERRUPT);
 }

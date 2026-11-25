@@ -326,6 +326,7 @@ public:
         creators["mage mana below 70"] = &MageReworkTriggerFactoryInternal::mage_mana_below_70;
         creators["mage mana below 80"] = &MageReworkTriggerFactoryInternal::mage_mana_below_80;
         creators["mage no frost armor"] = &MageReworkTriggerFactoryInternal::mage_no_frost_armor;
+        creators["mage spellsteal"] = &MageReworkTriggerFactoryInternal::mage_spellsteal;
         creators["mage evocation ready"] = &MageReworkTriggerFactoryInternal::mage_evocation_ready;
         creators["mage arcane power ready"] = &MageReworkTriggerFactoryInternal::mage_arcane_power_ready;
     }
@@ -365,6 +366,7 @@ private:
         return new MageReworkManaTrigger(botAI, "mage mana below 80", 80, false);
     }
     static Trigger* mage_no_frost_armor(PlayerbotAI* botAI) { return new MageReworkNoFrostArmorTrigger(botAI); }
+    static Trigger* mage_spellsteal(PlayerbotAI* botAI) { return new MageReworkSpellstealTrigger(botAI); }
     static Trigger* mage_evocation_ready(PlayerbotAI* botAI) { return new MageReworkEvocationReadyTrigger(botAI); }
     static Trigger* mage_arcane_power_ready(PlayerbotAI* botAI)
     {

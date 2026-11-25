@@ -201,7 +201,7 @@ rows:
     when: known(34433) and cooldown(34433) == 0 and mana(self) < 50 and alive(target)
     relevance: emergency + 2
 
-  # 21: Hymn of Hope under 20% mana while nobody is under 70% (trained at 80: no-op at 60, PR3)
+  # 21: Hymn of Hope under 20% mana while nobody is under 70% (trained at 60 since 2026-11-25)
   - do: disc hymn of hope
     when: >-
       known(64901) and cooldown(64901) == 0 and mana(self) < 20 and value("party members below::70") == 0

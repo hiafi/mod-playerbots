@@ -30,7 +30,7 @@ rows:
   - do: devour magic purge
     trigger: devour magic purge
     relevance: dispel
-  # 29858 is on no trainer up to level 60, so this is inert until a bot learns it
+  # 29858 is trained at 46 since 2026-11-25
   - do: soulshatter
     trigger: medium threat
     relevance: dispel + 5
