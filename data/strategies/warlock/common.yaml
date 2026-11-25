@@ -36,14 +36,14 @@ rows:
     relevance: dispel + 5
 ---
 # Curse of the Elements on elites (WL10), unless the target already carries an equivalent: Curse of the Elements, Earth
-# and Moon, Ebon Plague
+# and Moon, Ebon Plague, a hunter pet's Storm or Scorching Breath
 strategy: warlock/curse
 class: warlock
 rows:
   - do: warlock curse of the elements
     when: >-
       known(1490) and alive(target) and elite(target)
-      and not aura(target, "1490,11721,11722,27228,47865,60431,48511,48513,48514,51726,51734,51735")
+      and not aura(target, "1490,11721,11722,27228,47865,60431,48511,48513,48514,51726,51734,51735,201773,201774")
     relevance: normal + 9.95
 ---
 # Out-of-combat upkeep; the stock order is soul link > armor > healthstone > soulstone > stones > life tap. Pet summons
