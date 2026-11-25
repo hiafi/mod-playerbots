@@ -16,6 +16,7 @@
 #include "GridNotifiersImpl.h"
 #include "HunterActions.h"
 #include "InstanceScript.h"
+#include "LeapTrinketAction.h"
 #include "MageActions.h"
 #include "ObjectAccessor.h"
 #include "PaladinActions.h"
@@ -434,6 +435,10 @@ bool IsDpsCooldownAction(Player* bot, Action* action)
         return false;
 
     if (dynamic_cast<UseTrinketAction*>(action))
+        return true;
+
+    // Custom: Taragaman's Fang is a trinket use too
+    if (dynamic_cast<LeapTrinketAction*>(action))
         return true;
 
     bool isClassCooldown = false;

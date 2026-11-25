@@ -80,6 +80,7 @@ public:
         creators["healer low mana"] = &TriggerContext::HealerLowMana;
 
         creators["generic boost"] = &TriggerContext::generic_boost;
+        creators["leap trinket"] = &TriggerContext::leap_trinket; // Custom
         creators["loss of control"] = &TriggerContext::loss_of_control;
         creators["fear charm sleep"] = &TriggerContext::fear_charm_sleep;
         creators["fear sleep sap"] = &TriggerContext::fear_sleep_sap;
@@ -409,6 +410,7 @@ private:
         return new PartyMemberAlmostFullHealthTrigger(botAI);
     }
     static Trigger* generic_boost(PlayerbotAI* botAI) { return new GenericBoostTrigger(botAI); }
+    static Trigger* leap_trinket(PlayerbotAI* botAI) { return new LeapTrinketTrigger(botAI); } // Custom
     static Trigger* loss_of_control(PlayerbotAI* botAI) { return new LossOfControlTrigger(botAI); }
     static Trigger* fear_charm_sleep(PlayerbotAI* botAI) { return new FearCharmSleepTrigger(botAI); }
     static Trigger* fear_sleep_sap(PlayerbotAI* botAI) { return new FearSleepSapTrigger(botAI); }
