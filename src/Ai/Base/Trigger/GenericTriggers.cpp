@@ -10,6 +10,7 @@
 #include "GenericBuffUtils.h"
 #include "ItemVisitors.h"
 #include "LastSpellCastValue.h"
+#include "LeapTrinketUtils.h"
 #include "ObjectGuid.h"
 #include "Player.h"
 #include "PlayerbotAI.h"
@@ -331,6 +332,15 @@ bool GenericBoostTrigger::IsActive()
         return true;
 
     return AI_VALUE(uint8, "balance") <= balance;
+}
+
+bool LeapTrinketTrigger::IsActive()
+{
+    if (!bot->IsInCombat())
+        return false;
+
+    ai::leap_trinket::Trinket const trinket = ai::leap_trinket::Find(bot);
+    return trinket.item && !bot->HasSpellCooldown(trinket.spellId) && ai::leap_trinket::IsAgilityMeleeDps(bot);
 }
 
 bool HealerShouldAttackTrigger::IsActive()

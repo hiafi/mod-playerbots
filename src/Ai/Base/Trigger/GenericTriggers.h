@@ -451,6 +451,15 @@ protected:
     float balance;
 };
 
+// Custom: a ready leap trinket (LeapTrinketUtils.h) on an Agility melee DPS in combat
+class LeapTrinketTrigger : public Trigger
+{
+public:
+    LeapTrinketTrigger(PlayerbotAI* botAI) : Trigger(botAI, "leap trinket", 1) {}
+
+    bool IsActive() override;
+};
+
 class HealerShouldAttackTrigger : public Trigger
 {
 public:

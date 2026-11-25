@@ -37,6 +37,7 @@
 #include "GuildManagementActions.h"
 #include "ImbueAction.h"
 #include "InviteToGroupAction.h"
+#include "LeapTrinketAction.h" // Custom
 #include "LeaveGroupAction.h"
 #include "LootAction.h"
 #include "LootRollAction.h"
@@ -178,6 +179,7 @@ public:
         creators["stoneform"] = &ActionContext::stoneform;
         creators["escape artist"] = &ActionContext::escape_artist;
         creators["use trinket"] = &ActionContext::use_trinket;
+        creators["leap trinket"] = &ActionContext::leap_trinket; // Custom
         creators["auto talents"] = &ActionContext::auto_talents;
         creators["auto share quest"] = &ActionContext::auto_share_quest;
         creators["auto maintenance on levelup"] = &ActionContext::auto_maintenance_on_levelup;
@@ -390,6 +392,7 @@ private:
     static Action* stoneform(PlayerbotAI* botAI) { return new CastStoneformAction(botAI); }
     static Action* escape_artist(PlayerbotAI* botAI) { return new CastEscapeArtistAction(botAI); }
     static Action* use_trinket(PlayerbotAI* botAI) { return new UseTrinketAction(botAI); }
+    static Action* leap_trinket(PlayerbotAI* botAI) { return new LeapTrinketAction(botAI); } // Custom
     static Action* auto_talents(PlayerbotAI* botAI) { return new AutoSetTalentsAction(botAI); }
     static Action* auto_share_quest(PlayerbotAI* botAI) { return new AutoShareQuestAction(botAI); }
     static Action* auto_maintenance_on_levelup(PlayerbotAI* botAI) { return new AutoMaintenanceOnLevelupAction(botAI); }

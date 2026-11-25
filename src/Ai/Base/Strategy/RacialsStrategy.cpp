@@ -5,6 +5,7 @@
  */
 
 #include "RacialsStrategy.h"
+#include "LeapTrinketRules.h"
 #include "Playerbots.h"
 
 namespace
@@ -105,4 +106,11 @@ void RacialsStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 
     triggers.push_back(new TriggerNode(
         "generic boost", { NextAction("use trinket", ACTION_NORMAL + 4) }));
+
+    // Custom: Taragaman's Fang, whose target rule is its own (LeapTrinketAction)
+    if (ai::leap_trinket::IsLeapClass(bot->getClass()))
+    {
+        triggers.push_back(new TriggerNode(
+            "leap trinket", { NextAction("leap trinket", ACTION_NORMAL + 4) }));
+    }
 }
