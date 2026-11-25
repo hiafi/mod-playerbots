@@ -1,5 +1,5 @@
 # The reworked Protection warrior's single-target rotation, from the user's guide (docs/reworks/bot-strategy/
-# warrior-prot-strat.md, corrected by .agents/plans/rework-bot-strategies/rework-bot-strategies.WARRIOR.PLAN.md section
+# warrior-protection-bot-guide.md, corrected by .agents/plans/rework-bot-strategies/rework-bot-strategies.WARRIOR.PLAN.md section
 # 3 and 5): "warrior/prot" is appended to the "prot" combat strategy by WarriorReworkProtStrategy::InitTriggers. The
 # pack rows are the `warrior/prot-aoe` document, appended to "aoe". Each row queues its action at the relevance when its
 # condition holds (`when`, the expression language of StrategyExpression.h) or when an existing C++ trigger fires

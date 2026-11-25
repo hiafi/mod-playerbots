@@ -15,6 +15,9 @@ namespace
 {
 // "Ready" is a cooldown with less than 1 ms left
 constexpr uint32 READY_BELOW_MS = 1;
+
+// Below this the steal would eat the mana the rotation and the interrupt need (user ruling 49, 2026-11-25)
+constexpr uint8 SPELLSTEAL_MIN_MANA_PCT = 40;
 }  // namespace
 
 bool MageReworkNoFrostArmorTrigger::IsActive()
@@ -25,6 +28,11 @@ bool MageReworkNoFrostArmorTrigger::IsActive()
 
     return !ai::aura::HasAnyAura(bot, {SPELL_FROST_ARMOR, SPELL_ICE_ARMOR, SPELL_MAGE_ARMOR, SPELL_MOLTEN_ARMOR},
                                  bot->GetGUID());
+}
+
+bool MageReworkSpellstealTrigger::IsActive()
+{
+    return AI_VALUE2(uint8, "mana", "self target") >= SPELLSTEAL_MIN_MANA_PCT && SpellstealTrigger::IsActive();
 }
 
 bool MageReworkManaTrigger::IsActive()
