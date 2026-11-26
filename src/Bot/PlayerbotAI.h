@@ -29,6 +29,9 @@
 #include <stack>
 #include <unordered_set>
 
+// Custom: mod-boss-mechanics hook (Zul'Farrak F-1f) - PlayerbotAI::SetSelfDispelHoldHook exists
+#define PLAYERBOTS_HAS_SELF_DISPEL_HOLD_HOOK 1
+
 class Action;
 class AiObjectContext;
 class Creature;
@@ -537,6 +540,13 @@ public:
 
     virtual bool IsInterruptableSpellCasting(Unit* player, std::string const spell);
     virtual bool HasAuraToDispel(Unit* player, uint32 dispelType);
+    // Custom: mod-boss-mechanics hook (Zul'Farrak F-1f, Antu'sul's Calcify) - a boss descriptor may hold the cure of
+    // an aura until its rule allows it (cure only a lone carrier). Party cures read the module's own value; a bot's
+    // self-cure rows read HasAuraToDispel(bot, ...), which skips an aura on the bot itself while the hook says it is
+    // held. Called on the bot's map thread with the bot and the aura's spell id; nullptr (the default) holds nothing.
+    // Set once at startup by a module, on the world thread.
+    using SelfDispelHoldHook = bool (*)(Player* bot, uint32 auraId);
+    static void SetSelfDispelHoldHook(SelfDispelHoldHook hook);
     // ignoreMovingCastTime skips only the "has a cast time and the bot is moving" refusal, for a spell an aura makes
     // instant; a channel or an autorepeat spell is still refused while moving.
     bool CanCastSpell(uint32 spellid, Unit* target, bool checkHasSpell = true, Item* itemTarget = nullptr,

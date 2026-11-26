@@ -32,6 +32,7 @@ includes=(-I "$root/src/Ai/Base/Util" -I "$here" -isystem "$core/src/common" -is
 
 tests=(
   leap_trinket_rules_test
+  heal_read_rules_test
 )
 
 status=0
