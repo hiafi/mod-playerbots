@@ -5,12 +5,26 @@
  */
 
 #include "MageActions.h"
+#include "MageReworkIds.h"
+#include "MageReworkUtils.h"
 #include "PlayerbotAIConfig.h"
 #include "Playerbots.h"
 #include "ServerFacade.h"
 #include "SharedDefines.h"
 #include "UseItemAction.h"
 #include <cmath>
+
+bool CastArcaneInfusionAction::isPossible()
+{
+    return botAI->CanCastSpell(ai::mage_rework::SPELL_ARCANE_INFUSION, bot, true);
+}
+
+bool CastArcaneInfusionAction::isUseful() { return ai::mage_rework::ArcaneInfusionWanted(bot); }
+
+bool CastArcaneInfusionAction::Execute(Event /*event*/)
+{
+    return botAI->CastSpell(ai::mage_rework::SPELL_ARCANE_INFUSION, bot);
+}
 
 std::vector<NextAction> CastMoltenArmorAction::getAlternatives()
 {

@@ -97,6 +97,7 @@ public:
         creators["ice barrier"] = &MageTriggerFactoryInternal::ice_barrier;
         creators["arcane intellect"] = &MageTriggerFactoryInternal::arcane_intellect;
         creators["arcane intellect on party"] = &MageTriggerFactoryInternal::arcane_intellect_on_party;
+        creators["arcane infusion"] = &MageTriggerFactoryInternal::arcane_infusion;
         creators["mage armor"] = &MageTriggerFactoryInternal::mage_armor;
         creators["molten armor"] = &MageTriggerFactoryInternal::molten_armor;
         creators["remove curse"] = &MageTriggerFactoryInternal::remove_curse;
@@ -151,6 +152,7 @@ private:
     static Trigger* ice_barrier(PlayerbotAI* botAI) { return new IceBarrierTrigger(botAI); }
     static Trigger* arcane_intellect(PlayerbotAI* botAI) { return new ArcaneIntellectTrigger(botAI); }
     static Trigger* arcane_intellect_on_party(PlayerbotAI* botAI) { return new ArcaneIntellectOnPartyTrigger(botAI); }
+    static Trigger* arcane_infusion(PlayerbotAI* botAI) { return new ArcaneInfusionTrigger(botAI); }
     static Trigger* mage_armor(PlayerbotAI* botAI) { return new MageArmorTrigger(botAI); }
     static Trigger* molten_armor(PlayerbotAI* botAI) { return new MoltenArmorTrigger(botAI); }
     static Trigger* remove_curse(PlayerbotAI* botAI) { return new RemoveCurseTrigger(botAI); }
@@ -200,6 +202,7 @@ public:
         creators["frost nova"] = &MageAiObjectContextInternal::frost_nova;
         creators["arcane intellect"] = &MageAiObjectContextInternal::arcane_intellect;
         creators["arcane intellect on party"] = &MageAiObjectContextInternal::arcane_intellect_on_party;
+        creators["arcane infusion"] = &MageAiObjectContextInternal::arcane_infusion;
         creators["conjure water"] = &MageAiObjectContextInternal::conjure_water;
         creators["conjure food"] = &MageAiObjectContextInternal::conjure_food;
         creators["conjure mana gem"] = &MageAiObjectContextInternal::conjure_mana_gem;
@@ -266,6 +269,7 @@ private:
     static Action* frost_nova(PlayerbotAI* botAI) { return new CastFrostNovaAction(botAI); }
     static Action* arcane_intellect(PlayerbotAI* botAI) { return new CastArcaneIntellectAction(botAI); }
     static Action* arcane_intellect_on_party(PlayerbotAI* botAI) { return new CastArcaneIntellectOnPartyAction(botAI); }
+    static Action* arcane_infusion(PlayerbotAI* botAI) { return new CastArcaneInfusionAction(botAI); }
     static Action* conjure_water(PlayerbotAI* botAI) { return new CastConjureWaterAction(botAI); }
     static Action* conjure_food(PlayerbotAI* botAI) { return new CastConjureFoodAction(botAI); }
     static Action* conjure_mana_gem(PlayerbotAI* botAI) { return new CastConjureManaGemAction(botAI); }

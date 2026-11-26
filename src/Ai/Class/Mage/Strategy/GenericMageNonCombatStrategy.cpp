@@ -36,6 +36,8 @@ void GenericMageNonCombatStrategy::InitTriggers(std::vector<TriggerNode*>& trigg
     NonCombatStrategy::InitTriggers(triggers);
 
     triggers.push_back(new TriggerNode("arcane intellect", { NextAction("arcane intellect", 21.0f) }));
+    // The raid spell power buff (learned at 26): only when someone in range lacks an equal or stronger one
+    triggers.push_back(new TriggerNode("arcane infusion", { NextAction("arcane infusion", 20.5f) }));
     triggers.push_back(new TriggerNode("no focus magic", { NextAction("focus magic on party", 19.0f) }));
     triggers.push_back(new TriggerNode("often", { NextAction("apply oil", 1.0f) }));
     triggers.push_back(new TriggerNode("no mana gem", { NextAction("conjure mana gem", 20.0f) }));

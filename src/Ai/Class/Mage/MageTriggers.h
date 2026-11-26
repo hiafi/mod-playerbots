@@ -30,6 +30,15 @@ public:
     bool IsActive() override;
 };
 
+// Arcane Infusion (the mage's raid spell power buff, group 1048): a known spell and someone in range without an equal
+// or stronger spell power buff (ai::mage_rework::ArcaneInfusionWanted)
+class ArcaneInfusionTrigger : public Trigger
+{
+public:
+    ArcaneInfusionTrigger(PlayerbotAI* botAI) : Trigger(botAI, "arcane infusion", 8 * IN_MILLISECONDS) {}
+    bool IsActive() override;
+};
+
 class MageArmorTrigger : public BuffTrigger
 {
 public:

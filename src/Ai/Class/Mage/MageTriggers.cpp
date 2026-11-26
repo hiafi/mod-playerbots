@@ -6,6 +6,7 @@
 
 #include "MageTriggers.h"
 #include "DynamicObject.h"
+#include "MageReworkUtils.h"
 #include "Player.h"
 #include "PlayerbotAIConfig.h"
 #include "Playerbots.h"
@@ -37,6 +38,11 @@ bool NoManaGemTrigger::IsActive()
 bool ArcaneIntellectTrigger::IsActive()
 {
     return BuffTrigger::IsActive() && !botAI->HasAura("arcane brilliance", GetTarget());
+}
+
+bool ArcaneInfusionTrigger::IsActive()
+{
+    return ai::mage_rework::ArcaneInfusionWanted(bot);
 }
 
 bool MageArmorTrigger::IsActive()
