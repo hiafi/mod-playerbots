@@ -126,11 +126,21 @@ namespace
             case SPELL_AURA_MOD_PARRY_PERCENT:
             case SPELL_AURA_MOD_DODGE_PERCENT:
             case SPELL_AURA_MOD_BLOCK_PERCENT:
-            case SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN:
                 return true;
+            case SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN:
+                // Custom: only a reduction is defensive; a raise is the price of a damage Use (RaisesDamageTaken)
+                return effectInfo.CalcValue() < 0;
             default:
                 return false;
         }
+    }
+
+    // Custom: a self buff that also raises its wearer's damage taken (the Leaking Reactor Core's Meltdown and its tier
+    // copies), read from the spell data, not ids. Tank bots never press one.
+    bool RaisesDamageTaken(SpellEffectInfo const& effectInfo)
+    {
+        return effectInfo.Effect == SPELL_EFFECT_APPLY_AURA &&
+               effectInfo.ApplyAuraName == SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN && effectInfo.CalcValue() > 0;
     }
 }
 
@@ -588,6 +598,7 @@ bool UseTrinketAction::UseTrinket(Item* item)
             bool restoresMana = false;
             bool improvesManaEfficiency = false;
             bool defensiveTankEffect = false;
+            bool raisesDamageTaken = false;  // Custom: tanks skip a Use that raises their damage taken
             for (int i = 0; i < MAX_SPELL_EFFECTS; i++)
             {
                 SpellEffectInfo const& effectInfo = spellInfo->Effects[i];
@@ -597,7 +608,12 @@ bool UseTrinketAction::UseTrinket(Item* item)
                 restoresMana = restoresMana || IsManaRestoreEffect(effectInfo);
                 improvesManaEfficiency = improvesManaEfficiency || IsManaEfficiencyEffect(effectInfo);
                 defensiveTankEffect = defensiveTankEffect || IsDefensiveTankEffect(effectInfo);
+                raisesDamageTaken = raisesDamageTaken || RaisesDamageTaken(effectInfo);
             }
+
+            // Custom: a tank never presses a Use that raises its damage taken (the Leaking Reactor Core's Meltdown)
+            if (raisesDamageTaken && PlayerbotAI::IsTank(bot))
+                return false;
 
             if (!applyAura && !restoresMana)
                 return false;
