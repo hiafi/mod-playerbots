@@ -45,8 +45,9 @@ float HealthPctSeenBy(Unit const* viewer, Unit const* unit);
 // decisions (a boss descriptor's healUntil: keep healing a Grievous Wound carrier on to 95%). Called with the unit and
 // the percent the bot would read; returns the percent to use (`pct` when nothing applies). PB clamps the result to
 // [min(pct, 80), pct] (GuardedHealReadPct). Set once at startup by a module, on the world thread; nullptr (the
-// default) changes nothing. Runs on map threads for friendly reads above 80%: must be cheap and leave the game state
-// alone.
+// default) changes nothing. Runs on the reading bot's map thread for friendly reads above 80%, and the unit may be on
+// another map (a focus heal target found by guid): the hook must be cheap, leave the game state alone and read nothing
+// of the unit's map or auras (mod-boss-mechanics reads a per-map cache each map fills from its own thread).
 using HealReadHook = float (*)(Unit const* unit, float pct);
 void SetHealReadHook(HealReadHook hook);
 

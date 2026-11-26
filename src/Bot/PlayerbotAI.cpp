@@ -5,6 +5,8 @@
  */
 
 #include "PlayerbotAI.h"
+
+#include <atomic>
 #include "AiFactory.h"
 #include "AttackersValue.h"
 #include "BudgetValues.h"
@@ -4550,6 +4552,17 @@ bool PlayerbotAI::IsInterruptableSpellCasting(Unit* target, std::string const sp
     return false;
 }
 
+namespace
+{
+    // Custom: mod-boss-mechanics hook (Zul'Farrak F-1f) - see PlayerbotAI::SetSelfDispelHoldHook
+    std::atomic<PlayerbotAI::SelfDispelHoldHook> sSelfDispelHoldHook{ nullptr };
+}
+
+void PlayerbotAI::SetSelfDispelHoldHook(SelfDispelHoldHook hook)
+{
+    sSelfDispelHoldHook.store(hook, std::memory_order_relaxed);
+}
+
 bool PlayerbotAI::HasAuraToDispel(Unit* target, uint32 dispelType)
 {
     if (!IsValidUnit(target) || !target->IsAlive())
@@ -4588,8 +4601,16 @@ bool PlayerbotAI::HasAuraToDispel(Unit* target, uint32 dispelType)
         if (!isPositiveSpell && !isFriend)
             continue;
 
-        if (canDispel(spellInfo, dispelType))
-            return true;
+        if (!canDispel(spellInfo, dispelType))
+            continue;
+
+        // Custom: mod-boss-mechanics hook (Zul'Farrak F-1f) - a held aura on the bot itself is not its to cure yet
+        if (target == bot)
+            if (SelfDispelHoldHook const hook = sSelfDispelHoldHook.load(std::memory_order_relaxed))
+                if (hook(bot, aura->GetId()))
+                    continue;
+
+        return true;
     }
 
     return false;
