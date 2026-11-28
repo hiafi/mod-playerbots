@@ -11,7 +11,7 @@
 #include "SpellInfo.h"
 #include "SpellMgr.h"
 
-// Rework: Frost Presence and Unholy Presence are gone and Blood Presence is the tank aura (-5% damage dealt), so no
+// Rework: Frost Presence and Unholy Presence are gone and Blood Presence is the tank aura (-25% damage dealt), so no
 // action asks for a presence first. A presence is only ever cast by the Blood bot's own out-of-combat rows.
 std::vector<NextAction> CastDeathchillAction::getPrerequisites()
 {
