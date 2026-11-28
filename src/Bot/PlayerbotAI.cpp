@@ -4494,6 +4494,9 @@ void PlayerbotAI::WaitForSpellCast(Spell* spell)
     {
         int32 duration = spellInfo->GetDuration();
         bot->ApplySpellMod(spellInfo->Id, SPELLMOD_DURATION, duration);
+        // Custom: channels: stock hasted duration, fixed ticks; DoTs keep the Cata behavior, b84f1011a (core
+        // SpellAuraEffects.h). Wait the hasted channel, the length the core gives the channel and its auras.
+        duration = CalcHastedChannelDuration(bot, spellInfo, duration);
         if (duration > 0)
             castTime += duration;
     }
