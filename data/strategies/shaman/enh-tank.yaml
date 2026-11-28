@@ -35,6 +35,8 @@
 # 17364, Lava Lash 60103, Shamanistic Rage 30823, Elemental Spirits 51533, Earth Shield 974, Lightning Shield 324,
 # Rockbiter Weapon 8017, Living Earth 202361 (the castable of the talent), Earthen Wall Totem 202261, Magma Totem
 # 202268, Searing Totem creature 300278.
+# Stoneskin thresholds (gear-scaling 2026-11-28): the cap fell 50 -> 15 (10 with a shield, Toughness), so the old 20 / 35
+# (40% / 70% of 50) became 6 / 10 (about 40% / 67% of the dual-wield cap of 15).
 # Auras on the bot (ShamanData.h names): Stoneskin 202206 (stacks), Earth Charge 202383 (stacks), Earthen Ascendance
 # 202393, Maelstrom Weapon 53817 (stacks), Rockbiter 8017. Talent ids (known()): Ascendance 202364 (Living Earth's
 # Earthen Ascendance needs it).
@@ -43,9 +45,9 @@ class: shaman
 conditions:
   target_alive: alive(target)
   danger: value("shaman self danger")
-  # The ascension's triggers: a dangerous window (first, so its history is sampled each tick), Stoneskin below 20, or
+  # The ascension's triggers: a dangerous window (first, so its history is sampled each tick), Stoneskin below 6, or
   # health below 50%
-  danger_or_low: danger or stacks(self, 202206) < 20 or health_pct(self) < 50
+  danger_or_low: danger or stacks(self, 202206) < 6 or health_pct(self) < 50
   ascended: aura(self, 202393)
   ascension_known: known(202364)
   # Past melee reach: the filler Lightning Bolt at range
@@ -73,7 +75,7 @@ rows:
     relevance: high + 1
 
   # 1: Living Earth with 30 Earth Charge or more ascends (Earthen Ascendance: no Stoneskin erosion for 10 s, Earth Shock
-  # shocks and taunts every enemy in reach): on a dangerous window, below 20 Stoneskin, or below 50% health. The
+  # shocks and taunts every enemy in reach): on a dangerous window, below 6 Stoneskin, or below 50% health. The
   # danger value goes first so its history is sampled every tick
   - do: shaman earthen ascendance
     when: >-
@@ -86,17 +88,17 @@ rows:
     relevance: high + 9
 
   # SR (on the global cooldown): below 40% health, on a dangerous window, or Living Earth cooling with Stoneskin below
-  # 20
+  # 6
   - do: shaman tank shamanistic rage
     when: >-
       known(30823) and cooldown(30823) == 0
-      and (danger or health_pct(self) < 40 or (known(202361) and cooldown(202361) > 0 and stacks(self, 202206) < 20))
+      and (danger or health_pct(self) < 40 or (known(202361) and cooldown(202361) > 0 and stacks(self, 202206) < 6))
     relevance: emergency + 2
 
   # 3: the absorb press (absorbed damage does not erode Stoneskin): below 30 Earth Charge (or without Ascendance) when
-  # Stoneskin is below 35 or a dangerous window starts
+  # Stoneskin is below 10 or a dangerous window starts
   - do: shaman living earth absorb
-    when: le_ready and (stacks(self, 202383) < 30 or not ascension_known) and (danger or stacks(self, 202206) < 35)
+    when: le_ready and (stacks(self, 202383) < 30 or not ascension_known) and (danger or stacks(self, 202206) < 10)
     relevance: emergency + 1
 
   # Earthen Wall on self before a dangerous window, or on the pull of 4 or more enemies

@@ -53,6 +53,17 @@ public:
     CastArcaneIntellectOnPartyAction(PlayerbotAI* botAI) : GroupBuffOnPartyAction(botAI, "arcane intellect") {}
 };
 
+// Arcane Infusion by id, not by name: three stock NPC spells share the name. The bot casts it on itself; the spell's
+// raid area covers the group.
+class CastArcaneInfusionAction : public Action
+{
+public:
+    CastArcaneInfusionAction(PlayerbotAI* botAI) : Action(botAI, "arcane infusion") {}
+    bool isPossible() override;
+    bool isUseful() override;
+    bool Execute(Event event) override;
+};
+
 class CastFocusMagicOnPartyAction : public CastSpellAction
 {
 public:

@@ -23,6 +23,7 @@ namespace ai::mage_rework
 // Shared / baseline
 constexpr uint32 SPELL_ARCANE_INTELLECT = 1459;
 constexpr uint32 SPELL_ARCANE_BRILLIANCE = 23028;
+constexpr uint32 SPELL_ARCANE_INFUSION = 205102;  // party and raid spell power, learned at 26 (group 1048)
 constexpr uint32 SPELL_FROST_ARMOR = 168;
 constexpr uint32 SPELL_ICE_ARMOR = 7302;
 constexpr uint32 SPELL_MAGE_ARMOR = 6117;
